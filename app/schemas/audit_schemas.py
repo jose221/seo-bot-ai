@@ -11,7 +11,7 @@ from app.models.audit import AuditStatus
 
 class AuditCreate(BaseModel):
     """Schema para iniciar una auditoría"""
-    webpage_id: UUID = Field(..., description="ID del target a auditar")
+    web_page_id: UUID = Field(..., description="ID del target a auditar")
     include_ai_analysis: bool = Field(
         default=True,
         description="Si incluir análisis de IA (consume más tiempo)"
@@ -20,7 +20,7 @@ class AuditCreate(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "webpage_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "web_page_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                 "include_ai_analysis": True
             }
         }
@@ -45,7 +45,7 @@ class AuditTaskResponse(BaseModel):
 class AuditResponse(BaseModel):
     """Respuesta completa de una auditoría"""
     id: UUID
-    webpage_id: UUID
+    web_page_id: UUID
     user_id: UUID
     status: AuditStatus
 

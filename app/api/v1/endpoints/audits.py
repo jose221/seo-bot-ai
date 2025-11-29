@@ -144,7 +144,7 @@ async def create_audit(
     """
     # Verificar que el target existe y pertenece al usuario
     statement = select(WebPage).where(
-        WebPage.id == audit_request.webpage_id,
+        WebPage.id == audit_request.web_page_id,
         WebPage.user_id == current_user.id,
         WebPage.is_active == True
     )
@@ -159,7 +159,7 @@ async def create_audit(
 
     # Crear registro de auditoría
     audit = AuditReport(
-        webpage_id=webpage.id,
+        web_page_id=webpage.id,
         user_id=current_user.id,
         status=AuditStatus.PENDING
     )
@@ -215,7 +215,7 @@ async def get_audit(
 
 @router.get("/audits", response_model=audit_schemas.AuditListResponse)
 async def list_audits(
-    webpage_id: Optional[UUID] = Query(None, description="Filtrar por target"),
+    web_page_id: Optional[UUID] = Query(None, description="Filtrar por target"),
     status_filter: Optional[AuditStatus] = Query(None, description="Filtrar por estado"),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
@@ -231,8 +231,8 @@ async def list_audits(
     )
 
     # Aplicar filtros
-    if webpage_id:
-        statement = statement.where(AuditReport.webpage_id == webpage_id)
+    if web_page_id:
+        statement = statement.where(AuditReport.web_page_id == web_page_id)
     if status_filter:
         statement = statement.where(AuditReport.status == status_filter)
 

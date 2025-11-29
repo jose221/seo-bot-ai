@@ -28,7 +28,7 @@ class AuditReport(SQLModel, table=True):
     id: UUID = Field(default_factory=uuid4, primary_key=True)
 
     # Relaciones
-    webpage_id: UUID = Field(foreign_key="webpages.id", index=True)
+    web_page_id: UUID = Field(foreign_key="web_pages.id", index=True)
     user_id: UUID = Field(foreign_key="users.id", index=True)
 
     # Estado
