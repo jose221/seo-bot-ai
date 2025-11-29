@@ -102,7 +102,7 @@ class AuthProvider:
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(
-                    url,
+                    f"{url}?token={token}",
                     params={"token": token}
                 )
 

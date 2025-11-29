@@ -34,3 +34,9 @@ class Settings(BaseSettings):
 # Instancia global de configuración
 settings = Settings()
 
+
+def get_settings() -> Settings:
+    """Obtener instancia de configuración"""
+    return settings
+
+

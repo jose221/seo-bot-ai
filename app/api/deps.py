@@ -76,17 +76,9 @@ async def get_current_user(
         await session.commit()
         await session.refresh(user)
 
-    # 4. Si existe -> Sincronizar datos actualizados
-    else:
-        user.email = external_user.user_email
-        user.full_name = external_user.user_name
-        user.tenant_id = UUID(external_user.tenant_id) if external_user.tenant_id else None
-        user.project_id = UUID(external_user.project_id) if external_user.project_id else None
-        user.last_synced_at = datetime.utcnow()
 
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)
+    # Agregar token al objeto user para uso en background tasks
+    setattr(user, '_token', token)
 
     return user
 

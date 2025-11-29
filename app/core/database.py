@@ -8,6 +8,11 @@ from typing import AsyncGenerator
 
 from app.core.config import settings
 
+# Importar todos los modelos para que SQLModel los registre
+from app.models.user import User
+from app.models.webpage import WebPage
+from app.models.audit import AuditReport
+
 
 # Motor asíncrono de SQLAlchemy
 engine: AsyncEngine = create_async_engine(

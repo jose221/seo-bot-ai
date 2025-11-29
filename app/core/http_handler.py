@@ -77,28 +77,28 @@ class HTTPResponseHandler:
         elif response.status_code == 404:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Resource not found"
+                detail=f"Resource not found {response.json()}"
             )
 
         # 422 Validation Error
         elif response.status_code == 422:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Validation error in request data"
+                detail=f"Validation error in request data {response.json()}"
             )
 
         # 5xx Server Errors
         elif response.status_code >= 500:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"{service_name} is experiencing issues"
+                detail=f"{service_name} is experiencing issues {response.json()}"
             )
 
         # Otros códigos no manejados
         else:
             raise HTTPException(
                 status_code=response.status_code,
-                detail=f"{service_name} error: {response.text}"
+                detail=f"{service_name} error: {response.text} {response.json()}"
             )
 
     @staticmethod

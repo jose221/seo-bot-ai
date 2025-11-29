@@ -68,13 +68,20 @@ class RegisterResponse(BaseModel):
 
 class VerifyTokenResponse(BaseModel):
     """Response del endpoint de verificación de token"""
-    access_token: str
-    token_type: str
-    token_id: str
-    user_id: str
-    user_email: str
-    user_name: str
+
+    scope: Optional[str]
+    token_hash: Optional[str]
+    id: Optional[str]  # ID del token en la API externa
+    is_active: Optional[bool]
     tenant_id: Optional[str] = None
+    rate_limit_per_min: Optional[int] = None
     project_id: Optional[str] = None
     expires_at: datetime
-    scope: str
+    user_id: Optional[str]
+    revoked_at: Optional[datetime] = None
+    platform_admin_id: Optional[str] = None
+    created_at: Optional[datetime]
+    name: Optional[str]
+    created_by: Optional[str] = None
+    token_prefix: Optional[str]
+
