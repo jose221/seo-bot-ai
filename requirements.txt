@@ -1,0 +1,22 @@
+# FastAPI Core
+fastapi==0.122.0
+uvicorn[standard]==0.38.0
+python-multipart
+
+# Database
+sqlmodel
+asyncpg
+psycopg2-binary
+
+# HTTP Client
+httpx==0.28.1
+
+# Web Automation & Testing
+playwright
+pytest-playwright
+# Utilities
+python-dotenv
+pydantic==2.12.5
+pydantic-settings
+email-validator
+
