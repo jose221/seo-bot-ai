@@ -37,14 +37,18 @@ async def run_audit_task(
     from sqlmodel import create_engine, Session
     from sqlalchemy.pool import StaticPool
 
-    # Crear conexión a DB independiente para el background task
+    # Convertir URL asíncrona a síncrona para background task
+    sync_db_url = db_url.replace('postgresql+asyncpg://', 'postgresql+psycopg2://')
+
+    # Crear conexión a DB independiente para el background task (SINCRONA)
     engine = create_engine(
-        db_url,
-        connect_args={"server_settings": {"application_name": "audit_worker"}},
+        sync_db_url,
+        pool_pre_ping=True,
         poolclass=StaticPool
     )
 
     session = Session(engine)
+    audit = None  # Inicializar para evitar UnboundLocalError
 
     try:
         # Obtener el audit report
@@ -98,7 +102,7 @@ async def run_audit_task(
 
                 audit.ai_suggestions = {
                     'analysis': ai_analysis,
-                    'generated_at': datetime.utcnow().isoformat(),
+                    'generated_at': datetime.now(timezone.utc).isoformat(),
                     'model': 'deepseek-chat'
                 }
             except Exception as ai_error:
@@ -110,24 +114,35 @@ async def run_audit_task(
 
         # Marcar como completado
         audit.status = AuditStatus.COMPLETED
-        audit.completed_at = datetime.utcnow()
+        audit.completed_at = datetime.now(timezone.utc)
 
         print(f"✅ Auditoría completada: {audit_id}")
 
     except Exception as e:
         print(f"❌ Error en auditoría {audit_id}: {str(e)}")
-        audit = session.get(AuditReport, audit_id)
-        if audit:
-            audit.status = AuditStatus.FAILED
-            audit.error_message = str(e)
-            audit.completed_at = datetime.utcnow()
+        import traceback
+        traceback.print_exc()
+
+        # Intentar actualizar el audit con el error
+        try:
+            if audit is None:
+                audit = session.get(AuditReport, audit_id)
+
+            if audit:
+                audit.status = AuditStatus.FAILED
+                audit.error_message = str(e)
+                audit.completed_at = datetime.now(timezone.utc)
+                session.add(audit)
+                session.commit()
+        except Exception as inner_error:
+            print(f"❌ Error al guardar estado de fallo: {inner_error}")
 
     finally:
-        if audit:
-            session.add(audit)
-            session.commit()
-        session.close()
-        engine.dispose()
+        try:
+            session.close()
+            engine.dispose()
+        except Exception as cleanup_error:
+            print(f"⚠️  Error al limpiar recursos: {cleanup_error}")
 
 
 @router.post("/audits", response_model=audit_schemas.AuditTaskResponse, status_code=status.HTTP_202_ACCEPTED)
