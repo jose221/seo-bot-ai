@@ -179,6 +179,7 @@ class AuditEngine:
                 'url': url,
                 'timestamp': datetime.utcnow().isoformat(),
                 'html_content': html_content[:10000],  # Limitar para no saturar DB
+                'html_content_raw': html_content,
                 'performance_score': lighthouse_scores['performance'],
                 'seo_score': lighthouse_scores['seo'],
                 'accessibility_score': lighthouse_scores['accessibility'],

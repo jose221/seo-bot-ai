@@ -61,7 +61,7 @@ async def run_audit_task(
         req_lighthouse_params = dict(url=webpage.url, instructions=webpage.instructions)
         lighthouse_result = await _cache.loadFromCacheAsync(
             params=req_lighthouse_params,
-            prefix="lighthouse_report",
+            prefix="lighthouse_report_",
             callback_async=audit_engine.run_lighthouse_audit,
             **req_lighthouse_params
         )
@@ -79,10 +79,10 @@ async def run_audit_task(
                 )
                 ai_analysis = await _cache.loadFromCacheAsync(
                     params=req_ai_analysis_params,
-                    prefix="ai_analysis",
+                    prefix="ai_analysis_",
                     ttl=3600,
                     callback_async=ai_client.analyze_seo_content,
-                    html_content=lighthouse_result.get('html_content', ''),
+                    html_content=lighthouse_result.get('html_content_raw', ''),
                     lighthouse_data={
                         'performance_score': lighthouse_result.get('performance_score'),
                         'seo_score': lighthouse_result.get('seo_score'),
@@ -107,12 +107,15 @@ async def run_audit_task(
                 }
 
         _seo_analyzer = SEOAnalyzer(url=extract_domain(webpage.url),
-                                    html_content=lighthouse_result.get('html_content', ''))
+                                    html_content=lighthouse_result.get('html_content_raw', ''))
         seo_analysis = _seo_analyzer.run_full_analysis()
 
         # Actualizar resultados en la base de datos
         with db_manager.sync_session_context() as session:
             audit = session.get(AuditReport, audit_id)
+            #eliminar html y htl_raw
+            lighthouse_result.pop('html_content', None)
+            lighthouse_result.pop('html_content_raw', None)
             if audit:
                 # Extraer métricas
                 audit.performance_score = lighthouse_result.get('performance_score')
@@ -398,6 +401,7 @@ async def audits_compare(
             )
             ai_analysis = await _cache.loadFromCacheAsync(
                 params=req_ai_analysis_params,
+                prefix="ai_analysis_compare_",
                 ttl=3600,
                 callback_async=comparator.generate_ai_comparison,
                 **req_ai_analysis_params,

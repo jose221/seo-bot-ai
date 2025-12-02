@@ -138,7 +138,7 @@ class AIClient:
         )
 
         # Renderizar prompt del usuario desde plantilla
-        html_preview = html_content[:50000] if len(html_content) > 50000 else html_content
+        html_preview = html_content
 
         user_template = self.jinja_env.get_template("user_analysis.jinja")
         user_content = user_template.render(
@@ -190,7 +190,37 @@ class AIClient:
         request = ChatCompletionRequest(
             messages=[user_message],
             model="deepseek-chat",
-            stream=False
+            stream=False,
+            tools=["web_search"],
+            mcp_tools=[
+                {
+                    "server_name": "playwright-browser",
+                    "transport": "stdio",  # Local process
+                    "command": "npx",
+                    "args": [
+                        "-y",
+                        "@modelcontextprotocol/server-playwright"
+                    ],
+                    "env": {
+                        # Opcional: Define si quieres ver el navegador (headless=False) o no
+                        # Por defecto suele ser headless en servidores
+                        "PLAYWRIGHT_HEADLESS": "true"
+                    }
+                },
+                {
+                    "server_name": "lighthouse-audit",
+                    "transport": "stdio",
+                    "command": "npx",
+                    "args": [
+                        "-y",
+                        "lighthouse-mcp"
+                    ],
+                    "env": {
+                        # Opcional: Chrome flags si estás en un entorno Docker sin cabeza
+                        # "CHROME_FLAGS": "--no-sandbox --headless"
+                    }
+                }
+            ]
         )
 
         response = await self.chat_completion(request, token)

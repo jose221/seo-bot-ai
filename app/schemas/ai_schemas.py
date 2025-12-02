@@ -3,7 +3,7 @@ Schemas para integración con API de IA de Herandro.
 Mapea exactamente la estructura de /v3/agent/ai/chat/completions
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 from enum import Enum
 
 
@@ -36,9 +36,13 @@ class ChatCompletionRequest(BaseModel):
         description="Modelo a usar: deepseek-chat, lowest, etc."
     )
     stream: bool = Field(default=False, description="Si hacer streaming de respuesta")
-    mcp_tools: Optional[List[MCPTool]] = Field(
+    mcp_tools: Optional[Union[List[MCPTool], List[dict]]] = Field(
         default=None,
         description="Herramientas MCP a habilitar (ej. playwright)"
+    )
+    tools: Optional[List[str]] = Field(
+        default=None,
+        description="Herramientas adicionales a habilitar (ej. playwright)"
     )
 
     class Config:
@@ -56,7 +60,8 @@ class ChatCompletionRequest(BaseModel):
                     }
                 ],
                 "model": "deepseek-chat",
-                "stream": False
+                "stream": False,
+                "tools":[ "web_search","url_validator", "action_plan"]
             }
         }
 
@@ -89,4 +94,3 @@ class ChatCompletionResponse(BaseModel):
         if self.choices and len(self.choices) > 0:
             return self.choices[0].delta.content
         return ""
-
