@@ -16,6 +16,7 @@ from app.schemas.ai_schemas import (
     MCPTool
 )
 from app.core.config import settings
+from app.services.seo_analyzer import SEOAnalyzer
 
 
 class AIClient:
@@ -112,6 +113,9 @@ class AIClient:
             Análisis y sugerencias en texto plano
         """
         # Construir contexto del sistema
+
+        seo_analyzer = SEOAnalyzer(url=extract_domain(url), html_content=html_content)
+
         system_message = ChatMessage(
             role=MessageRole.SYSTEM,
             content=f"""Eres un experto en SEO y optimización web.
@@ -125,7 +129,8 @@ Debes analizar:
 5. Oportunidades de mejora
 6. Investigar en https://schema.org/docs/documents.html para sugerir datos estructurados apropiados.
 7. Devolver que tipo de schema se debe aplicar basandose en esto: https://schema.org/version/latest/schemaorg-current-https.jsonld y https://schema.org/docs/full.html
-8. Investigar del dominio principal si tiene robot.txt {extract_domain(url)}/robots.txt y navegar por el site mappara ver que se puede mejorar en los sitios, pero tiene que ser discreto como bot
+8. Analizar e invertigar este contenido y navegar por el sitemap (si tiene): {seo_analyzer.analyze_robots_txt()}
+9. Analizar los Schemas enriquecidos de la pagina principal y ofrece una retrolimentación basado en todo el contexto:{seo_analyzer.analyze_structured_data()}
 
 Proporciona respuestas en formato estructurado con:
 - Resumen ejecutivo

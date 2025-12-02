@@ -27,3 +27,6 @@ trafilatura
 beautifulsoup4
 lxml    # parser rápido para bs4
 
+reportlab
+openpyxl
+

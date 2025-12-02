@@ -18,6 +18,7 @@ from app.schemas import audit_schemas
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
+from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer
 
 router = APIRouter()
@@ -107,6 +108,7 @@ async def run_audit_task(
         _seo_analyzer = SEOAnalyzer(url=extract_domain(webpage.url), html_content=lighthouse_result.get('html_content', ''))
         seo_analysis = _seo_analyzer.run_full_analysis()
 
+
         # Actualizar resultados en la base de datos
         with db_manager.sync_session_context() as session:
             audit = session.get(AuditReport, audit_id)
@@ -124,6 +126,13 @@ async def run_audit_task(
                 audit.status = AuditStatus.COMPLETED
                 audit.completed_at = datetime.now(timezone.utc)
                 audit.seo_analysis = seo_analysis
+
+                #genera el reporte
+                report = ReportGenerator(audit=audit).generate_all()
+                print(report)
+                #audit.report_path = report.get('pdf_path')
+                #audit.excel_path = report.get('xlsx_path')
+
                 session.add(audit)
                 # No llamar commit aquí, el context manager lo hace automáticamente
 
