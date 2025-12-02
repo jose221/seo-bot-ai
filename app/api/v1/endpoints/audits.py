@@ -4,6 +4,7 @@ Permite iniciar análisis y consultar resultados.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlmodel import select, desc
+from sqlalchemy import String, cast as sql_cast
 from typing import Optional
 from uuid import UUID
 from datetime import datetime, timezone
@@ -262,7 +263,7 @@ async def list_audits(
     if web_page_id:
         statement = statement.where(AuditReport.web_page_id == web_page_id)
     if status_filter:
-        statement = statement.where(AuditReport.status == status_filter)
+        statement = statement.where(sql_cast(AuditReport.status, String) == status_filter.value)
 
     statement = statement.order_by(desc(AuditReport.created_at))
 
@@ -357,7 +358,7 @@ async def audits_compare(
     # Obtener última auditoría completada de cada página
     base_audit_stmt = select(AuditReport).where(
         AuditReport.web_page_id == webpage.id,
-        AuditReport.status == AuditStatus.COMPLETED
+        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value.upper()
     ).order_by(desc(AuditReport.created_at)).limit(1)
 
     base_audit_result = await session.execute(base_audit_stmt)
@@ -365,7 +366,7 @@ async def audits_compare(
 
     compare_audit_stmt = select(AuditReport).where(
         AuditReport.web_page_id == webpage_to_compare.id,
-        AuditReport.status == AuditStatus.COMPLETED
+        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value.upper()
     ).order_by(desc(AuditReport.created_at)).limit(1)
 
     compare_audit_result = await session.execute(compare_audit_stmt)
@@ -385,16 +386,23 @@ async def audits_compare(
         base_url=webpage.url,
         compare_url=webpage_to_compare.url
     )
-
+    auth_token = getattr(current_user, '_token', None) or "dummy-token"
+    _cache = Cache(table_name="audits_reports_compare_")
     # Generar análisis de IA si se solicita
-    if audit_request.include_ai_analysis and token:
+    if audit_request.include_ai_analysis and auth_token:
         try:
-            ai_analysis = await comparator.generate_ai_comparison(
-                base_audit=base_audit,
-                compare_audit=compare_audit,
+            req_ai_analysis_params = dict(
                 base_url=webpage.url,
                 compare_url=webpage_to_compare.url,
-                token=token
+                token=auth_token
+            )
+            ai_analysis = await _cache.loadFromCacheAsync(
+                params=req_ai_analysis_params,
+                ttl=3600,
+                callback_async=comparator.generate_ai_comparison,
+                **req_ai_analysis_params,
+                base_audit=base_audit,
+                compare_audit=compare_audit,
             )
             comparison_report['ai_analysis'] = ai_analysis
         except Exception as e:

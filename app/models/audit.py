@@ -3,7 +3,7 @@ Modelo de Reporte de Auditoría.
 Almacena resultados de análisis Lighthouse + IA.
 """
 from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import JSON
+from sqlalchemy import JSON, String
 from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -31,8 +31,11 @@ class AuditReport(SQLModel, table=True):
     web_page_id: UUID = Field(foreign_key="web_pages.id", index=True)
     user_id: UUID = Field(foreign_key="users.id", index=True)
 
-    # Estado
-    status: AuditStatus = Field(default=AuditStatus.PENDING)
+    # Estado (guardado como string en la BD)
+    status: AuditStatus = Field(
+        default=AuditStatus.PENDING,
+        sa_column=Column(String, nullable=False, default=AuditStatus.PENDING.value)
+    )
 
     # Datos de Lighthouse (JSONB)
     lighthouse_data: Optional[Dict[str, Any]] = Field(
