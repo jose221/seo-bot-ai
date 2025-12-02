@@ -14,6 +14,7 @@ from app.schemas.ai_schemas import (
     MessageRole,
     MCPTool
 )
+from app.core.config import settings
 
 
 class AIClient:

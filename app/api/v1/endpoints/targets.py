@@ -3,7 +3,7 @@ Endpoints para gestión de Targets (WebPages).
 CRUD completo para sitios web a auditar.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlmodel import Session, select, desc
+from sqlmodel import select, desc
 from uuid import UUID
 from datetime import datetime, timezone
 
@@ -20,7 +20,7 @@ router = APIRouter()
 async def create_target(
         target: target_schemas.WebPageCreate,
         current_user: User = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session = Depends(get_session)
 ):
     """
     Crear un nuevo target para auditar.
@@ -33,7 +33,7 @@ async def create_target(
         WebPage.is_active == True
     )
     result = await session.execute(statement)
-    existing = result.scalar_one_or_none()
+    existing = result.scalars().first()
 
     if existing:
         raise HTTPException(
@@ -63,7 +63,7 @@ async def list_targets(
         page_size: int = Query(10, ge=1, le=100, description="Elementos por página"),
         is_active: bool = Query(True, description="Filtrar por activos/inactivos"),
         current_user: User = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session = Depends(get_session)
 ):
     """
     Listar targets del usuario autenticado.
@@ -102,7 +102,7 @@ async def list_targets(
 async def get_target(
         target_id: UUID,
         current_user: User = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session = Depends(get_session)
 ):
     """
     Obtener un target específico por ID.
@@ -113,7 +113,7 @@ async def get_target(
         WebPage.user_id == current_user.id
     )
     result = await session.execute(statement)
-    target = result.scalar_one_or_none()
+    target = result.scalars().first()
 
     if not target:
         raise HTTPException(
@@ -129,7 +129,7 @@ async def update_target(
         target_id: UUID,
         target_update: target_schemas.WebPageUpdate,
         current_user: User = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session = Depends(get_session)
 ):
     """
     Actualizar un target existente.
@@ -140,7 +140,7 @@ async def update_target(
         WebPage.user_id == current_user.id
     )
     result = await session.execute(statement)
-    target = result.scalar_one_or_none()
+    target = result.scalars().first()
 
     if not target:
         raise HTTPException(
@@ -167,7 +167,7 @@ async def delete_target(
         target_id: UUID,
         hard_delete: bool = Query(False, description="Si es True, borra físicamente"),
         current_user: User = Depends(get_current_user),
-        session: Session = Depends(get_session)
+        session = Depends(get_session)
 ):
     """
     Eliminar un target.
@@ -178,7 +178,7 @@ async def delete_target(
         WebPage.user_id == current_user.id
     )
     result = await session.execute(statement)
-    target = result.scalar_one_or_none()
+    target = result.scalars().first()
 
     if not target:
         raise HTTPException(
