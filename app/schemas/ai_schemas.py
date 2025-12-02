@@ -63,7 +63,7 @@ class ChatCompletionRequest(BaseModel):
 
 class ChatCompletionChoice(BaseModel):
     """Una opción de respuesta del modelo"""
-    message: ChatMessage
+    delta: ChatMessage
     finish_reason: Optional[str] = None
     index: int = 0
 
@@ -87,6 +87,6 @@ class ChatCompletionResponse(BaseModel):
     def get_content(self) -> str:
         """Helper para obtener el contenido de la primera respuesta"""
         if self.choices and len(self.choices) > 0:
-            return self.choices[0].message.content
+            return self.choices[0].delta.content
         return ""
 

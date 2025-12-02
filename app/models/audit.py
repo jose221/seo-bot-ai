@@ -41,6 +41,12 @@ class AuditReport(SQLModel, table=True):
         description="Métricas completas de Lighthouse"
     )
 
+    seo_analysis: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON),
+        description="Seo analyzer data"
+    )
+
     # Análisis de IA (JSONB)
     ai_suggestions: Optional[Dict[str, Any]] = Field(
         default=None,

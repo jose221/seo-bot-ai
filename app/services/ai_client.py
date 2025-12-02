@@ -7,6 +7,7 @@ from typing import Optional, List
 from fastapi import HTTPException, status
 
 from app.core.config import get_settings
+from app.helpers import extract_domain
 from app.schemas.ai_schemas import (
     ChatCompletionRequest,
     ChatCompletionResponse,
@@ -22,7 +23,7 @@ class AIClient:
 
     def __init__(self):
         self.base_url = settings.HERANDRO_API_URL
-        self.timeout = 120.0  # 2 minutos para análisis largos
+        self.timeout = None  # 2 minutos para análisis largos
 
     async def chat_completion(
         self,
@@ -66,16 +67,19 @@ class AIClient:
                         detail=f"Error de validación en la API de IA: {response.text}"
                     )
                 elif response.status_code >= 500:
+                    print(request.model_dump(exclude_none=True))
+                    f_response = response.json()
                     raise HTTPException(
                         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                        detail="Servicio de IA temporalmente no disponible"
+                        detail=f"Servicio de IA temporalmente no disponible"
                     )
 
                 response.raise_for_status()
 
                 # Parsear respuesta
                 data = response.json()
-                return ChatCompletionResponse(**data)
+                obj_response = data[0]
+                return ChatCompletionResponse(**obj_response)
 
         except httpx.TimeoutException:
             raise HTTPException(
@@ -110,7 +114,7 @@ class AIClient:
         # Construir contexto del sistema
         system_message = ChatMessage(
             role=MessageRole.SYSTEM,
-            content="""Eres un experto en SEO y optimización web.
+            content=f"""Eres un experto en SEO y optimización web.
 Tu trabajo es analizar páginas web y proporcionar sugerencias prácticas y accionables.
 
 Debes analizar:
@@ -119,12 +123,16 @@ Debes analizar:
 3. Accesibilidad
 4. Mejores prácticas SEO
 5. Oportunidades de mejora
+6. Investigar en https://schema.org/docs/documents.html para sugerir datos estructurados apropiados.
+7. Devolver que tipo de schema se debe aplicar basandose en esto: https://schema.org/version/latest/schemaorg-current-https.jsonld y https://schema.org/docs/full.html
+8. Investigar del dominio principal si tiene robot.txt {extract_domain(url)}/robots.txt y navegar por el site mappara ver que se puede mejorar en los sitios, pero tiene que ser discreto como bot
 
 Proporciona respuestas en formato estructurado con:
 - Resumen ejecutivo
 - Problemas críticos
 - Sugerencias de mejora priorizadas
-- Acciones concretas a tomar""",
+- Acciones concretas a tomar
+""",
             isContext=True
         )
 
@@ -140,8 +148,8 @@ Proporciona respuestas en formato estructurado con:
             user_content += f"- CLS: {lighthouse_data.get('cls', 'N/A')}\n\n"
 
         # Limitar HTML para no exceder límites de tokens
-        html_preview = html_content[:5000] if len(html_content) > 5000 else html_content
-        user_content += f"HTML (primeros 5000 caracteres):\n{html_preview}"
+        html_preview = html_content[:50000] if len(html_content) > 50000 else html_content
+        user_content += f"HTML (primeros 50000 caracteres):\n{html_preview}"
 
         user_message = ChatMessage(
             role=MessageRole.USER,
@@ -168,6 +176,6 @@ def get_ai_client() -> AIClient:
     """Obtener instancia del cliente de IA"""
     global _ai_client
     if _ai_client is None:
-        _ai_client = AIClient()
+            _ai_client = AIClient()
     return _ai_client
 

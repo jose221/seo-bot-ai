@@ -10,12 +10,15 @@ from datetime import datetime, timezone
 
 from app.core.database import get_session
 from app.api.deps import get_current_user
+from app.helpers import extract_domain
 from app.models.user import User
 from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
 from app.schemas import audit_schemas
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
+from app.services.cache import Cache
+from app.services.seo_analyzer import SEOAnalyzer
 
 router = APIRouter()
 
@@ -33,7 +36,7 @@ async def run_audit_task(
     from app.core.database import db_manager
 
     audit = None  # Inicializar para evitar UnboundLocalError
-
+    _cache = Cache(table_name="audits_reports")
     try:
         # Usar el context manager síncrono del gestor de BD
         with db_manager.sync_session_context() as session:
@@ -52,21 +55,32 @@ async def run_audit_task(
 
         # Ejecutar auditoría con Playwright/Lighthouse
         audit_engine = get_audit_engine()
-        lighthouse_result = await audit_engine.run_lighthouse_audit(
-            url=webpage.url,
-            instructions=webpage.instructions
+        req_lighthouse_params = dict(url=webpage.url, instructions=webpage.instructions)
+        lighthouse_result = await _cache.loadFromCacheAsync(
+            params=req_lighthouse_params,
+            prefix="lighthouse_report",
+            callback_async=audit_engine.run_lighthouse_audit,
+            **req_lighthouse_params
         )
 
         # Si se solicita análisis de IA
         ai_analysis_data = None
+
+
         if include_ai:
             print(f"🤖 Ejecutando análisis de IA...")
             ai_client = get_ai_client()
 
             try:
-                ai_analysis = await ai_client.analyze_seo_content(
-                    html_content=lighthouse_result.get('html_content', ''),
+                req_ai_analysis_params = dict(
                     url=webpage.url,
+                )
+                ai_analysis = await _cache.loadFromCacheAsync(
+                    params=req_ai_analysis_params,
+                    prefix="ai_analysis",
+                    ttl=3600,
+                    callback_async=ai_client.analyze_seo_content,
+                    html_content=lighthouse_result.get('html_content', ''),
                     lighthouse_data={
                         'performance_score': lighthouse_result.get('performance_score'),
                         'seo_score': lighthouse_result.get('seo_score'),
@@ -74,7 +88,8 @@ async def run_audit_task(
                         'lcp': lighthouse_result.get('lcp'),
                         'cls': lighthouse_result.get('cls')
                     },
-                    token=token
+                    token=token,
+                    **req_ai_analysis_params
                 )
 
                 ai_analysis_data = {
@@ -88,6 +103,9 @@ async def run_audit_task(
                     'error': str(ai_error),
                     'status': 'failed'
                 }
+
+        _seo_analyzer = SEOAnalyzer(url=extract_domain(webpage.url), html_content=lighthouse_result.get('html_content', ''))
+        seo_analysis = _seo_analyzer.run_full_analysis()
 
         # Actualizar resultados en la base de datos
         with db_manager.sync_session_context() as session:
@@ -105,6 +123,7 @@ async def run_audit_task(
                 audit.ai_suggestions = ai_analysis_data
                 audit.status = AuditStatus.COMPLETED
                 audit.completed_at = datetime.now(timezone.utc)
+                audit.seo_analysis = seo_analysis
                 session.add(audit)
                 # No llamar commit aquí, el context manager lo hace automáticamente
 

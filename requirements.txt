@@ -1,5 +1,5 @@
 # FastAPI Core
-fastapi==0.122.0
+fastapi>=0.122.0
 uvicorn[standard]==0.38.0
 python-multipart
 
@@ -19,4 +19,11 @@ python-dotenv
 pydantic==2.12.5
 pydantic-settings
 email-validator
+
+##seo
+advertools
+pandas  # advertools usa pandas internamente
+trafilatura
+beautifulsoup4
+lxml    # parser rápido para bs4
 
