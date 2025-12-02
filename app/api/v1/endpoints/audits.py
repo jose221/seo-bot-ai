@@ -25,10 +25,10 @@ router = APIRouter()
 
 
 async def run_audit_task(
-    audit_id: UUID,
-    webpage: WebPage,
-    include_ai: bool,
-    token: str
+        audit_id: UUID,
+        webpage: WebPage,
+        include_ai: bool,
+        token: str
 ):
     """
     Tarea en segundo plano para ejecutar auditoría.
@@ -67,7 +67,6 @@ async def run_audit_task(
         # Si se solicita análisis de IA
         ai_analysis_data = None
 
-
         if include_ai:
             print(f"🤖 Ejecutando análisis de IA...")
             ai_client = get_ai_client()
@@ -105,9 +104,9 @@ async def run_audit_task(
                     'status': 'failed'
                 }
 
-        _seo_analyzer = SEOAnalyzer(url=extract_domain(webpage.url), html_content=lighthouse_result.get('html_content', ''))
+        _seo_analyzer = SEOAnalyzer(url=extract_domain(webpage.url),
+                                    html_content=lighthouse_result.get('html_content', ''))
         seo_analysis = _seo_analyzer.run_full_analysis()
-
 
         # Actualizar resultados en la base de datos
         with db_manager.sync_session_context() as session:
@@ -159,14 +158,13 @@ async def run_audit_task(
             print(f"❌ Error al guardar estado de fallo: {inner_error}")
 
 
-
 @router.post("/audits", response_model=audit_schemas.AuditTaskResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_audit(
-    audit_request: audit_schemas.AuditCreate,
-    background_tasks: BackgroundTasks,
-    current_user: User = Depends(get_current_user),
-    session = Depends(get_session),
-    token: str = Depends(lambda: None)  # Se obtendrá del header en deps
+        audit_request: audit_schemas.AuditCreate,
+        background_tasks: BackgroundTasks,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+        token: str = Depends(lambda: None)  # Se obtendrá del header en deps
 ):
     """
     Iniciar una nueva auditoría para un target.
@@ -219,9 +217,9 @@ async def create_audit(
 
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)
 async def get_audit(
-    audit_id: UUID,
-    current_user: User = Depends(get_current_user),
-    session = Depends(get_session)
+        audit_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session)
 ):
     """
     Obtener detalles de una auditoría específica.
@@ -244,12 +242,12 @@ async def get_audit(
 
 @router.get("/audits", response_model=audit_schemas.AuditListResponse)
 async def list_audits(
-    web_page_id: Optional[UUID] = Query(None, description="Filtrar por target"),
-    status_filter: Optional[AuditStatus] = Query(None, description="Filtrar por estado"),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
-    current_user: User = Depends(get_current_user),
-    session = Depends(get_session)
+        web_page_id: Optional[UUID] = Query(None, description="Filtrar por target"),
+        status_filter: Optional[AuditStatus] = Query(None, description="Filtrar por estado"),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(10, ge=1, le=100),
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session)
 ):
     """
     Listar auditorías del usuario con filtros opcionales.
@@ -288,9 +286,9 @@ async def list_audits(
 
 @router.delete("/audits/{audit_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_audit(
-    audit_id: UUID,
-    current_user: User = Depends(get_current_user),
-    session = Depends(get_session)
+        audit_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session)
 ):
     """
     Eliminar una auditoría.
@@ -313,3 +311,34 @@ async def delete_audit(
 
     return None
 
+
+#@router.post("/audits/compare", response_model=audit_schemas.AuditTaskResponse, status_code=status.HTTP_202_ACCEPTED)
+async def audits_compare(
+        audit_request: audit_schemas.AuditCompare,
+        background_tasks: BackgroundTasks,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+        token: str = Depends(lambda: None)  # Se obtendrá del header en deps
+):
+    statement = select(WebPage).where(
+        WebPage.id == audit_request.web_page_id,
+        WebPage.user_id == current_user.id,
+        WebPage.is_active == True
+    )
+    result = await session.execute(statement)
+    webpage = result.scalars().first()
+
+    #compare page
+    statement_to_compare = select(WebPage).where(
+        WebPage.id == audit_request.web_page_id_to_compare,
+        WebPage.user_id == current_user.id,
+        WebPage.is_active == True
+    )
+    result = await session.execute(statement_to_compare)
+    webpage_to_compare = result.scalars().first()
+
+    if not webpage or not webpage_to_compare:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Target no encontrado o no tienes acceso"
+        )

@@ -26,6 +26,25 @@ class AuditCreate(BaseModel):
         }
 
 
+class AuditCompare(BaseModel):
+    """Schema para iniciar una auditoría"""
+    web_page_id: UUID = Field(..., description="ID del target base de la comparación")
+    web_page_id_to_compare: UUID = Field(..., description="ID del target a comparar")
+    include_ai_analysis: bool = Field(
+        default=True,
+        description="Si incluir análisis de IA (consume más tiempo)"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "web_page_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "web_page_id_to_compare": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "include_ai_analysis": True
+            }
+        }
+
+
 class AuditTaskResponse(BaseModel):
     """Respuesta inmediata al iniciar auditoría"""
     task_id: UUID
