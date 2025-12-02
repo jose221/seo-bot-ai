@@ -63,6 +63,7 @@ async def get_current_user(
     user = result.scalar_one_or_none()
 
     # 3. Si no existe -> Crear Shadow User
+    """
     if user is None:
         user = User(
             external_id=external_id,
@@ -76,9 +77,10 @@ async def get_current_user(
         await session.commit()
         await session.refresh(user)
 
-
+    """
     # Agregar token al objeto user para uso en background tasks
-    setattr(user, '_token', token)
+    if token:
+        setattr(user, '_token', token)
 
     return user
 

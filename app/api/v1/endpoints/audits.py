@@ -20,6 +20,7 @@ from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
 from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer
+from app.services.audit_comparator import get_audit_comparator
 
 router = APIRouter()
 
@@ -312,14 +313,24 @@ async def delete_audit(
     return None
 
 
-#@router.post("/audits/compare", response_model=audit_schemas.AuditTaskResponse, status_code=status.HTTP_202_ACCEPTED)
+@router.post("/audits/compare", response_model=audit_schemas.AuditComparisonResponse, status_code=status.HTTP_200_OK)
 async def audits_compare(
         audit_request: audit_schemas.AuditCompare,
-        background_tasks: BackgroundTasks,
         current_user: User = Depends(get_current_user),
         session=Depends(get_session),
-        token: str = Depends(lambda: None)  # Se obtendrá del header en deps
+        token: str = Depends(lambda: None)
 ):
+    """
+    Comparar dos auditorías SEO y generar reporte estructurado.
+
+    Compara:
+    - Schemas estructurados (JSON-LD)
+    - Métricas de rendimiento (Lighthouse)
+    - Core Web Vitals
+    - SEO on-page
+    - Genera recomendaciones accionables
+    """
+    # Obtener página base
     statement = select(WebPage).where(
         WebPage.id == audit_request.web_page_id,
         WebPage.user_id == current_user.id,
@@ -328,7 +339,7 @@ async def audits_compare(
     result = await session.execute(statement)
     webpage = result.scalars().first()
 
-    #compare page
+    # Obtener página a comparar
     statement_to_compare = select(WebPage).where(
         WebPage.id == audit_request.web_page_id_to_compare,
         WebPage.user_id == current_user.id,
@@ -342,3 +353,53 @@ async def audits_compare(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Target no encontrado o no tienes acceso"
         )
+
+    # Obtener última auditoría completada de cada página
+    base_audit_stmt = select(AuditReport).where(
+        AuditReport.web_page_id == webpage.id,
+        AuditReport.status == AuditStatus.COMPLETED
+    ).order_by(desc(AuditReport.created_at)).limit(1)
+
+    base_audit_result = await session.execute(base_audit_stmt)
+    base_audit = base_audit_result.scalars().first()
+
+    compare_audit_stmt = select(AuditReport).where(
+        AuditReport.web_page_id == webpage_to_compare.id,
+        AuditReport.status == AuditStatus.COMPLETED
+    ).order_by(desc(AuditReport.created_at)).limit(1)
+
+    compare_audit_result = await session.execute(compare_audit_stmt)
+    compare_audit = compare_audit_result.scalars().first()
+
+    if not base_audit or not compare_audit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No hay auditorías completadas para comparar. Ejecuta auditorías primero."
+        )
+
+    # Generar comparación estructurada
+    comparator = get_audit_comparator()
+    comparison_report = comparator.generate_comparison_report(
+        base_audit=base_audit,
+        compare_audit=compare_audit,
+        base_url=webpage.url,
+        compare_url=webpage_to_compare.url
+    )
+
+    # Generar análisis de IA si se solicita
+    if audit_request.include_ai_analysis and token:
+        try:
+            ai_analysis = await comparator.generate_ai_comparison(
+                base_audit=base_audit,
+                compare_audit=compare_audit,
+                base_url=webpage.url,
+                compare_url=webpage_to_compare.url,
+                token=token
+            )
+            comparison_report['ai_analysis'] = ai_analysis
+        except Exception as e:
+            print(f"⚠️ Error generando análisis de IA: {e}")
+            comparison_report['ai_analysis'] = None
+
+    return audit_schemas.AuditComparisonResponse(**comparison_report)
+

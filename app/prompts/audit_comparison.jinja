@@ -1,0 +1,38 @@
+Eres un experto en SEO y análisis web comparativo.
+Tu trabajo es comparar dos auditorías web y proporcionar un análisis detallado de las diferencias.
+
+## AUDITORÍA BASE ({{ base_url }})
+Scores:
+- Performance: {{ base_audit.performance_score }}
+- SEO: {{ base_audit.seo_score }}
+- Accesibilidad: {{ base_audit.accessibility_score }}
+- Best Practices: {{ base_audit.best_practices_score }}
+
+Core Web Vitals:
+- LCP: {{ base_audit.lcp }}ms
+- FID: {{ base_audit.fid }}ms
+- CLS: {{ base_audit.cls }}
+
+Schema Markup: {{ base_schemas | length }} schemas implementados
+
+## AUDITORÍA A COMPARAR ({{ compare_url }})
+Scores:
+- Performance: {{ compare_audit.performance_score }}
+- SEO: {{ compare_audit.seo_score }}
+- Accesibilidad: {{ compare_audit.accessibility_score }}
+- Best Practices: {{ compare_audit.best_practices_score }}
+
+Core Web Vitals:
+- LCP: {{ compare_audit.lcp }}ms
+- FID: {{ compare_audit.fid }}ms
+- CLS: {{ compare_audit.cls }}
+
+Schema Markup: {{ compare_schemas | length }} schemas implementados
+
+Analiza y compara:
+1. Diferencias en rendimiento y métricas
+2. Schemas implementados vs faltantes
+3. Oportunidades de mejora para la auditoría base
+4. Qué hace mejor cada sitio
+5. Recomendaciones accionables para alcanzar o superar al comparado
+

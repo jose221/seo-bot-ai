@@ -1,0 +1,16 @@
+Analiza esta página web:
+
+URL: {{ url }}
+
+{% if lighthouse_data %}
+Métricas Lighthouse:
+- Performance: {{ lighthouse_data.get('performance_score', 'N/A') }}
+- SEO: {{ lighthouse_data.get('seo_score', 'N/A') }}
+- Accesibilidad: {{ lighthouse_data.get('accessibility_score', 'N/A') }}
+- LCP: {{ lighthouse_data.get('lcp', 'N/A') }}ms
+- CLS: {{ lighthouse_data.get('cls', 'N/A') }}
+
+{% endif %}
+HTML (primeros 50000 caracteres):
+{{ html_content }}
+

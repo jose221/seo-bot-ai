@@ -3,17 +3,17 @@ Cliente HTTP para API de Inteligencia Artificial de Herandro Services.
 Consume el endpoint /v3/agent/ai/chat/completions
 """
 import httpx
-from typing import Optional, List
+from typing import Optional
 from fastapi import HTTPException, status
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from pathlib import Path
 
-from app.core.config import get_settings
 from app.helpers import extract_domain
 from app.schemas.ai_schemas import (
     ChatCompletionRequest,
     ChatCompletionResponse,
     ChatMessage,
-    MessageRole,
-    MCPTool
+    MessageRole
 )
 from app.core.config import settings
 from app.services.seo_analyzer import SEOAnalyzer
@@ -25,6 +25,15 @@ class AIClient:
     def __init__(self):
         self.base_url = settings.HERANDRO_API_URL
         self.timeout = None  # 2 minutos para análisis largos
+
+        # Configurar Jinja2 para cargar plantillas de prompts
+        prompts_dir = Path(__file__).parent.parent / "prompts"
+        self.jinja_env = Environment(
+            loader=FileSystemLoader(prompts_dir),
+            autoescape=select_autoescape(),
+            trim_blocks=True,
+            lstrip_blocks=True
+        )
 
     async def chat_completion(
         self,
@@ -112,49 +121,31 @@ class AIClient:
         Returns:
             Análisis y sugerencias en texto plano
         """
-        # Construir contexto del sistema
-
+        # Construir contexto del sistema usando plantilla Jinja
         seo_analyzer = SEOAnalyzer(url=extract_domain(url), html_content=html_content)
+
+        # Renderizar prompt del sistema desde plantilla
+        system_template = self.jinja_env.get_template("seo_analysis.jinja")
+        system_content = system_template.render(
+            robots_analysis=seo_analyzer.analyze_robots_txt(),
+            structured_data=seo_analyzer.analyze_structured_data()
+        )
 
         system_message = ChatMessage(
             role=MessageRole.SYSTEM,
-            content=f"""Eres un experto en SEO y optimización web.
-Tu trabajo es analizar páginas web y proporcionar sugerencias prácticas y accionables.
-
-Debes analizar:
-1. Estructura HTML (títulos, meta tags, semántica)
-2. Rendimiento y Core Web Vitals
-3. Accesibilidad
-4. Mejores prácticas SEO
-5. Oportunidades de mejora
-6. Investigar en https://schema.org/docs/documents.html para sugerir datos estructurados apropiados.
-7. Devolver que tipo de schema se debe aplicar basandose en esto: https://schema.org/version/latest/schemaorg-current-https.jsonld y https://schema.org/docs/full.html
-8. Analizar e invertigar este contenido y navegar por el sitemap (si tiene): {seo_analyzer.analyze_robots_txt()}
-9. Analizar los Schemas enriquecidos de la pagina principal y ofrece una retrolimentación basado en todo el contexto:{seo_analyzer.analyze_structured_data()}
-
-Proporciona respuestas en formato estructurado con:
-- Resumen ejecutivo
-- Problemas críticos
-- Sugerencias de mejora priorizadas
-- Acciones concretas a tomar
-""",
+            content=system_content,
             isContext=True
         )
 
-        # Construir mensaje del usuario
-        user_content = f"Analiza esta página web:\n\nURL: {url}\n\n"
-
-        if lighthouse_data:
-            user_content += f"Métricas Lighthouse:\n"
-            user_content += f"- Performance: {lighthouse_data.get('performance_score', 'N/A')}\n"
-            user_content += f"- SEO: {lighthouse_data.get('seo_score', 'N/A')}\n"
-            user_content += f"- Accesibilidad: {lighthouse_data.get('accessibility_score', 'N/A')}\n"
-            user_content += f"- LCP: {lighthouse_data.get('lcp', 'N/A')}ms\n"
-            user_content += f"- CLS: {lighthouse_data.get('cls', 'N/A')}\n\n"
-
-        # Limitar HTML para no exceder límites de tokens
+        # Renderizar prompt del usuario desde plantilla
         html_preview = html_content[:50000] if len(html_content) > 50000 else html_content
-        user_content += f"HTML (primeros 50000 caracteres):\n{html_preview}"
+
+        user_template = self.jinja_env.get_template("user_analysis.jinja")
+        user_content = user_template.render(
+            url=url,
+            lighthouse_data=lighthouse_data,
+            html_content=html_preview
+        )
 
         user_message = ChatMessage(
             role=MessageRole.USER,
@@ -169,6 +160,39 @@ Proporciona respuestas en formato estructurado con:
         )
 
         # Enviar y obtener respuesta
+        response = await self.chat_completion(request, token)
+        return response.get_content()
+
+    async def analyze_audit_comparison(
+        self,
+        comparison_data: dict,
+        token: str
+    ) -> str:
+        """
+        Analizar comparación de auditorías usando IA.
+
+        Args:
+            comparison_data: Datos de comparación estructurados
+            token: Token de autenticación
+
+        Returns:
+            Análisis textual de la comparación
+        """
+        # Renderizar prompt desde plantilla
+        template = self.jinja_env.get_template("audit_comparison.jinja")
+        prompt_content = template.render(**comparison_data)
+
+        user_message = ChatMessage(
+            role=MessageRole.USER,
+            content=prompt_content
+        )
+
+        request = ChatCompletionRequest(
+            messages=[user_message],
+            model="deepseek-chat",
+            stream=False
+        )
+
         response = await self.chat_completion(request, token)
         return response.get_content()
 

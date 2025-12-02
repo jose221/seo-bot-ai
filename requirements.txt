@@ -19,6 +19,7 @@ python-dotenv
 pydantic==2.12.5
 pydantic-settings
 email-validator
+jinja2>=3.1.0  # Templates para prompts
 
 ##seo
 advertools

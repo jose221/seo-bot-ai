@@ -98,3 +98,55 @@ class AuditListResponse(BaseModel):
     page: int
     page_size: int
 
+
+class SchemaComparisonResult(BaseModel):
+    """Resultado de comparación de schemas"""
+    base_schemas: list[str]
+    compare_schemas: list[str]
+    missing_in_base: list[str]
+    common_schemas: list[str]
+    unique_to_base: list[str]
+    base_count: int
+    compare_count: int
+    completeness_score: float
+
+
+class PerformanceComparisonResult(BaseModel):
+    """Resultado de comparación de rendimiento"""
+    scores: Dict[str, Any]
+    core_web_vitals: Dict[str, Any]
+    overall_better: str
+
+
+class AuditComparisonResponse(BaseModel):
+    """Respuesta completa de comparación de auditorías"""
+    base_url: str
+    compare_url: str
+    comparison_date: Optional[str]
+    summary: Dict[str, Any]
+    performance: PerformanceComparisonResult
+    schemas: SchemaComparisonResult
+    seo_analysis: Dict[str, Any]
+    recommendations: list[Dict[str, Any]]
+    ai_analysis: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "base_url": "https://example.com",
+                "compare_url": "https://competitor.com",
+                "summary": {
+                    "overall_winner": "compare"
+                },
+                "recommendations": [
+                    {
+                        "category": "schema_markup",
+                        "priority": "high",
+                        "title": "Implementar schemas faltantes",
+                        "missing_schemas": ["LocalBusiness", "Product"]
+                    }
+                ]
+            }
+        }
+
+

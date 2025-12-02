@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, Any
 
 # Importamos tu modelo (ajusta la ruta según tu estructura)
 from app.models.audit import AuditReport
@@ -15,10 +15,9 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    PageBreak, Preformatted, Image
+    PageBreak, Preformatted
 )
-from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
-
+from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER
 
 class ReportGenerator:
     def __init__(self, audit: AuditReport):
@@ -27,20 +26,19 @@ class ReportGenerator:
         """
         self.audit = audit
 
-        # 1. Extracción segura de datos anidados (Dicts dentro del Objeto)
+        # 1. Extracción segura de datos
         self.lh_data = self.audit.lighthouse_data or {}
         self.seo_data = self.audit.seo_analysis or {}
         self.ai_data = self.audit.ai_suggestions or {}
 
-        # 2. Determinar URL y Dominio para la carpeta
-        self.url = self.lh_data.get('url') or self.seo_data.get('onpage_seo', {}).get(
-            'canonical') or f"audit-{self.audit.id}"
+        # 2. Determinar URL y Dominio
+        self.url = self.lh_data.get('url') or self.seo_data.get('onpage_seo', {}).get('canonical') or f"audit-{self.audit.id}"
 
         # Limpieza de dominio para nombre de carpeta
         clean_domain = self.url.replace('https://', '').replace('http://', '').split('/')[0]
         clean_domain = re.sub(r'[^\w\-_\.]', '_', clean_domain)
 
-        # 3. Configurar rutas: storage/reports/[dominio]/
+        # 3. Configurar rutas
         self.base_dir = Path("storage/reports") / clean_domain
         self.base_dir.mkdir(parents=True, exist_ok=True)
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M")
@@ -55,14 +53,14 @@ class ReportGenerator:
         # Estilo Justificado estándar
         self.styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY, leading=12, fontSize=10))
 
-        # Estilo para Listas (Markdown bullets) - AQUÍ ESTABA EL ERROR, AHORA SE DEFINE ACÁ
+        # Estilo para Listas (Markdown bullets)
         self.styles.add(ParagraphStyle(
             name='MarkdownList',
             parent=self.styles['Normal'],
-            leftIndent=20,  # Indentación a la izquierda
+            leftIndent=20,      # Indentación a la izquierda
             firstLineIndent=0,  # Primera línea alineada
             spaceAfter=5,
-            bulletIndent=10  # Indentación de la viñeta (dentro del estilo)
+            bulletIndent=10     # Indentación de la viñeta
         ))
 
         # Estilo para bloques de código
@@ -79,13 +77,14 @@ class ReportGenerator:
     def _get_score_color(self, score: Union[float, None]):
         """Retorna color verde/naranja/rojo según el score."""
         if score is None: return colors.grey
-        if score >= 90: return colors.HexColor("#27ae60")  # Verde
-        if score >= 50: return colors.HexColor("#f39c12")  # Naranja
-        return colors.HexColor("#c0392b")  # Rojo
+        if score >= 90: return colors.HexColor("#27ae60") # Verde
+        if score >= 50: return colors.HexColor("#f39c12") # Naranja
+        return colors.HexColor("#c0392b") # Rojo
 
     def _parse_markdown_to_flowables(self, text: str) -> List:
         """
         Convierte el Markdown de la IA en elementos visuales PDF.
+        INCLUYE PROTECCIÓN CONTRA TAGS HTML/XML MAL FORMADOS.
         """
         if not text: return []
 
@@ -94,12 +93,24 @@ class ReportGenerator:
         in_code = False
         code_buff = []
 
+        # Función auxiliar para limpiar texto antes de pasarlo a ReportLab
+        def clean_xml(raw_text):
+            # 1. Escapar caracteres XML reservados (<, >, &)
+            # Esto convierte "<img>" en "&lt;img&gt;" para que se vea como texto y no rompa el parser
+            safe_text = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+            # 2. Re-aplicar formato de negritas (Markdown ** -> ReportLab <b>)
+            # Como ya escapamos los <, ahora podemos insertar nuestros propios tags <b> seguros
+            return re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe_text)
+
         for line in lines:
-            # Detectar Bloques de Código (```)
+            # --- Bloques de Código ---
             if line.strip().startswith("```"):
                 if in_code:
                     # Cerrar bloque y renderizar
-                    content = "\n".join(code_buff).replace('<', '&lt;').replace('>', '&gt;')
+                    content = "\n".join(code_buff)
+                    # Escapar contenido del código también
+                    content = content.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                     flowables.append(Preformatted(content, self.styles["CodeBlock"]))
                     flowables.append(Spacer(1, 6))
                     code_buff = []
@@ -112,27 +123,35 @@ class ReportGenerator:
                 code_buff.append(line)
                 continue
 
-            # Procesar Texto Markdown Normal
+            # --- Texto Normal ---
             line = line.strip()
             if not line: continue
 
+            # Detectar Headers
             if line.startswith("###"):
                 txt = line.replace("###", "").strip()
-                flowables.append(Paragraph(f"<b><font size=11 color='#34495e'>{txt}</font></b>", self.styles["Normal"]))
+                # Limpiamos el texto del título
+                processed_txt = clean_xml(txt)
+                flowables.append(Paragraph(f"<b><font size=11 color='#34495e'>{processed_txt}</font></b>", self.styles["Normal"]))
+
             elif line.startswith("##"):
                 txt = line.replace("##", "").strip()
+                processed_txt = clean_xml(txt)
                 flowables.append(Spacer(1, 8))
-                flowables.append(Paragraph(f"<b><font size=13 color='#2980b9'>{txt}</font></b>", self.styles["Normal"]))
+                flowables.append(Paragraph(f"<b><font size=13 color='#2980b9'>{processed_txt}</font></b>", self.styles["Normal"]))
                 flowables.append(Spacer(1, 4))
+
+            # Detectar Listas
             elif line.startswith("- ") or line.startswith("* "):
                 txt = line[2:]
-                txt = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', txt)  # Negritas
+                # Limpiamos el texto de la lista
+                processed_txt = clean_xml(txt)
+                flowables.append(Paragraph(f"&bull; {processed_txt}", self.styles["MarkdownList"]))
 
-                # CORRECCIÓN: Usamos el estilo 'MarkdownList' en lugar de pasar bulletIndent como argumento
-                flowables.append(Paragraph(f"&bull; {txt}", self.styles["MarkdownList"]))
+            # Párrafo Normal
             else:
-                line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
-                flowables.append(Paragraph(line, self.styles["Justify"]))
+                processed_txt = clean_xml(line)
+                flowables.append(Paragraph(processed_txt, self.styles["Justify"]))
 
         return flowables
 
@@ -148,7 +167,7 @@ class ReportGenerator:
         story.append(Paragraph(f"<b>Generado:</b> {datetime.now().strftime('%d/%m/%Y %H:%M')}", self.styles["Normal"]))
         story.append(Spacer(1, 20))
 
-        # --- 2. PUNTAJES (Scores Directos del Objeto) ---
+        # --- 2. PUNTAJES ---
         scores = [
             self.audit.performance_score,
             self.audit.seo_score,
@@ -261,6 +280,7 @@ class ReportGenerator:
                 story.append(Paragraph(f"Schema #{idx}: <b>{s_type}</b>", self.styles["Normal"]))
 
                 json_str = json.dumps(schema, indent=2, ensure_ascii=False)
+                # Escapar también aquí por si acaso
                 json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
                 story.append(Preformatted(json_str, self.styles["CodeBlock"]))
@@ -272,10 +292,9 @@ class ReportGenerator:
     def generate_excel(self) -> str:
         filename = self.base_dir / f"Analitica_{self.timestamp}.xlsx"
 
-        # Helper para limpiar zonas horarias de las fechas (Fix para Excel)
+        # Helper para limpiar zonas horarias (Fix para Excel)
         def _clean_dt(dt):
             if not dt: return None
-            # Si tiene info de zona horaria, la quitamos (la hacemos naive)
             if dt.tzinfo is not None:
                 return dt.replace(tzinfo=None)
             return dt
@@ -283,10 +302,9 @@ class ReportGenerator:
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
             # Hoja 1: Dashboard
             summary = {
-                'ID': [str(self.audit.id)], # Convertir UUID a str por seguridad
+                'ID': [str(self.audit.id)],
                 'URL': [self.url],
                 'Status': [self.audit.status.value],
-                # AQUI ESTABA EL ERROR: Limpiamos la fecha
                 'Created At': [_clean_dt(self.audit.created_at)],
                 'Completed At': [_clean_dt(self.audit.completed_at)],
                 'Performance': [self.audit.performance_score],
