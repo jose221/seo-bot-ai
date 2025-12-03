@@ -137,6 +137,7 @@ class AuditComparisonResponse(BaseModel):
     overall_summary: Dict[str, Any] = Field(
         description="Resumen general comparando contra todos los competidores"
     )
+    ai_schema_comparison: str
 
     class Config:
         json_schema_extra = {
@@ -161,7 +162,8 @@ class AuditComparisonResponse(BaseModel):
                     "best_in_performance": "base",
                     "best_in_seo": "competitor1",
                     "areas_to_improve": ["schema_markup", "core_web_vitals"]
-                }
+                },
+                "ai_schema_comparison": "El sitio base tiene un 80% de schemas implementados, mientras que los competidores tienen un promedio del 65%. Se recomienda añadir los siguientes schemas: Product, FAQ, HowTo."
             }
         }
 

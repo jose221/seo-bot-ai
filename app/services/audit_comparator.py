@@ -284,13 +284,54 @@ class AuditComparator:
         request = ChatCompletionRequest(
             messages=[user_message],
             model="deepseek-chat",
-            stream=False
+            stream=False,
+            tools=["web_search"]
         )
 
         response = await self.ai_client.chat_completion(request, token)
         return response.get_content()
 
     # Métodos auxiliares
+
+    async def generate_ai_schema_comparison(
+            self,
+            base_audit: AuditReport,
+            compare_audits: List[AuditReport],
+            token: str
+    ):
+        template_schemas_compare = self.ai_client.jinja_env.get_template("schemas_markup_comparison.jinja")
+        competitors = []
+        base_schemas = []
+        if base_audit.seo_analysis and 'schema_markup' in base_audit.seo_analysis:
+            base_schemas = base_audit.seo_analysis['schema_markup']
+
+        for compare_audit in compare_audits:
+            if compare_audit.seo_analysis and 'schema_markup' in compare_audit.seo_analysis:
+                compare_schemas = compare_audit.seo_analysis['schema_markup']
+                competitors.append({"url": "NA", "schemas": compare_schemas})
+        params = {
+            "base_url": "NA",
+            "business_type": "Agencia de Viajes (OTA)",
+            "schemas": base_schemas,  # Lista de dicts
+            "competitors": competitors
+        }
+        prompt_content = template_schemas_compare.render(**params)
+        from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
+
+        user_message = ChatMessage(
+            role=MessageRole.USER,
+            content=prompt_content
+        )
+
+        request = ChatCompletionRequest(
+            messages=[user_message],
+            model="deepseek-chat",
+            stream=False,
+            tools=["web_search"]
+        )
+
+        response = await self.ai_client.chat_completion(request, token)
+        return response.get_content()
 
     def _get_comparison_status(self, difference: float) -> str:
         """Obtener estado de comparación basado en diferencia"""

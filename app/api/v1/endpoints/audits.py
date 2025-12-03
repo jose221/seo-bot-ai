@@ -370,6 +370,7 @@ async def audits_compare(
     _cache = Cache(table_name="audits_reports_compare_")
     comparator = get_audit_comparator()
 
+    competitors_audit = []
     # Procesar cada competidor
     for competitor_id in audit_request.web_page_id_to_compare:
         try:
@@ -412,17 +413,17 @@ async def audits_compare(
                 try:
                     req_ai_analysis_params = dict(
                         base_url=base_webpage.url,
-                        compare_url=competitor_webpage.url,
-                        token=auth_token
+                        compare_url=competitor_webpage.url
                     )
                     ai_analysis = await _cache.loadFromCacheAsync(
                         params=req_ai_analysis_params,
                         prefix="ai_analysis_compare_",
-                        ttl=3600,
+                        ttl=36000,
                         callback_async=comparator.generate_ai_comparison,
                         **req_ai_analysis_params,
                         base_audit=base_audit,
                         compare_audit=competitor_audit,
+                        token=auth_token
                     )
                     comparison_report['ai_analysis'] = ai_analysis
                 except Exception as e:
@@ -440,6 +441,7 @@ async def audits_compare(
                 recommendations=comparison_report['recommendations'],
                 ai_analysis=comparison_report.get('ai_analysis')
             ))
+            competitors_audit.append(competitor_audit)
 
         except Exception as e:
             print(f"❌ Error procesando competidor {competitor_id}: {str(e)}")
@@ -455,13 +457,20 @@ async def audits_compare(
 
     # Generar resumen general consolidado
     overall_summary = _generate_overall_summary(base_audit, comparisons)
-
-    return audit_schemas.AuditComparisonResponse(
+    response_generate_ai_schema_comparison = await comparator.generate_ai_schema_comparison(
+        base_audit=base_audit,
+        compare_audits=competitors_audit,
+        token=auth_token
+    )
+    response_f = audit_schemas.AuditComparisonResponse(
         base_url=base_webpage.url,
         comparisons=comparisons,
-        overall_summary=overall_summary
+        overall_summary=overall_summary,
+        ai_schema_comparison=response_generate_ai_schema_comparison
     )
-
+    report = ReportGenerator(audit=base_audit).generate_comparison_reports(response_f)
+    print(report)
+    return response_f
 
 def _generate_overall_summary(base_audit: AuditReport, comparisons: list) -> Dict[str, Any]:
     """
