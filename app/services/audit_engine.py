@@ -114,7 +114,7 @@ class AuditEngine:
         try:
             # --- Virtual Display Logic for Ubuntu Server ---
             # Detect if running on Linux without a physical display
-            if sys.platform.startswith('linux') and os.environ.get('DISPLAY') is None:
+            if sys.platform.startswith('linux'):
                 try:
                     from pyvirtualdisplay import Display
                     print("🖥️  Starting Xvfb (Virtual Display) for nodriver evasion...")
