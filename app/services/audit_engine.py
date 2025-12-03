@@ -1,263 +1,390 @@
-"""
-Motor de auditoría web usando Playwright y Lighthouse.
-Realiza análisis técnicos de páginas web.
-"""
 import asyncio
+import re
 import json
+import sys
+import os
 from typing import Dict, Any, Optional
-from playwright.async_api import async_playwright, Page, Browser
 from datetime import datetime
+
+# Playwright Imports
+from playwright.async_api import async_playwright, Page, Browser
+
+# Nodriver Import (Fallback)
+import nodriver as uc
 
 from app.core.config import get_settings
 
-
 class AuditEngine:
-    """Motor de auditoría para análisis de sitios web"""
+    """
+    Web Audit Engine with Hybrid Strategy:
+    1. Primary: Playwright (Optimized for speed/resources)
+    2. Fallback: Nodriver (Optimized for evasion against DataDome/Cloudflare)
+    """
 
     def __init__(self):
         self.settings = get_settings()
         self.browser: Optional[Browser] = None
 
     async def _init_browser(self):
-        """Inicializar navegador Playwright"""
+        """Initialize Playwright browser with stealth arguments."""
         if self.browser is None:
             playwright = await async_playwright().start()
+
+            browser_args = [
+                '--disable-blink-features=AutomationControlled',
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-infobars',
+                '--window-position=0,0',
+                '--ignore-certificate-errors',
+                '--disable-extensions',
+                '--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            ]
+
             self.browser = await playwright.chromium.launch(
                 headless=True,
-                args=[
-                    '--no-sandbox',
-                    '--disable-setuid-sandbox',
-                    '--disable-dev-shm-usage'
-                ]
+                args=browser_args
             )
 
     async def _close_browser(self):
-        """Cerrar navegador"""
+        """Clean up Playwright resources."""
         if self.browser:
             await self.browser.close()
             self.browser = None
 
-    async def execute_navigation_instructions(
-        self,
-        page: Page,
-        instructions: Optional[str]
-    ) -> bool:
-        """
-        Ejecutar instrucciones de navegación antes de auditar.
+    async def _apply_playwright_stealth(self, page: Page):
+        """Manual stealth injection for Playwright."""
+        await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+        await page.add_init_script("Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]})")
+        await page.add_init_script("""
+            const originalQuery = window.navigator.permissions.query;
+            window.navigator.permissions.query = (parameters) => (
+                parameters.name === 'notifications' ?
+                    Promise.resolve({ state: Notification.permission }) :
+                    originalQuery(parameters)
+            );
+        """)
 
-        Args:
-            page: Página de Playwright
-            instructions: Texto con instrucciones (ej. "click en #accept-cookies")
-
-        Returns:
-            True si se ejecutaron exitosamente, False si hubo errores
+    def _deserialize_nodriver_data(self, data: Any) -> Any:
         """
-        if not instructions or instructions.strip() == "":
-            return True
+        Deserializa recursivamente la estructura cruda de CDP (Chrome DevTools Protocol)
+        que nodriver devuelve a veces (listas de pares clave-valor y wrappers).
+        """
+        # Caso 0: Manejo explícito de tipos null/undefined de CDP (que a veces no traen 'value')
+        if isinstance(data, dict) and data.get('type') in ('null', 'undefined'):
+            return None
+
+        # Caso 1: Wrapper de valor {'type': '...', 'value': ...}
+        if isinstance(data, dict) and 'type' in data and 'value' in data:
+            if data['type'] == 'object':
+                return self._deserialize_nodriver_data(data['value'])
+            return data['value']
+
+        # Caso 2: Listas (pueden ser objetos serializados como listas de pares KV)
+        if isinstance(data, list):
+            # Heurística: Si es una lista donde todos los elementos son listas de 2 items [str, any]
+            # asumimos que es un objeto (diccionario)
+            is_kv_list = True
+            if not data:
+                return []
+
+            for item in data:
+                if not (isinstance(item, list) and len(item) == 2 and isinstance(item[0], str)):
+                    is_kv_list = False
+                    break
+
+            if is_kv_list:
+                return {item[0]: self._deserialize_nodriver_data(item[1]) for item in data}
+
+            # Si no es KV list, es una lista normal, procesamos sus elementos
+            return [self._deserialize_nodriver_data(item) for item in data]
+
+        # Caso Base: Primitivos
+        return data
+
+    async def _execute_nodriver_audit(self, url: str) -> Dict[str, Any]:
+        """
+        Fallback Method: Executes audit using 'nodriver' (Chrome CDP).
+        Used when Playwright is detected by DataDome.
+        """
+        print(f"🛡️ Activating Fallback Protocol (nodriver) for: {url}")
+        browser = None
+        display = None
 
         try:
-            # Esperar un poco para que cargue la página
-            await asyncio.sleep(2)
+            # --- Virtual Display Logic for Ubuntu Server ---
+            # Detect if running on Linux without a physical display
+            if sys.platform.startswith('linux') and os.environ.get('DISPLAY') is None:
+                try:
+                    from pyvirtualdisplay import Display
+                    print("🖥️  Starting Xvfb (Virtual Display) for nodriver evasion...")
+                    display = Display(visible=0, size=(1920, 1080))
+                    display.start()
+                except ImportError:
+                    print("⚠️  Warning: pyvirtualdisplay not installed. Nodriver might fail on headless server.")
+                    print("ℹ️  Fix: pip install pyvirtualdisplay && sudo apt-get install xvfb")
 
-            # Analizar instrucciones simples
-            # Formato esperado: "click en #selector" o "esperar 3 segundos"
-            for line in instructions.lower().split('\n'):
-                line = line.strip()
+            # Start real Chrome instance (High evasion success rate)
+            # headless=False is CRITICAL for DataDome bypass.
+            # On Ubuntu Server, Xvfb handles the GUI requirement.
+            browser = await uc.start(
+                headless=False,
+                browser_args=["--window-size=1920,1080", "--no-first-run"]
+            )
 
-                if not line:
-                    continue
+            page = await browser.get(url)
 
-                if 'esperar' in line or 'wait' in line:
-                    # Extraer segundos
-                    import re
-                    match = re.search(r'(\d+)', line)
-                    if match:
-                        seconds = int(match.group(1))
-                        await asyncio.sleep(seconds)
+            # Smart wait for body instead of fixed sleep
+            await page.wait_for("body", timeout=60)
 
-                elif 'click' in line:
-                    # Extraer selector
-                    import re
-                    # Buscar algo entre comillas o después de "en"
-                    match = re.search(r'["\']([^"\']+)["\']|en\s+([#.\w\-\[\]]+)', line)
-                    if match:
-                        selector = match.group(1) or match.group(2)
-                        try:
-                            await page.click(selector, timeout=5000)
-                            await asyncio.sleep(1)
-                        except Exception as e:
-                            print(f"⚠️  No se pudo hacer click en {selector}: {e}")
+            # Double check if even nodriver was blocked
+            content = await page.get_content()
+            if "captcha-delivery" in content or "DataDome" in content:
+                raise Exception("Nodriver also blocked by DataDome.")
 
-            return True
+            # Extract metrics using JS evaluation via nodriver
+            metrics_data_raw = await page.evaluate("""
+                (function() {
+                    const nav = performance.getEntriesByType("navigation")[0] || {};
+                    return {
+                        timing: window.performance.timing.toJSON(),
+                        web_vitals: {
+                            lcp: window.largestContentfulPaint || null,
+                            fid: window.firstInputDelay || null,
+                            cls: window.cumulativeLayoutShift || null
+                        },
+                        seo: {
+                            title: document.title,
+                            metaDescription: document.querySelector('meta[name="description"]')?.content || null,
+                            h1Count: document.querySelectorAll('h1').length,
+                            imageCount: document.querySelectorAll('img').length,
+                            imagesWithoutAlt: document.querySelectorAll('img:not([alt])').length,
+                            linksCount: document.querySelectorAll('a').length,
+                            hasCanonical: !!document.querySelector('link[rel="canonical"]'),
+                            hasViewport: !!document.querySelector('meta[name="viewport"]')
+                        },
+                        loadDuration: nav.loadEventEnd - nav.startTime || 0
+                    }
+                })()
+            """)
+
+            # CRITICAL FIX: Parse raw CDP structure to Python Dict
+            metrics_data = self._deserialize_nodriver_data(metrics_data_raw)
+
+            # Asegurar que sea un dict (fallback por seguridad)
+            if not isinstance(metrics_data, dict):
+                print(f"⚠️ Warning: metrics_data structure unexpected: {type(metrics_data)}")
+                metrics_data = {'seo': {}, 'web_vitals': {}, 'loadDuration': 0, 'timing': {}}
+
+            # Construct the result dictionary matching Playwright's output structure
+            scores = self._estimate_lighthouse_scores(
+                metrics_data.get('seo', {}),
+                {'loadDuration': metrics_data.get('loadDuration', 0)},
+                content
+            )
+
+            return {
+                'url': url,
+                'timestamp': datetime.utcnow().isoformat(),
+                'status_code': 200, # Nodriver handles connection errors via exception
+                'html_content': content[:15000],
+                'html_content_raw': content,
+                'performance_score': scores['performance'],
+                'seo_score': scores['seo'],
+                'accessibility_score': scores['accessibility'],
+                'best_practices_score': scores['best_practices'],
+                'lcp': metrics_data.get('web_vitals', {}).get('lcp'),
+                'cls': metrics_data.get('web_vitals', {}).get('cls'),
+                'seo_analysis': metrics_data.get('seo', {}),
+                'performance_metrics': metrics_data.get('timing', {}),
+                'method': 'nodriver_fallback'
+            }
 
         except Exception as e:
-            print(f"⚠️  Error ejecutando instrucciones: {e}")
-            return False
+            print(f"❌ Fallback (nodriver) failed: {e}")
+            return {
+                "error": True,
+                "message": f"Bloqueo Anti-Bot Persistente (DataDome). Falló Playwright y Nodriver. Error: {str(e)}",
+                "url": url
+            }
+        finally:
+            if browser:
+                try:
+                    browser.stop()
+                except:
+                    pass
+            # Clean up virtual display
+            if display:
+                try:
+                    display.stop()
+                except:
+                    pass
 
     async def run_lighthouse_audit(
-        self,
-        url: str,
-        instructions: Optional[str] = None
+            self,
+            url: str,
+            instructions: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Ejecutar auditoría Lighthouse completa.
-
-        Args:
-            url: URL a auditar
-            instructions: Instrucciones de navegación previas
-
-        Returns:
-            Dict con métricas de Lighthouse y HTML de la página
+        Main entry point for auditing.
+        Tries Playwright first, switches to Nodriver if blocked.
         """
         await self._init_browser()
+        context = None
 
         try:
-            # Crear contexto y página
+            # 1. Playwright Execution Strategy
             context = await self.browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
-                user_agent='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+                locale='es-MX',
+                timezone_id='America/Mexico_City',
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             )
+
             page = await context.new_page()
+            await self._apply_playwright_stealth(page)
 
-            # Navegar a la URL
-            print(f"🌐 Navegando a: {url}")
-            await page.goto(url, wait_until='networkidle', timeout=30000)
+            print(f"🌐 [Playwright] Navigating to: {url}")
 
-            # Ejecutar instrucciones si existen
+            try:
+                response = await page.goto(url, wait_until='networkidle', timeout=450000)
+            except Exception:
+                response = None
+
+            # 2. Block Detection & Fallback Trigger
+            await asyncio.sleep(2) # Allow JS redirects to happen
+            content_check = await page.content()
+
+            if "captcha-delivery" in content_check or "DataDome" in content_check:
+                print("🚨 DataDome Block detected in Playwright.")
+
+                # Cleanup Playwright context before switching
+                await context.close()
+                await self._close_browser()
+
+                # TRIGGER FALLBACK
+                return await self._execute_nodriver_audit(url)
+
+            # 3. Standard Playwright Extraction (If not blocked)
             if instructions:
-                print(f"📋 Ejecutando instrucciones de navegación...")
-                await self.execute_navigation_instructions(page, instructions)
+                pass
 
-            # Capturar HTML
             html_content = await page.content()
 
-            # Capturar métricas de performance usando Playwright
+            # JS Injection for metrics
             performance_metrics = await page.evaluate("""() => {
+                const nav = performance.getEntriesByType("navigation")[0] || {};
                 return {
                     timing: window.performance.timing,
-                    navigation: window.performance.navigation,
-                    memory: window.performance.memory || {}
+                    loadDuration: nav.loadEventEnd - nav.startTime || 0
                 }
             }""")
 
-            # Capturar Core Web Vitals si están disponibles
-            web_vitals = await page.evaluate("""() => {
-                return {
-                    lcp: window.largestContentfulPaint || null,
-                    fid: window.firstInputDelay || null,
-                    cls: window.cumulativeLayoutShift || null
-                }
-            }""")
+            web_vitals = await page.evaluate("""() => ({
+                lcp: window.largestContentfulPaint || null,
+                cls: window.cumulativeLayoutShift || null
+            })""")
 
-            # Analizar estructura SEO básica
-            seo_analysis = await page.evaluate("""() => {
-                return {
-                    title: document.title,
-                    metaDescription: document.querySelector('meta[name="description"]')?.content || null,
-                    h1Count: document.querySelectorAll('h1').length,
-                    imageCount: document.querySelectorAll('img').length,
-                    imagesWithoutAlt: document.querySelectorAll('img:not([alt])').length,
-                    linksCount: document.querySelectorAll('a').length,
-                    hasCanonical: !!document.querySelector('link[rel="canonical"]'),
-                    hasRobots: !!document.querySelector('meta[name="robots"]'),
-                    hasViewport: !!document.querySelector('meta[name="viewport"]')
-                }
-            }""")
+            seo_analysis = await page.evaluate("""() => ({
+                title: document.title,
+                metaDescription: document.querySelector('meta[name="description"]')?.content || null,
+                h1Count: document.querySelectorAll('h1').length,
+                imageCount: document.querySelectorAll('img').length,
+                imagesWithoutAlt: document.querySelectorAll('img:not([alt])').length,
+                hasViewport: !!document.querySelector('meta[name="viewport"]')
+            })""")
 
-            # Simular scores de Lighthouse (en producción real usarías lighthouse npm)
-            # Por ahora generamos scores estimados basados en análisis básico
             lighthouse_scores = self._estimate_lighthouse_scores(
                 seo_analysis,
                 performance_metrics,
                 html_content
             )
 
-            await context.close()
-
-            # Construir resultado
-            result = {
+            return {
                 'url': url,
                 'timestamp': datetime.utcnow().isoformat(),
-                'html_content': html_content[:10000],  # Limitar para no saturar DB
+                'status_code': response.status if response else 0,
+                'html_content': html_content[:15000],
                 'html_content_raw': html_content,
                 'performance_score': lighthouse_scores['performance'],
                 'seo_score': lighthouse_scores['seo'],
                 'accessibility_score': lighthouse_scores['accessibility'],
                 'best_practices_score': lighthouse_scores['best_practices'],
                 'lcp': web_vitals.get('lcp'),
-                'fid': web_vitals.get('fid'),
                 'cls': web_vitals.get('cls'),
                 'seo_analysis': seo_analysis,
-                'performance_metrics': {
-                    'loadTime': performance_metrics['timing']['loadEventEnd'] - performance_metrics['timing']['navigationStart']
-                    if performance_metrics['timing']['loadEventEnd'] > 0 else None
-                }
+                'performance_metrics': performance_metrics,
+                'method': 'playwright_stealth'
             }
 
-            print(f"✅ Auditoría completada para {url}")
-            return result
-
         except Exception as e:
-            print(f"❌ Error en auditoría: {str(e)}")
-            raise Exception(f"Error durante la auditoría: {str(e)}")
+            print(f"❌ Critical Error in Playwright Audit: {str(e)}")
+            # Try fallback one last time if it was a generic error that looks like a timeout/block
+            if "Timeout" in str(e) or "Target closed" in str(e):
+                return await self._execute_nodriver_audit(url)
+
+            return {
+                "error": True,
+                "message": str(e),
+                "url": url
+            }
 
         finally:
+            if context:
+                try: await context.close()
+                except: pass
             await self._close_browser()
 
     def _estimate_lighthouse_scores(
-        self,
-        seo_analysis: Dict[str, Any],
-        performance_metrics: Dict[str, Any],
-        html_content: str
+            self,
+            seo_analysis: Dict[str, Any],
+            performance_metrics: Dict[str, Any],
+            html_content: str
     ) -> Dict[str, float]:
         """
-        Estimar scores de Lighthouse basados en análisis básico.
-        En producción real, esto se reemplaza con Lighthouse real.
+        Shared logic to calculate scores, used by both Playwright and Nodriver methods.
         """
-        # SEO Score
+        # SEO Calculation
         seo_score = 100.0
         if not seo_analysis.get('title'): seo_score -= 20
         if not seo_analysis.get('metaDescription'): seo_score -= 15
         if seo_analysis.get('h1Count', 0) == 0: seo_score -= 10
         if seo_analysis.get('h1Count', 0) > 1: seo_score -= 5
         if not seo_analysis.get('hasViewport'): seo_score -= 15
-        if not seo_analysis.get('hasCanonical'): seo_score -= 5
 
-        # Accessibility Score
+        # Accessibility Calculation
         accessibility_score = 100.0
-        if seo_analysis.get('imagesWithoutAlt', 0) > 0:
-            ratio = seo_analysis['imagesWithoutAlt'] / max(seo_analysis['imageCount'], 1)
-            accessibility_score -= min(ratio * 50, 30)
+        img_count = seo_analysis.get('imageCount', 0)
+        if img_count > 0:
+            bad_imgs = seo_analysis.get('imagesWithoutAlt', 0)
+            ratio = bad_imgs / img_count
+            accessibility_score -= (ratio * 40)
 
-        # Performance Score (simplificado)
-        load_time = performance_metrics.get('timing', {}).get('loadEventEnd', 0) - \
-                   performance_metrics.get('timing', {}).get('navigationStart', 0)
-
+        # Performance Calculation
+        load_time = performance_metrics.get('loadDuration', 0)
         performance_score = 100.0
-        if load_time > 5000: performance_score = 50.0
-        elif load_time > 3000: performance_score = 70.0
-        elif load_time > 2000: performance_score = 85.0
+
+        if load_time > 6000: performance_score = 40.0
+        elif load_time > 4000: performance_score = 60.0
+        elif load_time > 2000: performance_score = 80.0
+        elif load_time > 0: performance_score = 95.0
 
         # Best Practices
-        best_practices_score = 85.0  # Base score
-        if len(html_content) > 100000: best_practices_score -= 10  # HTML muy grande
+        best_practices_score = 90.0
+        if len(html_content) > 200000: best_practices_score -= 15
 
         return {
-            'performance': max(0, min(100, performance_score)),
-            'seo': max(0, min(100, seo_score)),
-            'accessibility': max(0, min(100, accessibility_score)),
-            'best_practices': max(0, min(100, best_practices_score))
+            'performance': round(max(0, min(100, performance_score)), 1),
+            'seo': round(max(0, min(100, seo_score)), 1),
+            'accessibility': round(max(0, min(100, accessibility_score)), 1),
+            'best_practices': round(max(0, min(100, best_practices_score)), 1)
         }
 
-
-# Singleton
+# Singleton Pattern
 _audit_engine: Optional[AuditEngine] = None
 
-
 def get_audit_engine() -> AuditEngine:
-    """Obtener instancia del motor de auditoría"""
     global _audit_engine
     if _audit_engine is None:
         _audit_engine = AuditEngine()
     return _audit_engine
-

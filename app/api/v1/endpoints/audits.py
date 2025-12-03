@@ -5,7 +5,7 @@ Permite iniciar análisis y consultar resultados.
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
 from sqlmodel import select, desc
 from sqlalchemy import String, cast as sql_cast
-from typing import Optional
+from typing import Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime, timezone
 
@@ -61,7 +61,7 @@ async def run_audit_task(
         req_lighthouse_params = dict(url=webpage.url, instructions=webpage.instructions)
         lighthouse_result = await _cache.loadFromCacheAsync(
             params=req_lighthouse_params,
-            prefix="lighthouse_report_",
+            prefix="___lighthouse_report___",
             callback_async=audit_engine.run_lighthouse_audit,
             **req_lighthouse_params
         )
@@ -325,14 +325,14 @@ async def audits_compare(
         token: str = Depends(lambda: None)
 ):
     """
-    Comparar dos auditorías SEO y generar reporte estructurado.
+    Comparar una página base contra múltiples competidores.
 
     Compara:
     - Schemas estructurados (JSON-LD)
     - Métricas de rendimiento (Lighthouse)
     - Core Web Vitals
     - SEO on-page
-    - Genera recomendaciones accionables
+    - Genera recomendaciones accionables basadas en todas las comparaciones
     """
     # Obtener página base
     statement = select(WebPage).where(
@@ -341,77 +341,184 @@ async def audits_compare(
         WebPage.is_active == True
     )
     result = await session.execute(statement)
-    webpage = result.scalars().first()
+    base_webpage = result.scalars().first()
 
-    # Obtener página a comparar
-    statement_to_compare = select(WebPage).where(
-        WebPage.id == audit_request.web_page_id_to_compare,
-        WebPage.user_id == current_user.id,
-        WebPage.is_active == True
-    )
-    result = await session.execute(statement_to_compare)
-    webpage_to_compare = result.scalars().first()
-
-    if not webpage or not webpage_to_compare:
+    if not base_webpage:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Target no encontrado o no tienes acceso"
+            detail="Target base no encontrado o no tienes acceso"
         )
 
-    # Obtener última auditoría completada de cada página
+    # Obtener auditoría completada de la página base
     base_audit_stmt = select(AuditReport).where(
-        AuditReport.web_page_id == webpage.id,
-        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value.upper()
+        AuditReport.web_page_id == base_webpage.id,
+        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
     ).order_by(desc(AuditReport.created_at)).limit(1)
 
     base_audit_result = await session.execute(base_audit_stmt)
     base_audit = base_audit_result.scalars().first()
 
-    compare_audit_stmt = select(AuditReport).where(
-        AuditReport.web_page_id == webpage_to_compare.id,
-        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value.upper()
-    ).order_by(desc(AuditReport.created_at)).limit(1)
-
-    compare_audit_result = await session.execute(compare_audit_stmt)
-    compare_audit = compare_audit_result.scalars().first()
-
-    if not base_audit or not compare_audit:
+    if not base_audit:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No hay auditorías completadas para comparar. Ejecuta auditorías primero."
+            detail=f"No hay auditorías completadas para la página base {base_webpage.url}"
         )
 
-    # Generar comparación estructurada
-    comparator = get_audit_comparator()
-    comparison_report = comparator.generate_comparison_report(
-        base_audit=base_audit,
-        compare_audit=compare_audit,
-        base_url=webpage.url,
-        compare_url=webpage_to_compare.url
-    )
+    # Inicializar estructuras para resultados
+    comparisons = []
     auth_token = getattr(current_user, '_token', None) or "dummy-token"
     _cache = Cache(table_name="audits_reports_compare_")
-    # Generar análisis de IA si se solicita
-    if audit_request.include_ai_analysis and auth_token:
-        try:
-            req_ai_analysis_params = dict(
-                base_url=webpage.url,
-                compare_url=webpage_to_compare.url,
-                token=auth_token
-            )
-            ai_analysis = await _cache.loadFromCacheAsync(
-                params=req_ai_analysis_params,
-                prefix="ai_analysis_compare_",
-                ttl=3600,
-                callback_async=comparator.generate_ai_comparison,
-                **req_ai_analysis_params,
-                base_audit=base_audit,
-                compare_audit=compare_audit,
-            )
-            comparison_report['ai_analysis'] = ai_analysis
-        except Exception as e:
-            print(f"⚠️ Error generando análisis de IA: {e}")
-            comparison_report['ai_analysis'] = None
+    comparator = get_audit_comparator()
 
-    return audit_schemas.AuditComparisonResponse(**comparison_report)
+    # Procesar cada competidor
+    for competitor_id in audit_request.web_page_id_to_compare:
+        try:
+            # Obtener página competidora
+            competitor_stmt = select(WebPage).where(
+                WebPage.id == competitor_id,
+                WebPage.user_id == current_user.id,
+                WebPage.is_active == True
+            )
+            competitor_result = await session.execute(competitor_stmt)
+            competitor_webpage = competitor_result.scalars().first()
+
+            if not competitor_webpage:
+                print(f"⚠️  Target {competitor_id} no encontrado, se omitirá")
+                continue
+
+            # Obtener auditoría completada del competidor
+            competitor_audit_stmt = select(AuditReport).where(
+                AuditReport.web_page_id == competitor_webpage.id,
+                sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
+            ).order_by(desc(AuditReport.created_at)).limit(1)
+
+            competitor_audit_result = await session.execute(competitor_audit_stmt)
+            competitor_audit = competitor_audit_result.scalars().first()
+
+            if not competitor_audit:
+                print(f"⚠️  No hay auditoría completada para {competitor_webpage.url}, se omitirá")
+                continue
+
+            # Generar comparación individual
+            comparison_report = comparator.generate_comparison_report(
+                base_audit=base_audit,
+                compare_audit=competitor_audit,
+                base_url=base_webpage.url,
+                compare_url=competitor_webpage.url
+            )
+
+            # Generar análisis de IA si se solicita
+            if audit_request.include_ai_analysis and auth_token:
+                try:
+                    req_ai_analysis_params = dict(
+                        base_url=base_webpage.url,
+                        compare_url=competitor_webpage.url,
+                        token=auth_token
+                    )
+                    ai_analysis = await _cache.loadFromCacheAsync(
+                        params=req_ai_analysis_params,
+                        prefix="ai_analysis_compare_",
+                        ttl=3600,
+                        callback_async=comparator.generate_ai_comparison,
+                        **req_ai_analysis_params,
+                        base_audit=base_audit,
+                        compare_audit=competitor_audit,
+                    )
+                    comparison_report['ai_analysis'] = ai_analysis
+                except Exception as e:
+                    print(f"⚠️ Error generando análisis de IA para {competitor_webpage.url}: {e}")
+                    comparison_report['ai_analysis'] = None
+
+            # Agregar resultado a la lista
+            comparisons.append(audit_schemas.SingleComparisonResult(
+                compare_url=comparison_report['compare_url'],
+                comparison_date=comparison_report.get('comparison_date'),
+                summary=comparison_report['summary'],
+                performance=comparison_report['performance'],
+                schemas=comparison_report['schemas'],
+                seo_analysis=comparison_report['seo_analysis'],
+                recommendations=comparison_report['recommendations'],
+                ai_analysis=comparison_report.get('ai_analysis')
+            ))
+
+        except Exception as e:
+            print(f"❌ Error procesando competidor {competitor_id}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            continue
+
+    if not comparisons:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se pudo generar ninguna comparación. Verifica que los competidores tengan auditorías completadas."
+        )
+
+    # Generar resumen general consolidado
+    overall_summary = _generate_overall_summary(base_audit, comparisons)
+
+    return audit_schemas.AuditComparisonResponse(
+        base_url=base_webpage.url,
+        comparisons=comparisons,
+        overall_summary=overall_summary
+    )
+
+
+def _generate_overall_summary(base_audit: AuditReport, comparisons: list) -> Dict[str, Any]:
+    """
+    Genera un resumen consolidado comparando contra todos los competidores.
+    """
+    # Recopilar todas las métricas
+    all_performance_scores = [base_audit.performance_score or 0]
+    all_seo_scores = [base_audit.seo_score or 0]
+    all_accessibility_scores = [base_audit.accessibility_score or 0]
+    all_lcp_values = [base_audit.lcp or 0]
+    all_cls_values = [base_audit.cls or 0]
+
+    for comp in comparisons:
+        perf = comp.performance.scores
+        all_performance_scores.append(perf.get('compare', {}).get('performance_score', 0))
+        all_seo_scores.append(perf.get('compare', {}).get('seo_score', 0))
+        all_accessibility_scores.append(perf.get('compare', {}).get('accessibility_score', 0))
+
+        cwv = comp.performance.core_web_vitals
+        all_lcp_values.append(cwv.get('compare', {}).get('lcp', 0))
+        all_cls_values.append(cwv.get('compare', {}).get('cls', 0))
+
+    # Calcular posición relativa
+    base_perf = base_audit.performance_score or 0
+    base_seo = base_audit.seo_score or 0
+
+    perf_rank = sum(1 for score in all_performance_scores if score > base_perf) + 1
+    seo_rank = sum(1 for score in all_seo_scores if score > base_seo) + 1
+
+    # Identificar áreas de mejora
+    areas_to_improve = []
+    if perf_rank > 1:
+        areas_to_improve.append("performance")
+    if seo_rank > 1:
+        areas_to_improve.append("seo")
+
+    # Recopilar todas las recomendaciones únicas
+    all_recommendations = []
+    seen_categories = set()
+    for comp in comparisons:
+        for rec in comp.recommendations:
+            category = rec.get('category', '')
+            if category not in seen_categories:
+                all_recommendations.append(rec)
+                seen_categories.add(category)
+
+    return {
+        "total_competitors": len(comparisons),
+        "performance_rank": f"{perf_rank}/{len(all_performance_scores)}",
+        "seo_rank": f"{seo_rank}/{len(all_seo_scores)}",
+        "is_best_performance": perf_rank == 1,
+        "is_best_seo": seo_rank == 1,
+        "areas_to_improve": areas_to_improve,
+        "top_recommendations": all_recommendations[:5],  # Top 5 recomendaciones
+        "competitive_advantage": {
+            "performance_above_average": base_perf > (sum(all_performance_scores) / len(all_performance_scores)),
+            "seo_above_average": base_seo > (sum(all_seo_scores) / len(all_seo_scores)),
+        }
+    }
 

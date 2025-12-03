@@ -30,4 +30,6 @@ lxml    # parser rápido para bs4
 
 reportlab
 openpyxl
-
+playwright-stealth
+nodriver
+pyvirtualdisplay

@@ -3,7 +3,7 @@ Schemas para Auditorías.
 Define DTOs para crear y consultar reportes de análisis.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from uuid import UUID
 from datetime import datetime
 from app.models.audit import AuditStatus
@@ -29,7 +29,7 @@ class AuditCreate(BaseModel):
 class AuditCompare(BaseModel):
     """Schema para iniciar una auditoría"""
     web_page_id: UUID = Field(..., description="ID del target base de la comparación")
-    web_page_id_to_compare: UUID = Field(..., description="ID del target a comparar")
+    web_page_id_to_compare: List[UUID] = Field(..., description="ID del target a comparar")
     include_ai_analysis: bool = Field(
         default=True,
         description="Si incluir análisis de IA (consume más tiempo)"
@@ -39,7 +39,7 @@ class AuditCompare(BaseModel):
         json_schema_extra = {
             "example": {
                 "web_page_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-                "web_page_id_to_compare": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "web_page_id_to_compare": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
                 "include_ai_analysis": True
             }
         }
@@ -118,9 +118,8 @@ class PerformanceComparisonResult(BaseModel):
     overall_better: str
 
 
-class AuditComparisonResponse(BaseModel):
-    """Respuesta completa de comparación de auditorías"""
-    base_url: str
+class SingleComparisonResult(BaseModel):
+    """Resultado de una comparación individual"""
     compare_url: str
     comparison_date: Optional[str]
     summary: Dict[str, Any]
@@ -130,22 +129,39 @@ class AuditComparisonResponse(BaseModel):
     recommendations: list[Dict[str, Any]]
     ai_analysis: Optional[str] = None
 
+
+class AuditComparisonResponse(BaseModel):
+    """Respuesta completa de comparación de auditorías con múltiples competidores"""
+    base_url: str
+    comparisons: list[SingleComparisonResult]
+    overall_summary: Dict[str, Any] = Field(
+        description="Resumen general comparando contra todos los competidores"
+    )
+
     class Config:
         json_schema_extra = {
             "example": {
                 "base_url": "https://example.com",
-                "compare_url": "https://competitor.com",
-                "summary": {
-                    "overall_winner": "compare"
-                },
-                "recommendations": [
+                "comparisons": [
                     {
-                        "category": "schema_markup",
-                        "priority": "high",
-                        "title": "Implementar schemas faltantes",
-                        "missing_schemas": ["LocalBusiness", "Product"]
+                        "compare_url": "https://competitor1.com",
+                        "summary": {
+                            "overall_winner": "base"
+                        },
+                        "recommendations": [
+                            {
+                                "category": "schema_markup",
+                                "priority": "high",
+                                "title": "Implementar schemas faltantes"
+                            }
+                        ]
                     }
-                ]
+                ],
+                "overall_summary": {
+                    "best_in_performance": "base",
+                    "best_in_seo": "competitor1",
+                    "areas_to_improve": ["schema_markup", "core_web_vitals"]
+                }
             }
         }
 
