@@ -4,9 +4,10 @@ FROM python:3.11-slim
 # Variables de entorno
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    NODE_VERSION=20
+    NODE_VERSION=20 \
+    DISPLAY=:99
 
-# Instalar dependencias del sistema
+# Instalar dependencias del sistema + Xvfb (Virtual Display)
 RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
@@ -31,7 +32,20 @@ RUN apt-get update && apt-get install -y \
     libxkbcommon0 \
     libxrandr2 \
     xdg-utils \
+    xvfb \
+    libxi6 \
+    libgconf-2-4 \
     && rm -rf /var/lib/apt/lists/*
+
+# Instalar Google Chrome Oficial (mejor evasión que Chromium)
+RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && \
+    apt-get update && \
+    apt-get install -y ./google-chrome-stable_current_amd64.deb && \
+    rm google-chrome-stable_current_amd64.deb && \
+    rm -rf /var/lib/apt/lists/*
+
+# Verificar instalación de Chrome
+RUN google-chrome --version
 
 # Instalar Node.js v20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
@@ -55,9 +69,16 @@ RUN playwright install --with-deps chromium
 # Copiar código de la aplicación
 COPY ./app ./app
 COPY ./main.py .
+COPY ./docker-entrypoint.sh .
+
+# Dar permisos de ejecución al entrypoint
+RUN chmod +x docker-entrypoint.sh
 
 # Exponer puerto
 EXPOSE 8000
+
+# Usar entrypoint para iniciar Xvfb primero
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
 # Comando de inicio
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

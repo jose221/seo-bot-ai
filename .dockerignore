@@ -1,0 +1,51 @@
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist
+build
+*.log
+
+# Entornos virtuales
+myenv/
+venv/
+env/
+ENV/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Archivos de test
+tests/
+pytest_cache/
+
+# Git
+.git/
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Documentación
+*.md
+docs/
+
+# Archivos temporales
+*.tmp
+.DS_Store
+storage/
+
+# Variables de entorno locales
+.env.local
+.env.development
+

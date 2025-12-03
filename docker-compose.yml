@@ -30,9 +30,18 @@ services:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/seo_bot_db
       HERANDRO_API_URL: https://herandro-services-api.herandro.com.mx
       SECRET_KEY: your-secret-key-change-in-production
+      DISPLAY: ":99"
     depends_on:
       db:
         condition: service_healthy
+    # Recursos necesarios para Chrome + Xvfb
+    shm_size: '2gb'
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
 
 volumes:
   postgres_data:
