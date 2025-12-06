@@ -1,6 +1,7 @@
+
 -- 1. Crear el usuario (Rol)
 -- Cambia 'tu_password_seguro_123' por la contraseña que quieras usar realmente
-CREATE USER seo_bot_user WITH PASSWORD 'Gonzales220.';
+CREATE USER seo_bot_user WITH PASSWORD 'Gonzales220';
 
 -- 2. Conceder permisos sobre la base de datos específica
 GRANT ALL PRIVILEGES ON DATABASE seo_bot_db TO seo_bot_user;

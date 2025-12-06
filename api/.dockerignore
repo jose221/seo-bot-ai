@@ -43,7 +43,7 @@ docs/
 # Archivos temporales
 *.tmp
 .DS_Store
-storage/
+api/storage/
 
 # Variables de entorno locales
 .env.local

@@ -59,27 +59,25 @@ RUN npm install -g lighthouse@12.2.1
 WORKDIR /app
 
 # Copiar requirements y instalar dependencias Python
-COPY requirements.txt .
+COPY ./api/requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Instalar navegadores Playwright
 RUN playwright install --with-deps chromium
 
-# Copiar código de la aplicación
-COPY ./app ./app
-COPY ./main.py .
-COPY ./docker-entrypoint.sh .
+# Copiar código de la aplicación desde el directorio api
+COPY ./api ./api
 
 # Dar permisos de ejecución al entrypoint
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x ./api/docker-entrypoint.sh
 
 # Exponer puerto
 EXPOSE 8000
 
 # Usar entrypoint para iniciar Xvfb primero
-ENTRYPOINT ["./docker-entrypoint.sh"]
+ENTRYPOINT ["./api/docker-entrypoint.sh"]
 
-# Comando de inicio
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Comando de inicio (ajustado para la nueva ruta)
+CMD ["uvicorn", "api.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
