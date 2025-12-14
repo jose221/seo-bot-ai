@@ -11,12 +11,15 @@ import {
   ApiRouteGuardImplementationRepository
 } from '@/app/infrastructure/repositories/auth/api-route-guard.implementation.repository';
 import {RouteGuardRepository} from '@/app/domain/repositories/auth/route-guard.repository';
+import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
+import {AuthImplementationRepository} from '@/app/infrastructure/repositories/auth/auth.implementation.repository';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes), provideClientHydration(withEventReplay()),
     { provide: TranslationRepository, useClass: TranslationImplementationRepository },
-    { provide: RouteGuardRepository, useClass: ApiRouteGuardImplementationRepository }
+    { provide: RouteGuardRepository, useClass: ApiRouteGuardImplementationRepository },
+    { provide: AuthRepository, useClass: AuthImplementationRepository }
   ]
 };
