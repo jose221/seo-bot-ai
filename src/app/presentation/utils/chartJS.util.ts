@@ -1,6 +1,6 @@
 import {Chart, ChartConfiguration, ChartData, ChartType, registerables} from 'chart.js';
 import ChartDataLabels from "chartjs-plugin-datalabels";
-import {ConfigChartInterface, CustomChartOptions, ItemsOptionsInterface} from "@/utils/models/chartJS.model";
+import {ConfigChartInterface, CustomChartOptions, ItemsOptionsInterface} from "@/app/presentation/utils/models/chartJS.model";
 
 
 export class ChartJSUtil {
