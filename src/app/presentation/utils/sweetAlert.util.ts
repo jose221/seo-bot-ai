@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import Swal, { SweetAlertOptions, SweetAlertResult } from 'sweetalert2';
-import {TranslationService} from '@/app/application/services/translation/translation.service';
+import {TranslationRepository} from '@/app/domain/repositories/translation/translation.repository';
 
 @Injectable({
   providedIn: 'root',
@@ -8,7 +8,7 @@ import {TranslationService} from '@/app/application/services/translation/transla
 
 export class SweetAlertUtil {
   swal = Swal;
-  constructor(private readonly _translationService: TranslationService) {
+  constructor(private readonly _translationService: TranslationRepository) {
   }
   // Crear un alerta con los parámetros predeterminados
   async success(title: string = "Good job!", text: string = "Process has been successfully", icon: any = "success", confirmButtonText: any= 'OK'): Promise<SweetAlertResult<any>> {
