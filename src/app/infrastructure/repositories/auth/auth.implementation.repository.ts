@@ -7,9 +7,9 @@ import {AuthService} from '@/app/infrastructure/services/auth/auth.service';
 @Injectable({
   providedIn: 'root'
 })
-export class AuthImplementationRepository extends AuthRepository {
+export class AuthImplementationRepository implements AuthRepository {
   constructor(private primaryService: AuthService) {
-    super();
+
   }
   async login(params: AuthLoginRequestModel): Promise<AuthLoginResponseModel> {
     return await this.primaryService.login(params);
