@@ -1,0 +1,309 @@
+# 🚀 Sistema de Generación de Módulos - DEV
+
+Sistema automatizado para la creación homologada de módulos siguiendo arquitectura limpia (Clean Architecture) en Angular.
+
+## 📋 Índice
+
+- [Inicio Rápido](#-inicio-rápido)
+- [Arquitectura](#-arquitectura)
+- [Comandos Disponibles](#-comandos-disponibles)
+- [Flujos de Trabajo](#-flujos-de-trabajo)
+- [Convenciones](#-convenciones)
+
+## 🚀 Inicio Rápido
+
+```bash
+# Ejecutar el menú principal
+./dev.sh
+
+# Ver ayuda completa
+./commands/help.sh
+```
+
+## 🏗️ Arquitectura
+
+El proyecto sigue una arquitectura de 3 capas:
+
+### Domain Layer (Reglas de negocio)
+```
+domain/
+├── models/           # Entidades del dominio
+├── repositories/     # Interfaces de repositorios (contratos)
+└── mappers/         # Transformadores DTO ↔ Model
+```
+
+### Infrastructure Layer (Implementación técnica)
+```
+infrastructure/
+├── dto/             # Data Transfer Objects
+├── repositories/    # Implementaciones de repositorios
+└── services/        # Servicios HTTP
+```
+
+### Application Layer (Casos de uso)
+```
+application/
+└── use-cases/       # Lógica de aplicación
+```
+
+## 📦 Comandos Disponibles
+
+### Menú Principal - `./dev.sh`
+
+Menú interactivo con todas las opciones:
+
+1. **📦 Crear Modelo** - Models + DTOs + Mappers
+2. **🔧 Crear Servicio** - Service con auto-detección de Mapper
+3. **🗄️ Crear Repositorio** - Repository Domain + Implementation
+4. **🎯 Crear Módulo Completo** - Flujo completo automatizado
+5. **🔄 Crear Use Case** - Casos de uso con auto-detección de Repository
+6. **📋 Ver Estructura** - Visualiza la arquitectura
+7. **✅ Validar Estructura** - Valida y muestra estadísticas
+8. **🔍 Inspeccionar Módulo** - Analiza un módulo específico
+9. **🧹 Limpiar Módulo** - Elimina un módulo completo
+0. **❌ Salir**
+
+### Comandos Individuales
+
+#### `./commands/model.sh`
+Crea modelos con opciones configurables:
+- Request/Response o Model simple
+- DTOs opcionales
+- Mappers opcionales
+
+#### `./commands/service.sh`
+Crea servicios con:
+- Auto-detección de Mappers
+- Integración con HttpService
+
+#### `./commands/repository.sh`
+Crea repositorios con:
+- Interface en Domain Layer
+- Implementation en Infrastructure Layer
+- Auto-detección de Models y Services
+- Auto-actualización de `app.config.ts`
+
+#### `./commands/usecase.sh`
+Crea casos de uso con:
+- Auto-detección de Repositories
+- Inyección de dependencias automática
+
+#### `./commands/validate.sh`
+Valida la estructura del proyecto:
+- Cuenta archivos por tipo
+- Lista módulos disponibles
+- Muestra componentes de cada módulo
+
+#### `./commands/inspect.sh`
+Inspecciona un módulo específico:
+- Lista todos los archivos
+- Muestra exports y clases
+- Verifica configuración en app.config.ts
+
+#### `./commands/help.sh`
+Muestra documentación completa del sistema
+
+## 🔄 Flujos de Trabajo
+
+### Crear Módulo Completo (Recomendado)
+
+El flujo automatizado crea todo en el orden correcto:
+
+```bash
+./dev.sh
+# Opción 4: Crear Módulo Completo
+```
+
+**Paso 1:** Creación de Models
+- Directorio: `auth`
+- Archivo: `auth`
+- Request: `Sí`
+- Response: `Sí`
+- DTO: `Sí`
+- Mapper: `Sí`
+
+**Paso 2:** Creación de Service
+- Usa el mismo directorio/archivo
+- Auto-detecta y usa el Mapper creado
+
+**Paso 3:** Creación de Repository
+- Usa el mismo directorio/archivo
+- Auto-detecta Models y Service
+- Genera métodos automáticamente
+- Actualiza `app.config.ts`
+
+### Crear Componentes Individuales
+
+Para mayor control, crea en este orden:
+
+```bash
+# 1. Models (base del módulo)
+./commands/model.sh
+
+# 2. Service (lógica HTTP)
+./commands/service.sh
+
+# 3. Repository (interfaz del dominio)
+./commands/repository.sh
+
+# 4. Use Cases (opcional - casos de uso específicos)
+./commands/usecase.sh
+```
+
+## 📝 Convenciones
+
+### Nomenclatura
+
+| Elemento | Convención | Ejemplo |
+|----------|-----------|---------|
+| Directorio | kebab-case | `auth`, `user-profile` |
+| Archivo | kebab-case | `auth`, `user-profile` |
+| Clase Model | PascalCase + Model | `AuthModel` |
+| Clase DTO | PascalCase + Dto | `AuthDto` |
+| Clase Service | PascalCase + Service | `AuthService` |
+| Clase Repository | PascalCase + Repository | `AuthRepository` |
+| Clase Use Case | PascalCase + UseCase | `LoginUseCase` |
+
+### Estructura de Archivos
+
+#### Request/Response Pattern
+```
+domain/models/auth/
+├── request/
+│   └── auth-request.model.ts
+└── response/
+    └── auth-response.model.ts
+
+infrastructure/dto/
+├── request/
+│   └── auth-request.dto.ts
+└── response/
+    └── auth-response.dto.ts
+
+domain/mappers/auth/
+└── auth.mapper.ts
+```
+
+#### Simple Pattern
+```
+domain/models/auth/
+└── auth.model.ts
+
+infrastructure/dto/
+└── auth.dto.ts
+
+domain/mappers/auth/
+└── auth.mapper.ts
+```
+
+## ✨ Características
+
+### Auto-detección
+- ✅ Detecta Mappers existentes al crear Services
+- ✅ Detecta Models y Services al crear Repositories
+- ✅ Detecta Repositories al crear Use Cases
+- ✅ Genera métodos automáticamente basándose en Services
+
+### Auto-configuración
+- ✅ Actualiza `app.config.ts` automáticamente
+- ✅ Agrega imports necesarios
+- ✅ Registra providers en DI
+
+### Validación
+- ✅ Valida estructura del proyecto
+- ✅ Cuenta archivos por tipo
+- ✅ Verifica integridad de módulos
+
+### Inspección
+- ✅ Analiza módulos específicos
+- ✅ Muestra exports y clases
+- ✅ Detecta archivos huérfanos
+
+## 🎯 Ejemplos
+
+### Ejemplo 1: Módulo de Autenticación
+
+```bash
+./dev.sh
+# Opción 4 (Módulo Completo)
+# Directorio: auth
+# Archivo: auth
+# Request: s
+# Response: s
+# DTO: s
+# Mapper: s
+```
+
+**Archivos creados:**
+```
+✓ domain/models/auth/request/auth-request.model.ts
+✓ domain/models/auth/response/auth-response.model.ts
+✓ infrastructure/dto/request/auth-request.dto.ts
+✓ infrastructure/dto/response/auth-response.dto.ts
+✓ domain/mappers/auth/auth.mapper.ts
+✓ infrastructure/services/auth/auth.service.ts
+✓ domain/repositories/auth/auth.repository.ts
+✓ infrastructure/repositories/auth/auth.implementation.repository.ts
+✓ app.config.ts (actualizado)
+```
+
+### Ejemplo 2: Use Case de Login
+
+```bash
+./dev.sh
+# Opción 5 (Crear Use Case)
+# Directorio: auth
+# Caso de uso: login
+```
+
+**Resultado:**
+```typescript
+// application/use-cases/auth/login.use-case.ts
+@Injectable({ providedIn: 'root' })
+export class LoginUseCase {
+  constructor(private authRepository: AuthRepository) {}
+
+  async execute(params?: any): Promise<any> {
+    // TODO: Implementar lógica
+  }
+}
+```
+
+## 🛠️ Mantenimiento
+
+### Validar Proyecto
+```bash
+./commands/validate.sh
+```
+
+### Inspeccionar Módulo
+```bash
+./commands/inspect.sh
+# Módulo: auth
+```
+
+### Limpiar Módulo
+```bash
+./dev.sh
+# Opción 9 (Limpiar Módulo)
+# Módulo: auth
+```
+
+## 📚 Recursos
+
+- Ver estructura: Opción 6 en menú principal
+- Ayuda completa: `./commands/help.sh` o opción `?` en menú
+- Validar estructura: `./commands/validate.sh`
+- Inspeccionar módulo: `./commands/inspect.sh`
+
+## 🤝 Contribución
+
+Para agregar nuevos generadores:
+1. Crear script en `commands/`
+2. Hacer ejecutable: `chmod +x commands/nuevo.sh`
+3. Agregar al menú en `dev.sh`
+
+## 📄 Licencia
+
+Uso interno - SEO Bot AI Project
+
