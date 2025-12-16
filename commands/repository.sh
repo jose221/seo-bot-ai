@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/bin/bash
 
 # Colores para el menú
 GREEN='\033[0;32m'
@@ -144,108 +144,149 @@ fi
 
 # Detectar service
 has_service=false
-service_methods=()
+declare -a method_names_array=()
+declare -a method_data_array=()
 
 if [[ -f "$SERVICE_FILE" ]]; then
     has_service=true
     echo "${CYAN}✓ Detectado service: ${file_name}.service.ts${NC}"
 
-    # Extraer métodos del service usando Python
-    service_methods=($(python3 -c "$(cat << 'PYEOF'
+    # Extraer métodos del service con toda su información
+    method_data=$(python3 - "$SERVICE_FILE" << 'PYEOF'
 import sys
 import re
 
 service_file = sys.argv[1]
+
+# Leer el archivo
 with open(service_file, 'r') as f:
     content = f.read()
 
-# Buscar métodos async públicos
-pattern = r'async\s+(\w+)\s*\([^)]*\)\s*:\s*Promise<([^>]+)>'
+# Buscar métodos async públicos con toda su información
+pattern = r'async\s+(\w+)\s*\(([^)]*)\)\s*:\s*Promise<([^>]+)>'
 matches = re.findall(pattern, content)
 
-for method_name, return_type in matches:
+for method_name, params, return_type in matches:
     if not method_name.startswith('_'):  # Ignorar métodos privados
-        print(f"{method_name}:{return_type}")
+        # Formatear: name|||params|||return_type
+        print(f"{method_name}|||{params}|||{return_type}")
 PYEOF
-)" "$SERVICE_FILE"))
+)
 
-    if [[ ${#service_methods[@]} -gt 0 ]]; then
-        echo "${CYAN}  → Métodos detectados: ${#service_methods[@]}${NC}"
-        for method in "${service_methods[@]}"; do
-            method_name="${method%%:*}"
-            echo "${CYAN}    • ${method_name}()${NC}"
+    # Convertir la salida en arrays (compatible con bash)
+    IFS=$'\n' read -d '' -r -a method_lines <<< "$method_data" || true
+
+    if [[ ${#method_lines[@]} -gt 0 ]]; then
+        echo "${CYAN}  → Métodos detectados: ${#method_lines[@]}${NC}"
+        for method_line in "${method_lines[@]}"; do
+            if [[ -n "$method_line" ]]; then
+                method_name=$(echo "$method_line" | awk -F'\\|\\|\\|' '{print $1}')
+                echo "${CYAN}    • ${method_name}()${NC}"
+                # Guardar en arrays paralelos
+                method_params=$(echo "$method_line" | awk -F'\\|\\|\\|' '{print $2}')
+                method_return=$(echo "$method_line" | awk -F'\\|\\|\\|' '{print $3}')
+                method_names_array+=("$method_name")
+                method_data_array+=("${method_params}|||${method_return}")
+            fi
         done
     fi
 else
     echo "${YELLOW}ℹ No se detectó service para ${file_name}${NC}"
 fi
 
-# Preguntar si desea agregar el service al repository
-add_service_to_repo=false
-if [[ "$has_service" == true ]] && [[ ${#service_methods[@]} -gt 0 ]]; then
+# Preguntar método por método si desea agregarlo
+selected_methods=()
+if [[ "$has_service" == true ]] && [[ ${#method_names_array[@]} -gt 0 ]]; then
     echo ""
-    echo "${YELLOW}❓ ¿Quieres que agregue el servicio detectado al repository? (s/n):${NC}"
+    echo "${YELLOW}❓ Se detectaron métodos en el service. ¿Quieres agregarlos? (s/n):${NC}"
     read -r add_service_response
 
     if [[ "$add_service_response" == "s" || "$add_service_response" == "S" ]]; then
-        add_service_to_repo=true
+        echo ""
+        echo "${BLUE}🔧 Selección de métodos...${NC}"
+
+        # Preguntar por cada método usando índices
+        for i in "${!method_names_array[@]}"; do
+            method_name="${method_names_array[$i]}"
+            echo "${YELLOW}¿Agregar el método '${method_name}'? (s/n):${NC}"
+            read -r add_method
+
+            if [[ "$add_method" == "s" || "$add_method" == "S" ]]; then
+                selected_methods+=("$method_name|||${method_data_array[$i]}")
+                echo "${GREEN}  ✓ Método '${method_name}' será agregado${NC}"
+            else
+                echo "${YELLOW}  ⊘ Método '${method_name}' omitido${NC}"
+            fi
+        done
     fi
 fi
 
-# Regenerar archivos con service si se confirmó
-if [[ "$add_service_to_repo" == true ]]; then
+# Generar archivos con los métodos seleccionados
+if [[ ${#selected_methods[@]} -gt 0 ]]; then
     echo ""
-    echo "${BLUE}🔄 Regenerando archivos con integración de service...${NC}"
+    echo "${BLUE}🔄 Generando archivos con métodos seleccionados...${NC}"
 
-    # Extraer información completa de los métodos
-    python3 << 'PYEOF' "$SERVICE_FILE" "$DOMAIN_FILE" "$INFRA_FILE" "$class_name" "$file_name" "$directory_name"
+    # Crear script Python temporal con los métodos seleccionados
+    TEMP_METHODS_FILE="/tmp/selected_methods_${file_name}.txt"
+    > "$TEMP_METHODS_FILE"
+
+    for method_info in "${selected_methods[@]}"; do
+        echo "$method_info" >> "$TEMP_METHODS_FILE"
+    done
+
+    # Ejecutar Python para generar los archivos
+    SERVICE_FILE="$SERVICE_FILE" DOMAIN_FILE="$DOMAIN_FILE" INFRA_FILE="$INFRA_FILE" \
+    CLASS_NAME="$class_name" FILE_NAME="$file_name" DIR_NAME="$directory_name" \
+    METHODS_FILE="$TEMP_METHODS_FILE" python3 << 'PYEOF'
 import sys
 import re
+import os
 
-service_file = sys.argv[1]
-domain_file = sys.argv[2]
-infra_file = sys.argv[3]
-class_name = sys.argv[4]
-file_name = sys.argv[5]
-directory_name = sys.argv[6]
+service_file = os.environ['SERVICE_FILE']
+domain_file = os.environ['DOMAIN_FILE']
+infra_file = os.environ['INFRA_FILE']
+class_name = os.environ['CLASS_NAME']
+file_name = os.environ['FILE_NAME']
+directory_name = os.environ['DIR_NAME']
+methods_file = os.environ['METHODS_FILE']
 
-# Leer el service
+# Leer el service para extraer imports
 with open(service_file, 'r') as f:
     service_content = f.read()
 
 # Extraer imports de models del service
 model_imports = set()
-import_pattern = r'import\s*{([^}]+)}\s*from\s*[\'"]@/app/domain/models/([^\'"]+)[\'"];'
+import_pattern = r'import\s*\{([^}]+)\}\s*from\s*[\'"]@/app/domain/models/([^\'"]+)[\'"];'
 for match in re.finditer(import_pattern, service_content):
     imports = match.group(1).strip()
     path = match.group(2).strip()
-    model_imports.add(f"import {{{imports}}} from '@/app/domain/models/{path}';")
+    # Formatear imports con espacios después de comas
+    formatted_imports = ', '.join([imp.strip() for imp in imports.split(',')])
+    model_imports.add(f"import {{{formatted_imports}}} from '@/app/domain/models/{path}';")
 
-# Extraer métodos con sus parámetros y tipos de retorno
-method_pattern = r'async\s+(\w+)\s*\(([^)]*)\)\s*:\s*Promise<([^>]+)>\s*{'
-methods = []
-
-for match in re.finditer(method_pattern, service_content):
-    method_name = match.group(1)
-    params = match.group(2).strip()
-    return_type = match.group(3).strip()
-
-    if not method_name.startswith('_'):  # Ignorar métodos privados
-        methods.append({
-            'name': method_name,
-            'params': params,
-            'return_type': return_type
-        })
+# Leer métodos seleccionados
+selected_methods = []
+with open(methods_file, 'r') as f:
+    for line in f:
+        if line.strip():
+            parts = line.strip().split('|||')
+            if len(parts) >= 3:
+                selected_methods.append({
+                    'name': parts[0],
+                    'params': parts[1],
+                    'return_type': parts[2]
+                })
 
 # Generar domain repository (interface)
 domain_content = []
-domain_content.append("// Imports de models")
-for import_line in sorted(model_imports):
-    domain_content.append(import_line)
-domain_content.append("")
+if model_imports:
+    for import_line in sorted(model_imports):
+        domain_content.append(import_line)
+    domain_content.append("")
+
 domain_content.append(f"export abstract class {class_name} {{")
 
-for method in methods:
+for method in selected_methods:
     domain_content.append(f"  abstract {method['name']}({method['params']}): Promise<{method['return_type']}>;")
 
 domain_content.append("}")
@@ -256,26 +297,41 @@ with open(domain_file, 'w') as f:
 
 # Generar implementation repository
 impl_class_name = class_name.replace('Repository', 'ImplementationRepository')
+service_class_name = class_name.replace('Repository', 'Service')
+
 impl_content = []
 impl_content.append("import { Injectable } from '@angular/core';")
 impl_content.append(f"import {{{class_name}}} from '@/app/domain/repositories/{directory_name}/{file_name}.repository';")
 
-for import_line in sorted(model_imports):
-    impl_content.append(import_line)
+if model_imports:
+    for import_line in sorted(model_imports):
+        impl_content.append(import_line)
 
-impl_content.append(f"import {{{class_name.replace('Repository', 'Service')}}} from '@/app/infrastructure/services/{directory_name}/{file_name}.service';")
+impl_content.append(f"import {{{service_class_name}}} from '@/app/infrastructure/services/{directory_name}/{file_name}.service';")
 impl_content.append("")
 impl_content.append("@Injectable({")
 impl_content.append("  providedIn: 'root'")
 impl_content.append("})")
 impl_content.append(f"export class {impl_class_name} implements {class_name} {{")
-impl_content.append(f"  constructor(private primaryService: {class_name.replace('Repository', 'Service')}) {{")
+impl_content.append(f"  constructor(private primaryService: {service_class_name}) {{")
 impl_content.append("")
 impl_content.append("  }")
 
-for method in methods:
+for method in selected_methods:
+    # Extraer solo los nombres de parámetros (sin el ? de opcionales)
+    if method['params']:
+        param_names = []
+        for param in method['params'].split(','):
+            # Extraer nombre del parámetro y eliminar ? si existe
+            param_name = param.split(':')[0].strip().rstrip('?')
+            if param_name:
+                param_names.append(param_name)
+        param_call = ', '.join(param_names)
+    else:
+        param_call = ''
+
     impl_content.append(f"  async {method['name']}({method['params']}): Promise<{method['return_type']}> {{")
-    impl_content.append(f"    return await this.primaryService.{method['name']}({method['params'].split(':')[0].strip() if ':' in method['params'] else ''});")
+    impl_content.append(f"    return await this.primaryService.{method['name']}({param_call});")
     impl_content.append("  }")
 
 impl_content.append("}")
@@ -284,10 +340,13 @@ impl_content.append("}")
 with open(infra_file, 'w') as f:
     f.write('\n'.join(impl_content))
 
-print(f"✓ Archivos actualizados con {len(methods)} métodos")
+print(f"✓ Archivos generados con {len(selected_methods)} métodos")
 PYEOF
 
-    echo "${GREEN}✓ Archivos regenerados con métodos del service${NC}"
+    # Limpiar archivo temporal
+    rm -f "$TEMP_METHODS_FILE"
+
+    echo "${GREEN}✓ Archivos generados con métodos seleccionados${NC}"
 fi
 
 # Actualizar app.config.ts
