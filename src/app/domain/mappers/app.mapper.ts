@@ -1,7 +1,13 @@
 
 interface MapOptions {
   except?: string[];
-  include?: string[];
+  include?: string[] | Record<string, any>;
+  /**
+   * Renombra propiedades al mapear.
+   * { 'sourceKey': 'targetKey' }
+   * Ejemplo: { 'email': 'userEmail' }
+   */
+  replace?: Record<string, string|any>;
 }
 
 /**
@@ -79,7 +85,7 @@ export abstract class AppMapper {
     // Crear un conjunto de propiedades a excluir para facilitar la comprobación
     const exceptProps = new Set(options?.except || []);
 
-    includeProps.forEach(prop => {
+    includeProps.forEach((prop: any) => {
       if (fromProps.includes(prop) && !exceptProps.has(prop)) {
         // @ts-ignore: Ignorar el error de TypeScript para permitir asignación dinámica
         toInstance[prop] = from[prop];
@@ -117,8 +123,13 @@ export abstract class AppMapper {
     return this.pipeData(from, to, options);
   }
   /**
-   * Mapea automáticamente copiando todas las keys enumerables de `from`,
-   * excepto las listadas en `options.except`.
+   * Mapea automáticamente copiando propiedades enumerables de `from`,
+   * con soporte para:
+   * - `except`: excluir propiedades
+   * - `include`:
+   *     - Si es array: whitelist (solo incluye esas propiedades de `from`)
+   *     - Si es objeto: inyecta esas propiedades con sus valores en el resultado
+   * - `replace`: renombrar propiedades { 'sourceKey': 'targetKey' }
    *
    * Útil cuando DTO y Domain comparten nombres de propiedades.
    */
@@ -129,11 +140,33 @@ export abstract class AppMapper {
     if (!from) return from as unknown as TTo;
 
     const except = new Set(options?.except ?? []);
+    const replace = options?.replace ?? {};
     const result: Record<string, any> = {};
 
-    for (const key of Object.keys(from)) {
-      if (except.has(key)) continue;
-      result[key] = from[key];
+    // Determinar si include es whitelist (array) o inyección (objeto)
+    const includeIsArray = Array.isArray(options?.include);
+    const includeWhitelist = includeIsArray ? new Set(options!.include as string[]) : null;
+    const includeInjection = !includeIsArray && options?.include ? (options.include as Record<string, any>) : null;
+
+    // 1) Copiar propiedades de `from`
+    const keysToProcess = includeWhitelist ? Array.from(includeWhitelist) : Object.keys(from);
+
+    for (const sourceKey of keysToProcess) {
+      // Saltar si está en except
+      if (except.has(sourceKey)) continue;
+
+      // Saltar si está en whitelist y no existe en from
+      if (includeWhitelist && !(sourceKey in from)) continue;
+
+      // Determinar el nombre de destino (target)
+      const targetKey = replace[sourceKey] ?? sourceKey;
+
+      result[targetKey] = from[sourceKey];
+    }
+
+    // 2) Inyectar propiedades adicionales si include es objeto
+    if (includeInjection) {
+      Object.assign(result, includeInjection);
     }
 
     return result as TTo;
