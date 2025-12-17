@@ -20,6 +20,12 @@ export const environment = {
       createOrUpdate: `/translate`,
       delete: `/translate`,
     }
+  },
+  settings:{
+    auth:{
+      expires_in_days: 30,
+      token_name: 'seoBotAi',
+    }
   }
 };
 

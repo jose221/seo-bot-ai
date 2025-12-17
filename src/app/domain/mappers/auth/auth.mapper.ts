@@ -3,6 +3,7 @@ import {AuthLoginRequestDto, AuthRegisterRequestDto} from '@/app/infrastructure/
 import {AuthLoginRequestModel, AuthRegisterRequestModel} from '@/app/domain/models/auth/request/auth-request.model';
 import {AuthLoginResponseDto, AuthRegisterResponseDto} from '@/app/infrastructure/dto/response/auth-response.dto';
 import {AuthLoginResponseModel, AuthRegisterResponseModel} from '@/app/domain/models/auth/response/auth-response.model';
+import {environment} from '@/environments/environment';
 
 
 export class AuthLoginMapper extends AppMapper {
@@ -10,10 +11,12 @@ export class AuthLoginMapper extends AppMapper {
     super();
   }
   // --------- mapRequest (sobrecargas)
-  mapRequest(dto: AuthLoginRequestDto): AuthLoginRequestModel;
   mapRequest(model: AuthLoginRequestModel): AuthLoginRequestDto;
-  mapRequest(input: AuthLoginRequestDto | AuthLoginRequestModel) {
-    return this.autoMap<any, any>(input, { except: [] });
+  mapRequest(input: AuthLoginRequestModel) {
+    return this.autoMap<any, any>(input, { except: [], include:{
+        expires_in_days: environment.settings.auth.expires_in_days,
+        token_name:  environment.settings.auth.token_name,
+      } });
   }
 
   // --------- mapResponse (sobrecargas)
