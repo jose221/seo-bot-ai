@@ -1,0 +1,65 @@
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+      <div class="card shadow">
+        <div class="card-header text-center text-white bg-primary">
+          <h3 class="mb-0">Iniciar Sesión</h3>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" class="user" id="loginForm">
+            <div class="mb-3">
+              <label class="form-label" for="email">Correo Electrónico</label>
+              <input
+                formControlName="email"
+                aria-describedby=" validationMessages"
+                [ngClass]="{'is-invalid': messages('email').length > 0}"
+                class="form-control" type="email" id="email" placeholder="nombre@ejemplo.com">
+              @for(msg of messages('email'); track msg){
+                <div id="validationMessages" class="invalid-feedback">
+                  {{msg}}
+                </div>
+              }
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="password">Contraseña</label>
+              <input
+                formControlName="password"
+                aria-describedby=" validationPassword"
+                [ngClass]="{'is-invalid': messages('password').length > 0}"
+                class="form-control" type="password" id="password" placeholder="Ingresa tu contraseña">
+              @for(msg of messages('password'); track msg){
+                <div id="validationPassword" class="invalid-feedback">
+                  {{msg}}
+                </div>
+              }
+            </div>
+            <div class="mb-3 form-check">
+              <input type="checkbox" class="form-check-input" id="rememberMe">
+              <label class="form-check-label" for="rememberMe">Recordarme</label>
+            </div>
+            <div class="d-grid gap-2">
+              <button class="btn btn-primary" type="submit" [disabled]="loading()">
+                @if (loading()) {
+                  <span>Cargando...</span>
+                } @else {
+                  <span>Iniciar Sesión</span>
+                }
+              </button>
+              <button class="btn btn-outline-secondary" type="button">Limpiar</button></div>
+            @if (error()) {
+              <div class="invalid-feedback"><span> {{error()}} </span></div>
+            }
+          </form>
+          <!--
+          <div class="text-center mt-3">
+            <a class="text-decoration-none" href="#">¿Olvidaste tu contraseña?</a>
+          </div>
+          <div class="text-center mt-2">
+            <small>¿No tienes una cuenta? <a class="text-decoration-none" href="#">Regístrate aquí</a></small>
+          </div>
+          -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
