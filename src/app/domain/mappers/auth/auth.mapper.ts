@@ -1,8 +1,4 @@
 import { AppMapper } from "../app.mapper";
-import {RouteGuardRequestDto} from '@/app/infrastructure/dto/request/route-guard-request.dto';
-import {RouteGuardRequestModel} from '@/app/domain/models/auth/request/route-guard-request.model';
-import {RouteGuardResponseDto} from '@/app/infrastructure/dto/response/route-guard-response.dto';
-import {RouteGuardResponseModel} from '@/app/domain/models/auth/response/route-guard-response.model';
 import {AuthLoginRequestDto, AuthRegisterRequestDto} from '@/app/infrastructure/dto/request/auth-request.dto';
 import {AuthLoginRequestModel, AuthRegisterRequestModel} from '@/app/domain/models/auth/request/auth-request.model';
 import {AuthLoginResponseDto, AuthRegisterResponseDto} from '@/app/infrastructure/dto/response/auth-response.dto';

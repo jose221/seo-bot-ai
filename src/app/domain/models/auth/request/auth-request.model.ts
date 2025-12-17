@@ -1,9 +1,7 @@
 export class AuthLoginRequestModel {
   constructor(
-    public email: string,
-    public password: string,
-    public token_name: string,
-    public expires_in_days: number
+    email: string,
+    password: string
   ) {
   }
 }
