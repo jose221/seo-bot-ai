@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Seo Analysis</title>
+    <link rel="canonical" href="https://seo-analysis.herandro.com.mx/audit_form.html">
+    <meta property="og:url" content="https://seo-analysis.herandro.com.mx/audit_form.html">
+    <meta property="og:type" content="website">
+    <meta name="description" content="Analisis de seo enfocado para mejorar los esquemas (schemas) basado en schemas.org y utilizando analisis comparativo con inteligencia artificial generativa">
+    <meta property="og:image" content="https://seo-analysis.herandro.com.mx/assets/img/pexels-photo-267415.jpeg">
+    <link rel="icon" type="image/jpeg" sizes="940x624" href="assets/img/pexels-photo-270637.jpeg?h=b5346e33b5cedc1d15b2295fb344b08f">
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css?h=945fb3ff8106aaf5eda73c29e0d47826">
+    <link rel="manifest" href="manifest.json?h=8d7cb3e668ea97487baf4d810f0af0d9" crossorigin="use-credentials">
+    <link rel="stylesheet" href="assets/css/styles.css?h=c54455e6e9f5d68e7f680fe5e76cc80b">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg bg-transparent shadow-sm" style="backdrop-filter: blur(10px);-webkit-backdrop-filter: blur(10px);background-color: rgba(255, 255, 255, 0.95);">
+        <div class="container-fluid"><a class="navbar-brand fw-bold text-primary" href="#">Mi Sitio</a><button data-bs-toggle="collapse" data-bs-target="#navbarNav" class="navbar-toggler border-primary" type="button" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon" style="filter:invert(0.3) sepia(1) saturate(5) hue-rotate(175deg);"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link active fw-semibold text-primary" aria-current="page" href="#">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary" href="#">Servicios</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary" href="#">Contacto</a></li>
+                    <li class="nav-item dropdown"><a class="nav-link dropdown-toggle text-primary" aria-expanded="false" data-bs-toggle="dropdown" href="#" id="navbarDropdown" role="button">Más opciones</a>
+                        <ul class="border-0 shadow dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item text-primary" href="#">Blog</a></li>
+                            <li><a class="dropdown-item text-primary" href="#">Galería</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-primary" href="#">FAQ</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <form class="d-flex"><input class="border-primary form-control me-2" type="search" aria-label="Search" placeholder="Buscar" style="border-width:2px;"><button class="btn btn-primary px-4" type="submit">Buscar</button></form>
+            </div>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="d-flex justify-content-end gap-2 p-3"><button class="btn btn-outline-secondary btn-sm" type="button"><i class="me-1 bi bi-list-check"></i>Ver Auditorías </button><button class="btn btn-outline-secondary btn-sm" type="button"><i class="me-1 bi bi-gear"></i>Administrar Páginas </button></div>
+                </div>
+            </div>
+            <div class="row justify-content-center" style="margin-top:15vh;">
+                <div class="col-lg-6 col-xl-5">
+                    <div class="text-center mb-5"><i class="text-primary bi bi-shield-check" style="font-size:5rem;"></i>
+                        <h1 class="fw-bold text-primary mt-3">Auditoría Web</h1>
+                    </div>
+                    <form id="auditForm">
+                        <div class="mb-3"><select class="shadow-sm form-select form-select-lg form-select" id="targetSelect" required="" style="border-radius:24px;padding:1rem 1.5rem;border:1px solid #dfe1e5;">
+                                <option value="" selected="">Selecciona una página web para auditar...</option>
+                                <option value="3fa85f64-5717-4562-b3fc-2c963f66afa6">www.ejemplo1.com</option>
+                                <option value="4fb96f75-6828-5673-c4gd-3d074g77bgb7">www.ejemplo2.com</option>
+                                <option value="5gc07g86-7939-6784-d5he-4e185h88chc8">www.ejemplo3.com</option>
+                                <option value="6hd18h97-8040-7895-e6if-5f296i99dif9">www.ejemplo4.com</option>
+                            </select></div>
+                        <div class="d-flex justify-content-center mb-4">
+                            <div class="form-check form-switch"><input type="checkbox" class="form-check-input" id="aiAnalysisSwitch" role="switch" style="width:3rem;height:1.5rem;cursor:pointer;"><label class="ms-2 form-check-label" for="aiAnalysisSwitch" style="cursor:pointer;font-size:0.95rem;"><i class="text-primary me-1 bi bi-cpu"></i>Incluir Análisis Inteligente (IA) </label></div>
+                        </div>
+                        <div class="d-flex justify-content-center gap-2"><button class="btn btn-primary btn-lg shadow-sm px-4 py-2" type="submit"><i class="me-2 bi bi-search"></i>Auditar </button></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" role="dialog" tabindex="-1" id="responseModal" aria-labelledby="responseModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <div class="modal-header border-0">
+                        <h5 class="text-primary modal-title" id="responseModalLabel"><i class="me-2 bi bi-check-circle-fill"></i>Auditoría Iniciada </h5><button class="btn-close" aria-label="Close" data-bs-dismiss="modal" type="button"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info mb-3" role="alert"><strong>Mensaje:</strong><span id="modalMessage">Auditoría iniciada en segundo plano</span></div>
+                        <div class="mb-2"><strong>Estado:</strong><span class="badge bg-warning text-dark" id="modalStatus">pending</span></div>
+                        <div class="mb-2"><strong>ID de Tarea:</strong><code id="modalTaskId">3fa85f64-5717-4562-b3fc-2c963f66afa6</code></div>
+                    </div>
+                    <div class="modal-footer border-0"><button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Aceptar</button><button class="btn btn-primary" id="viewAuditsBtn" type="button"><i class="me-1 bi bi-list-check"></i>Ver Lista de Auditorías </button></div>
+                </div>
+            </div>
+        </div><script>
+document.getElementById('auditForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const webPageId = document.getElementById('targetSelect').value;
+    const includeAiAnalysis = document.getElementById('aiAnalysisSwitch').checked;
+    
+    if (!webPageId) {
+        alert('Por favor selecciona una página web');
+        return;
+    }
+    
+    // Simular llamada a API (aquí irá tu fetch real)
+    const requestData = {
+        include_ai_analysis: includeAiAnalysis,
+        web_page_id: webPageId
+    };
+    
+    // Simular respuesta de API
+    const responseData = {
+        message: "Auditoría iniciada en segundo plano",
+        status: "pending",
+        task_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+    };
+    
+    // Actualizar modal con la respuesta
+    document.getElementById('modalMessage').textContent = responseData.message;
+    document.getElementById('modalStatus').textContent = responseData.status;
+    document.getElementById('modalTaskId').textContent = responseData.task_id;
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('responseModal'));
+    modal.show();
+});
+
+document.getElementById('viewAuditsBtn').addEventListener('click', function() {
+    // Aquí rediriges a la lista de auditorías
+    console.log('Redirigir a lista de auditorías');
+    // window.location.href = '/auditorias';
+});
+</script>
+    </div>
+    <script src="assets/bootstrap/js/bootstrap.min.js?h=2cf0875e1daf356bc4e64c053e7a4150"></script>
+</body>
+
+</html>

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>Seo Analysis</title>
+    <link rel="canonical" href="https://seo-analysis.herandro.com.mx/compare_audits_form.html">
+    <meta property="og:url" content="https://seo-analysis.herandro.com.mx/compare_audits_form.html">
+    <meta property="og:type" content="website">
+    <meta name="description" content="Analisis de seo enfocado para mejorar los esquemas (schemas) basado en schemas.org y utilizando analisis comparativo con inteligencia artificial generativa">
+    <meta property="og:image" content="https://seo-analysis.herandro.com.mx/assets/img/pexels-photo-267415.jpeg">
+    <link rel="icon" type="image/jpeg" sizes="940x624" href="assets/img/pexels-photo-270637.jpeg?h=b5346e33b5cedc1d15b2295fb344b08f">
+    <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css?h=945fb3ff8106aaf5eda73c29e0d47826">
+    <link rel="manifest" href="manifest.json?h=8d7cb3e668ea97487baf4d810f0af0d9" crossorigin="use-credentials">
+    <link rel="stylesheet" href="assets/css/styles.css?h=c54455e6e9f5d68e7f680fe5e76cc80b">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg bg-transparent shadow-sm" style="backdrop-filter: blur(10px);-webkit-backdrop-filter: blur(10px);background-color: rgba(255, 255, 255, 0.95);">
+        <div class="container-fluid"><a class="navbar-brand fw-bold text-primary" href="#">Mi Sitio</a><button data-bs-toggle="collapse" data-bs-target="#navbarNav" class="navbar-toggler border-primary" type="button" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon" style="filter:invert(0.3) sepia(1) saturate(5) hue-rotate(175deg);"></span></button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item"><a class="nav-link active fw-semibold text-primary" aria-current="page" href="#">Inicio</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary" href="#auditorias">Auditorías</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary" href="#sitios">Listado de Sitios</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary" href="#">Servicios</a></li>
+                    <li class="nav-item"><a class="nav-link text-primary" href="#">Contacto</a></li>
+                    <li class="nav-item dropdown"><a class="nav-link dropdown-toggle text-primary" aria-expanded="false" data-bs-toggle="dropdown" href="#" id="navbarDropdown" role="button"> Más opciones </a>
+                        <ul class="border-0 shadow dropdown-menu" aria-labelledby="navbarDropdown">
+                            <li><a class="dropdown-item text-primary" href="#">Blog</a></li>
+                            <li><a class="dropdown-item text-primary" href="#">Galería</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-primary" href="#">FAQ</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                <form class="d-flex"><input class="border-primary form-control me-2" type="search" aria-label="Search" placeholder="Buscar" style="border-width:2px;"><button class="btn btn-primary px-4" type="submit">Buscar</button></form>
+            </div>
+        </div>
+    </nav>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-9">
+                <div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#auditorias"> Auditorías </a><a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#sitios"> Listado de Sitios </a></div>
+                <div class="card rounded-3 border-0 shadow-sm">
+                    <div class="card-body p-4 p-md-5">
+                        <div class="text-center mb-4">
+                            <h2 class="fw-bold text-primary mb-2">Comparativa de Páginas Web</h2>
+                            <p class="text-muted">Seleccione una página web base y las páginas con las que desea compararla</p>
+                        </div>
+                        <form id="compareForm" class="needs-validation" novalidate="">
+                            <div class="mb-4"><label class="form-label fw-semibold" for="baseWebPage">Página Web Base <span class="text-danger">*</span></label><select class="border-2 form-select form-select-lg form-select" id="baseWebPage" required="">
+                                    <option value="">Seleccione una página web...</option>
+                                    <option value="3fa85f64-5717-4562-b3fc-2c963f66afa6">https://example.com</option>
+                                    <option value="7bc95f84-6828-5673-c4gd-3d074g77bgb7">https://mywebsite.com</option>
+                                    <option value="8cd06f95-7939-6784-d5he-4e185h88chc8">https://competitor1.com</option>
+                                    <option value="9de17fa6-8a4a-7895-e6if-5f296i99did9">https://competitor2.com</option>
+                                </select>
+                                <div class="form-text"><span>Seleccione la página web que será la base de la comparación</span></div>
+                                <div class="invalid-feedback"><span>Por favor seleccione una página web base.</span></div>
+                            </div>
+                            <div class="mb-4"><label class="form-label fw-semibold">Páginas Web para Comparar <span class="text-danger">*</span></label>
+                                <div class="bg-light border rounded-3 p-3">
+                                    <div class="mb-3 form-text"><span>Seleccione una o más páginas web para comparar con la base</span></div>
+                                    <div class="mb-2 form-check"><input type="checkbox" class="form-check-input" id="compare1" name="comparePages" value="3fa85f64-5717-4562-b3fc-2c963f66afa6"><label class="form-check-label" for="compare1"> https://example.com </label></div>
+                                    <div class="mb-2 form-check"><input type="checkbox" class="form-check-input" id="compare2" name="comparePages" value="7bc95f84-6828-5673-c4gd-3d074g77bgb7"><label class="form-check-label" for="compare2"> https://mywebsite.com </label></div>
+                                    <div class="mb-2 form-check"><input type="checkbox" class="form-check-input" id="compare3" name="comparePages" value="8cd06f95-7939-6784-d5he-4e185h88chc8"><label class="form-check-label" for="compare3"> https://competitor1.com </label></div>
+                                    <div class="mb-2 form-check"><input type="checkbox" class="form-check-input" id="compare4" name="comparePages" value="9de17fa6-8a4a-7895-e6if-5f296i99did9"><label class="form-check-label" for="compare4"> https://competitor2.com </label></div>
+                                    <div class="form-check"><input type="checkbox" class="form-check-input" id="compare5" name="comparePages" value="aef28gb7-9b5b-8906-f7jg-6g3a7j00eje0"><label class="form-check-label" for="compare5"> https://competitor3.com </label></div>
+                                </div>
+                                <div class="d-block invalid-feedback" id="checkboxError" style="display:none;"><span>Por favor seleccione al menos una página para comparar.</span></div>
+                            </div>
+                            <div class="mb-4">
+                                <div class="form-check form-switch"><input type="checkbox" checked="" class="form-check-input" id="includeAiAnalysis"><label class="fw-semibold form-check-label" for="includeAiAnalysis"> Incluir Análisis con IA </label></div>
+                                <div class="form-text"><span>Active esta opción para obtener recomendaciones generadas por inteligencia artificial</span></div>
+                            </div>
+                            <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5"><button class="btn btn-outline-secondary btn-lg px-4" type="reset"> Limpiar </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"> Generar Comparativa </button></div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" role="dialog" tabindex="-1" id="resultsModal" aria-labelledby="resultsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-white bg-primary">
+                    <h5 class="fw-bold modal-title" id="resultsModalLabel">Resultados de la Comparativa</h5><button class="btn-close btn-close-white" aria-label="Close" data-bs-dismiss="modal" type="button"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-primary">Página Web Base</h6>
+                        <p class="mb-0"><a class="text-decoration-none" href="https://example.com" target="_blank">https://example.com</a></p>
+                    </div>
+                    <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
+                        <h6 class="fw-bold mb-2"><svg class="bi bi-robot me-2" fill="currentColor" height="20" viewbox="0 0 16 16" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"></path><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"></path></svg> Análisis con IA </h6>
+                        <p class="mb-0">El sitio base tiene un 80% de schemas implementados, mientras que los competidores tienen un promedio del 65%. Se recomienda añadir los siguientes schemas: Product, FAQ, HowTo.</p>
+                    </div>
+                    <div class="card border-0 shadow-sm mb-4">
+                        <div class="card-header bg-white border-0 pt-3">
+                            <h6 class="fw-bold text-primary mb-0">Resumen General</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">Mejor en Rendimiento</small><span class="badge bg-success">Base</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">Mejor en SEO</small><span class="badge bg-warning text-dark">competitor1</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">Áreas a Mejorar</small><span class="badge bg-danger me-1">schema_markup</span><span class="badge bg-danger">core_web_vitals</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold text-primary mb-3">Comparaciones Detalladas</h6>
+                    <div class="accordion" role="tablist" id="comparisonsAccordion">
+                        <div class="accordion-item border-0 shadow-sm mb-3">
+                            <h2 class="accordion-header" role="tab" id="heading1"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="true" aria-controls="collapse1"><div class="d-flex align-items-center justify-content-between w-100 pe-3"><span class="fw-semibold">https://competitor1.com</span><span class="badge bg-success">Ganador: Base</span></div></button></h2>
+                            <div class="accordion-collapse collapse show item-1 show" role="tabpanel" data-bs-parent="#comparisonsAccordion" aria-labelledby="heading1" id="collapse1">
+                                <div class="accordion-body">
+                                    <h6 class="fw-bold mb-3">Recomendaciones</h6>
+                                    <div class="list-group">
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <h6 class="mb-1">Implementar schemas faltantes</h6><span class="badge bg-danger">Prioridad Alta</span>
+                                            </div><small class="text-muted">Categoría: schema_markup</small>
+                                        </div>
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <h6 class="mb-1">Optimizar Core Web Vitals</h6><span class="badge bg-warning text-dark">Prioridad Media</span>
+                                            </div><small class="text-muted">Categoría: core_web_vitals</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="accordion-item border-0 shadow-sm mb-3">
+                            <h2 class="accordion-header" role="tab" id="heading2"><button class="accordion-button collapsed collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2"><div class="d-flex align-items-center justify-content-between w-100 pe-3"><span class="fw-semibold">https://competitor2.com</span><span class="badge bg-warning text-dark">Ganador: Empate</span></div></button></h2>
+                            <div class="accordion-collapse collapse item-2" role="tabpanel" data-bs-parent="#comparisonsAccordion" aria-labelledby="heading2" id="collapse2">
+                                <div class="accordion-body">
+                                    <h6 class="fw-bold mb-3">Recomendaciones</h6>
+                                    <div class="list-group">
+                                        <div class="list-group-item">
+                                            <div class="d-flex w-100 justify-content-between align-items-center">
+                                                <h6 class="mb-1">Mejorar velocidad de carga</h6><span class="badge bg-info text-dark">Prioridad Baja</span>
+                                            </div><small class="text-muted">Categoría: performance</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cerrar</button><button class="btn btn-primary" type="button">Exportar Reporte</button></div>
+            </div>
+        </div>
+    </div><script>
+        document.getElementById('compareForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const baseWebPage = document.getElementById('baseWebPage').value;
+            const checkboxes = document.querySelectorAll('input[name="comparePages"]:checked');
+            const includeAiAnalysis = document.getElementById('includeAiAnalysis').checked;
+            
+            if (checkboxes.length === 0) {
+                document.getElementById('checkboxError').style.display = 'block';
+                return;
+            } else {
+                document.getElementById('checkboxError').style.display = 'none';
+            }
+            
+            if (this.checkValidity()) {
+                // Simular envío y abrir modal
+                const modal = new bootstrap.Modal(document.getElementById('resultsModal'));
+                modal.show();
+            }
+            
+            this.classList.add('was-validated');
+        });
+        
+        document.querySelectorAll('input[name="comparePages"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const checkboxes = document.querySelectorAll('input[name="comparePages"]:checked');
+                if (checkboxes.length > 0) {
+                    document.getElementById('checkboxError').style.display = 'none';
+                }
+            });
+        });
+    </script>
+    <script src="assets/bootstrap/js/bootstrap.min.js?h=2cf0875e1daf356bc4e64c053e7a4150"></script>
+</body>
+
+</html>
