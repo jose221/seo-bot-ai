@@ -1,19 +1,22 @@
 <div class="container mt-5">
   <div class="row justify-content-center">
     <div class="col-md-6 col-lg-5">
+      <div class="d-flex justify-content-end mb-2">
+        <app-language-selector />
+      </div>
       <div class="card shadow">
         <div class="card-header text-center text-white bg-primary">
-          <h3 class="mb-0">Iniciar Sesión</h3>
+          <h3 class="mb-0">{{ 'login.title' | translate }}</h3>
         </div>
         <div class="card-body">
           <form [formGroup]="form" (ngSubmit)="onSubmit()" class="user" id="loginForm">
             <div class="mb-3">
-              <label class="form-label" for="email">Correo Electrónico</label>
+              <label class="form-label" for="email">{{ 'login.email.label' | translate }}</label>
               <input
                 formControlName="email"
                 aria-describedby=" validationMessages"
                 [ngClass]="{'is-invalid': messages('email').length > 0}"
-                class="form-control" type="email" id="email" placeholder="nombre@ejemplo.com">
+                class="form-control" type="email" id="email" [placeholder]="'login.email.placeholder' | translate">
               @for(msg of messages('email'); track msg){
                 <div id="validationMessages" class="invalid-feedback">
                   {{msg}}
@@ -21,12 +24,12 @@
               }
             </div>
             <div class="mb-3">
-              <label class="form-label" for="password">Contraseña</label>
+              <label class="form-label" for="password">{{ 'login.password.label' | translate }}</label>
               <input
                 formControlName="password"
                 aria-describedby=" validationPassword"
                 [ngClass]="{'is-invalid': messages('password').length > 0}"
-                class="form-control" type="password" id="password" placeholder="Ingresa tu contraseña">
+                class="form-control" type="password" id="password" [placeholder]="'login.password.placeholder' | translate">
               @for(msg of messages('password'); track msg){
                 <div id="validationPassword" class="invalid-feedback">
                   {{msg}}
@@ -35,19 +38,19 @@
             </div>
             <div class="mb-3 form-check">
               <input type="checkbox" class="form-check-input" id="rememberMe">
-              <label class="form-check-label" for="rememberMe">Recordarme</label>
+              <label class="form-check-label" for="rememberMe">{{ 'login.rememberMe' | translate }}</label>
             </div>
             <div class="d-grid gap-2">
               <button class="btn btn-primary" type="submit" [disabled]="loading()">
                 @if (loading()) {
-                  <span>Cargando...</span>
+                  <span>{{ 'login.loading' | translate }}</span>
                 } @else {
-                  <span>Iniciar Sesión</span>
+                  <span>{{ 'login.submit' | translate }}</span>
                 }
               </button>
-              <button class="btn btn-outline-secondary" type="button">Limpiar</button></div>
+              <button class="btn btn-outline-secondary" type="button">{{ 'login.clear' | translate }}</button></div>
             @if (error()) {
-              <div class="invalid-feedback"><span> {{error()}} </span></div>
+              <div class="invalid-feedback"><span>{{ error() | translate }}</span></div>
             }
           </form>
           <!--
