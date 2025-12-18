@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { TranslateService } from '@ngx-translate/core';
 
 @Component({
   selector: 'app-root',
@@ -9,4 +10,11 @@ import { RouterOutlet } from '@angular/router';
 })
 export class App {
   protected readonly title = signal('seo-bot-ai');
+  private readonly translate = inject(TranslateService);
+
+  constructor() {
+    // Inicializar idioma por defecto
+    this.translate.setDefaultLang('es');
+    this.translate.use('es');
+  }
 }

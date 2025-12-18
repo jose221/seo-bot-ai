@@ -4,12 +4,16 @@ import {AuthService} from '@/app/infrastructure/services/auth/auth.service';
 import {Router} from '@angular/router';
 import {ValidationFormBase} from '@/app/presentation/shared/validation-form.base';
 import {NgClass} from '@angular/common';
+import {TranslateModule} from '@ngx-translate/core';
+import {LanguageSelector} from '@/app/presentation/components/language-selector/language-selector';
 
 @Component({
   selector: 'app-login',
   imports: [
     ReactiveFormsModule,
-    NgClass
+    NgClass,
+    TranslateModule,
+    LanguageSelector
   ],
   templateUrl: './login.html',
   styleUrl: './login.scss',
@@ -43,7 +47,7 @@ export class Login extends ValidationFormBase{
       );
       await this.router.navigateByUrl('/admin');
     } catch (e) {
-      this.error.set('Credenciales inválidas');
+      this.error.set('login.errors.invalidCredentials');
     } finally {
       this.loading.set(false);
     }

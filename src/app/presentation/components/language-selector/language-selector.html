@@ -1,0 +1,23 @@
+<div class="dropdown">
+  <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+    @for (lang of languages; track lang.code) {
+      @if (lang.code === currentLanguage) {
+        <span>{{lang.flag}} {{lang.name}}</span>
+      }
+    }
+  </button>
+  <ul class="dropdown-menu">
+    @for (lang of languages; track lang.code) {
+      <li>
+        <a
+          class="dropdown-item"
+          [ngClass]="{'active': lang.code === currentLanguage}"
+          (click)="changeLanguage(lang.code)"
+          style="cursor: pointer;">
+          {{lang.flag}} {{lang.name}}
+        </a>
+      </li>
+    }
+  </ul>
+</div>
+

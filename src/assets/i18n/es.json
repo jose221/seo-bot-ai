@@ -1,0 +1,31 @@
+{
+  "login": {
+    "title": "Iniciar Sesión",
+    "email": {
+      "label": "Correo Electrónico",
+      "placeholder": "nombre@ejemplo.com"
+    },
+    "password": {
+      "label": "Contraseña",
+      "placeholder": "Ingresa tu contraseña"
+    },
+    "rememberMe": "Recordarme",
+    "submit": "Iniciar Sesión",
+    "clear": "Limpiar",
+    "loading": "Cargando...",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "noAccount": "¿No tienes una cuenta?",
+    "register": "Regístrate aquí",
+    "errors": {
+      "invalidCredentials": "Credenciales inválidas"
+    }
+  },
+  "validation": {
+    "required": "Este campo es requerido",
+    "email": "Debe ser un correo electrónico válido",
+    "minlength": "Debe tener al menos {{requiredLength}} caracteres",
+    "maxlength": "No debe exceder {{requiredLength}} caracteres",
+    "pattern": "El formato no es válido"
+  }
+}
+
