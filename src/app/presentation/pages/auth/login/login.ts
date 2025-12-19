@@ -1,11 +1,12 @@
 import {Component, inject, signal} from '@angular/core';
 import {FormBuilder, ReactiveFormsModule, Validators} from '@angular/forms';
-import {AuthService} from '@/app/infrastructure/services/auth/auth.service';
 import {Router} from '@angular/router';
 import {ValidationFormBase} from '@/app/presentation/shared/validation-form.base';
 import {NgClass} from '@angular/common';
 import {TranslateModule} from '@ngx-translate/core';
 import {LanguageSelector} from '@/app/presentation/components/language-selector/language-selector';
+import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
+import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 
 @Component({
   selector: 'app-login',
@@ -24,7 +25,7 @@ export class Login extends ValidationFormBase{
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required]
   });
-  private readonly authService = inject(AuthService);
+  private readonly authService = inject(AuthRepository);
   private readonly router = inject(Router);
 
   constructor() {
@@ -36,8 +37,11 @@ export class Login extends ValidationFormBase{
   async onSubmit() {
     this.submitted.set(true);
     if (this.form.invalid) return;
-    this.loading.set(true);
+    await this.login();
+  }
+  async login(){
     this.error.set('');
+    this.loading.set(true);
     try {
       await this.authService.login(
         {
@@ -46,8 +50,9 @@ export class Login extends ValidationFormBase{
         }
       );
       await this.router.navigateByUrl('/admin');
-    } catch (e) {
-      this.error.set('login.errors.invalidCredentials');
+    } catch (e: Error | any) {
+      console.log('Error logging in:', e);
+      this.error.set( `${e.response.statusText} ${e.response?.data?.detail ?? e.message} (${e.response?.status}) `);
     } finally {
       this.loading.set(false);
     }

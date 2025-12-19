@@ -12,7 +12,7 @@
     <meta property="og:image" content="https://seo-analysis.herandro.com.mx/assets/img/pexels-photo-267415.jpeg">
     <link rel="icon" type="image/jpeg" sizes="940x624" href="assets/img/pexels-photo-270637.jpeg?h=b5346e33b5cedc1d15b2295fb344b08f">
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css?h=945fb3ff8106aaf5eda73c29e0d47826">
-    <link rel="manifest" href="manifest.json?h=8d7cb3e668ea97487baf4d810f0af0d9" crossorigin="use-credentials">
+    <link rel="manifest" href="../src/assets/manifest.json?h=8d7cb3e668ea97487baf4d810f0af0d9" crossorigin="use-credentials">
     <link rel="stylesheet" href="assets/css/styles.css?h=c54455e6e9f5d68e7f680fe5e76cc80b">
 </head>
 
@@ -82,33 +82,33 @@
         </div><script>
 document.getElementById('auditForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     const webPageId = document.getElementById('targetSelect').value;
     const includeAiAnalysis = document.getElementById('aiAnalysisSwitch').checked;
-    
+
     if (!webPageId) {
         alert('Por favor selecciona una página web');
         return;
     }
-    
+
     // Simular llamada a API (aquí irá tu fetch real)
     const requestData = {
         include_ai_analysis: includeAiAnalysis,
         web_page_id: webPageId
     };
-    
+
     // Simular respuesta de API
     const responseData = {
         message: "Auditoría iniciada en segundo plano",
         status: "pending",
         task_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     };
-    
+
     // Actualizar modal con la respuesta
     document.getElementById('modalMessage').textContent = responseData.message;
     document.getElementById('modalStatus').textContent = responseData.status;
     document.getElementById('modalTaskId').textContent = responseData.task_id;
-    
+
     // Mostrar modal
     const modal = new bootstrap.Modal(document.getElementById('responseModal'));
     modal.show();

@@ -1,30 +1,30 @@
 export class AuthLoginResponseModel {
   constructor(
-    access_token: string,
-    token_type: string,
-    token_id: string,
-    user_id: string,
-    user_email: string,
-    user_name: string,
-    tenant_id: string,
-    project_id: string,
-    expires_at: string,
-    scope: string
+    public access_token: string,
+    public token_type: string,
+    public token_id: string,
+    public user_id: string,
+    public user_email: string,
+    public user_name: string,
+    public tenant_id: string,
+    public project_id: string,
+    public expires_at: string,
+    public scope: string
   ) {}
 }
 
 export class AuthRegisterResponseModel {
   constructor(
-    access_token: string,
-    token_type: string,
-    token_id: string,
-    user_id: string,
-    user_email: string,
-    user_name: string,
-    tenant_id: string,
-    project_id: string,
-    expires_at: string,
-    scope: string
+    public  access_token: string,
+    public token_type: string,
+    public token_id: string,
+    public user_id: string,
+    public user_email: string,
+    public user_name: string,
+    public tenant_id: string,
+    public project_id: string,
+    public expires_at: string,
+    public scope: string
   ) {
   }
 }
