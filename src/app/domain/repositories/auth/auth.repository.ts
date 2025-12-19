@@ -2,6 +2,10 @@ import {AuthLoginRequestModel, AuthRegisterRequestModel} from '@/app/domain/mode
 import {AuthLoginResponseModel, AuthRegisterResponseModel} from '@/app/domain/models/auth/response/auth-response.model';
 
 export abstract class AuthRepository {
-  abstract login(params: AuthLoginRequestModel): Promise<AuthLoginResponseModel>;
+  abstract isAuthenticated(): boolean;
+  abstract getToken(): string;
+  abstract login(params: AuthLoginRequestModel): Promise<AuthLoginResponseModel|any>;
   abstract register(params: AuthRegisterRequestModel): Promise<AuthRegisterResponseModel>;
+  abstract logout(): void;
+  abstract getUser(): AuthRegisterResponseModel;
 }

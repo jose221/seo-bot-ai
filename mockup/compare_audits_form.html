@@ -12,7 +12,7 @@
     <meta property="og:image" content="https://seo-analysis.herandro.com.mx/assets/img/pexels-photo-267415.jpeg">
     <link rel="icon" type="image/jpeg" sizes="940x624" href="assets/img/pexels-photo-270637.jpeg?h=b5346e33b5cedc1d15b2295fb344b08f">
     <link rel="stylesheet" href="assets/bootstrap/css/bootstrap.min.css?h=945fb3ff8106aaf5eda73c29e0d47826">
-    <link rel="manifest" href="manifest.json?h=8d7cb3e668ea97487baf4d810f0af0d9" crossorigin="use-credentials">
+    <link rel="manifest" href="../src/assets/manifest.json?h=8d7cb3e668ea97487baf4d810f0af0d9" crossorigin="use-credentials">
     <link rel="stylesheet" href="assets/css/styles.css?h=c54455e6e9f5d68e7f680fe5e76cc80b">
 </head>
 
@@ -160,27 +160,27 @@
     </div><script>
         document.getElementById('compareForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const baseWebPage = document.getElementById('baseWebPage').value;
             const checkboxes = document.querySelectorAll('input[name="comparePages"]:checked');
             const includeAiAnalysis = document.getElementById('includeAiAnalysis').checked;
-            
+
             if (checkboxes.length === 0) {
                 document.getElementById('checkboxError').style.display = 'block';
                 return;
             } else {
                 document.getElementById('checkboxError').style.display = 'none';
             }
-            
+
             if (this.checkValidity()) {
                 // Simular envío y abrir modal
                 const modal = new bootstrap.Modal(document.getElementById('resultsModal'));
                 modal.show();
             }
-            
+
             this.classList.add('was-validated');
         });
-        
+
         document.querySelectorAll('input[name="comparePages"]').forEach(checkbox => {
             checkbox.addEventListener('change', function() {
                 const checkboxes = document.querySelectorAll('input[name="comparePages"]:checked');
