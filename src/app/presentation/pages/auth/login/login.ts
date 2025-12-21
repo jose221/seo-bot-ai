@@ -52,7 +52,7 @@ export class Login extends ValidationFormBase{
       await this.router.navigateByUrl('/admin');
     } catch (e: Error | any) {
       console.log('Error logging in:', e);
-      this.error.set( `${e.response.statusText} ${e.response?.data?.detail ?? e.message} (${e.response?.status}) `);
+      this.error.set( `${e?.response?.statusText ?? e.name} ${e.response?.data?.detail ?? e.message} (${e?.response?.status ?? e?.code}) `);
     } finally {
       this.loading.set(false);
     }
