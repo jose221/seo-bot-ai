@@ -9,13 +9,15 @@ import {ListDefaultBase} from '@/app/presentation/shared/list-default.base';
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
 import {TranslatePipe} from '@ngx-translate/core';
+import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-target-list',
   imports: [
     FilterList,
     PaginatorList,
-    TranslatePipe
+    TranslatePipe,
+    RouterLink
   ],
   templateUrl: './target-list.html',
   styleUrl: './target-list.scss',

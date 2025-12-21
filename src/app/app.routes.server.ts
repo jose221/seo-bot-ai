@@ -33,6 +33,10 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server
   },
   {
+    path: 'admin/target/**',
+    renderMode: RenderMode.Server
+  },
+  {
     path: 'admin/**',
     renderMode: RenderMode.Server
   },

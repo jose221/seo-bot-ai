@@ -3,6 +3,7 @@ import {Login} from '@/app/presentation/pages/auth/login/login';
 import {authGuard} from '@/app/presentation/guards/auth.guard';
 import {Admin} from '@/app/presentation/pages/admin/admin';
 import {TargetList} from '@/app/presentation/pages/admin/target/target-list/target-list';
+import {TargetForm} from '@/app/presentation/pages/admin/target/target-form/target-form';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -13,6 +14,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'target', pathMatch: 'full' },
       {path: 'target', component: TargetList},
+      {path: 'target/create', component: TargetForm},
     ]
   }
 ];
