@@ -26,6 +26,68 @@
     "minlength": "Debe tener al menos {{requiredLength}} caracteres",
     "maxlength": "No debe exceder {{requiredLength}} caracteres",
     "pattern": "El formato no es válido"
+  },
+  "general": {
+    "actions": {
+      "edit": "Editar",
+      "delete": "Eliminar",
+      "view": "Ver",
+      "add": "Agregar",
+      "audit": "Auditar",
+      "create": "Crear",
+      "update": "Actualizar",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "search": "Buscar",
+      "filter": "Filtrar",
+      "export": "Exportar",
+      "import": "Importar"
+    },
+    "status": {
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "pending": "Pendiente",
+      "completed": "Completada",
+      "failed": "Fallida"
+    },
+    "messages": {
+      "loading": "Cargando...",
+      "noData": "No hay datos disponibles",
+      "error": "Ocurrió un error",
+      "success": "Operación exitosa",
+      "confirmDelete": "¿Estás seguro de eliminar este elemento?"
+    }
+  },
+  "targets": {
+    "title": "Gestión de Páginas",
+    "subtitle": "Administra y visualiza todas tus páginas creadas",
+    "buttons": {
+      "new": "Nueva",
+      "audits": "Auditorías"
+    },
+    "fields": {
+      "name": "Nombre",
+      "url": "URL",
+      "techStack": "Tecnología",
+      "instructions": "Instrucciones",
+      "status": "Estado",
+      "actions": "Acciones",
+      "accessUrl": "Url de acceso"
+    },
+    "menu": {
+      "edit": "Editar",
+      "view": "Ver",
+      "delete": "Eliminar",
+      "audit": "Auditar"
+    },
+    "table": {
+      "status": "Estado",
+      "name": "Nombre",
+      "url": "URL",
+      "technology": "Tecnología",
+      "instructions": "Instrucciones",
+      "actions": "Acciones"
+    }
   }
 }
 

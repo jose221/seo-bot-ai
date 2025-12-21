@@ -26,6 +26,68 @@
     "minlength": "Must be at least {{requiredLength}} characters",
     "maxlength": "Must not exceed {{requiredLength}} characters",
     "pattern": "Invalid format"
+  },
+  "general": {
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete",
+      "view": "View",
+      "add": "Add",
+      "audit": "Audit",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel",
+      "save": "Save",
+      "search": "Search",
+      "filter": "Filter",
+      "export": "Export",
+      "import": "Import"
+    },
+    "status": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "noData": "No data available",
+      "error": "An error occurred",
+      "success": "Operation successful",
+      "confirmDelete": "Are you sure you want to delete this item?"
+    }
+  },
+  "targets": {
+    "title": "Page Management",
+    "subtitle": "Manage and view all your created pages",
+    "buttons": {
+      "new": "New",
+      "audits": "Audits"
+    },
+    "fields": {
+      "name": "Name",
+      "url": "URL",
+      "techStack": "Technology",
+      "instructions": "Instructions",
+      "status": "Status",
+      "actions": "Actions",
+      "accessUrl": "Access URL"
+    },
+    "menu": {
+      "edit": "Edit",
+      "view": "View",
+      "delete": "Delete",
+      "audit": "Audit"
+    },
+    "table": {
+      "status": "Status",
+      "name": "Name",
+      "url": "URL",
+      "technology": "Technology",
+      "instructions": "Instructions",
+      "actions": "Actions"
+    }
   }
 }
 
