@@ -1,0 +1,27 @@
+@if (data().data.length){
+  <div class="d-lg-flex justify-content-lg-end dataTables_paginate paging_simple_numbers">
+    <nav aria-label="Page navigation example">
+      <ul class="pagination">
+        <li class="page-item px-1"><button
+          [class.disabled]="!(data().getCurrentPage > 1)"
+          (click)="prevPage()"
+          class="page-link" href="#">{{ 'Previous' }}</button>
+        </li>
+        @for (page of data().listPagination(sizeButtonsPagination()); track page) {
+          @if (page <= data().getTotalPages &&  page >= 1) {
+            <li
+              class="page-item"
+              [class.active]="data().getCurrentPage == page"
+            >
+              <button  (click)="goToPage(page)" class="page-link" href="#">{{page}}</button>
+            </li>
+          }
+        }
+        <li class="page-item px-1"><button
+          [class.disabled]="!(data().getCurrentPage < data().getTotalPages)"
+          (click)="nextPage()" class="page-link" href="#">{{ 'Next' }}</button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+}

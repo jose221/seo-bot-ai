@@ -4,20 +4,25 @@
     <p class="fs-6 text-muted">Administra y visualiza todas tus páginas creadas</p>
   </div>
 </div>
+<!--header-->
 <div class="row mb-4">
   <div class="col-12 col-lg-10 col-xl-8 mx-auto">
     <div class="card rounded-3 border-0 shadow-sm">
       <div class="card-body p-4">
         <div class="row align-items-center g-3">
+          <div class="col-12 col-lg-7 align-items-center">
+            @if (!isLoading() && cItems().data.length > 0) {
+              <app-filter-list class="w-100" [data]="cItems()" (dataChange)="items.set($event)" [config]="configFilter()" ></app-filter-list>
+            }
+          </div>
           <div class="col-12 col-lg-5">
-            <div class="input-group input-group-lg border rounded-2 overflow-hidden"><span class="bg-transparent border-0 input-group-text input-group-text input-group-text"><i class="text-muted bi bi-search"></i></span><input class="border-0 shadow-none form-control form-control-lg form-control form-control" type="text" id="searchInput" placeholder="Buscar páginas..."></div>
-          </div>
-          <div class="col-12 col-lg-4">
-            <div class="d-flex gap-2"><button class="btn btn-primary rounded-2 flex-fill"><i class="me-1 bi bi-plus-circle"></i> Nueva </button><button class="btn btn-outline-secondary rounded-2 flex-fill"><i class="me-1 bi bi-clipboard-check"></i> Auditorías </button></div>
-          </div>
-          <div class="col-12 col-lg-3">
-            <div class="d-flex align-items-center gap-2 justify-content-lg-end"><span class="text-muted me-1 small">Vista:</span>
-              <div class="btn-group shadow-sm" role="group"><button class="btn btn-outline-dark btn-sm active view-toggle-btn" id="gridViewBtn" type="button"><i class="bi bi-grid-3x3-gap"></i></button><button class="btn btn-outline-dark btn-sm view-toggle-btn" id="tableViewBtn" type="button"><i class="bi bi-table"></i></button></div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-primary rounded-2 flex-fill">
+                <i class="me-1 bi bi-plus-circle"></i> Nueva
+              </button>
+              <button class="btn btn-outline-secondary rounded-2 flex-fill">
+                <i class="me-1 bi bi-clipboard-check"></i> Auditorías
+              </button>
             </div>
           </div>
         </div>
@@ -25,134 +30,103 @@
     </div>
   </div>
 </div>
-<div class="row mb-4">
-  <div class="col-12 col-lg-10 col-xl-8 mx-auto">
-    <div class="row g-3" id="gridView">
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm">
-          <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-start mb-3"><span class="badge bg-success">Activa</span>
-              <div class="dropdown"><button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>Editar</a></li>
-                  <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>Ver</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>Eliminar</a></li>
-                </ul>
+<!--elements list-->
+@if (!isLoading() && items().data.length > 0){
+  <div class="row mb-4">
+    <div class="col-12 col-lg-10 col-xl-8 mx-auto">
+      <div class="row g-3" id="gridView">
+        @for (item of items().data; track item.id){
+          <div class="col-12 col-md-6 col-lg-4">
+            <div class="card h-100 border-0 shadow-sm">
+              <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  @if (item.is_active){
+                    <span class="badge bg-success">Activa</span>
+                  }
+                  @else {
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                  }
+                  <div class="dropdown">
+                    <button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown">
+                      <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>Editar</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>Ver</a></li>
+                      <li><hr class="dropdown-divider"></li>
+                      <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>Eliminar</a></li>
+                    </ul>
+                  </div>
+                </div>
+                <h5 class="mb-2 card-title">{{item.name}}</h5>
+                <p class="text-muted mb-2 small"><i class="me-1 bi bi-code-square"></i>{{item.tech_stack}}</p>
+                <p class="text-truncate mb-3 card-text small">{{item.instructions}}</p>
+                <a [href]="item.url" class="text-muted my-2 small" target="_blank" >Url de acceso</a>
+              </div>
+              <div  class="card-footer bg-transparent border-0 pb-4">
+                <div class="d-flex gap-2 mt-auto">
+                  <button class="btn btn-outline-danger btn-sm flex-fill" title="Editar"
+                  ><i class="me-1 bi bi-pencil"></i>
+                    Eliminar
+                  </button>
+                  <button class="btn btn-outline-info btn-sm flex-fill" title="Auditar">
+                    <i class="me-1 bi bi-shield-check"></i>Auditar
+                  </button>
+                </div>
               </div>
             </div>
-            <h5 class="mb-2 card-title">Página Principal</h5>
-            <p class="text-muted mb-2 small"><i class="me-1 bi bi-link-45deg"></i>www.ejemplo.com</p>
-            <p class="text-muted mb-2 small"><i class="me-1 bi bi-code-square"></i>WordPress</p>
-            <p class="text-truncate mb-3 card-text small">Instrucciones de configuración de la página...</p>
-            <div class="d-flex gap-2 mt-auto"><button class="btn btn-outline-primary btn-sm flex-fill" title="Editar"><i class="me-1 bi bi-pencil"></i>Editar</button><button class="btn btn-outline-success btn-sm flex-fill" title="Agregar"><i class="me-1 bi bi-plus-circle"></i>Agregar</button><button class="btn btn-outline-info btn-sm flex-fill" title="Auditar"><i class="me-1 bi bi-shield-check"></i>Auditar</button></div>
           </div>
-        </div>
+        }
       </div>
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm">
-          <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-start mb-3"><span class="badge bg-warning text-dark">Pendiente</span>
-              <div class="dropdown"><button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>Editar</a></li>
-                  <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>Ver</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>Eliminar</a></li>
-                </ul>
+      <div class="row" id="tableView" style="display:none;">
+        <div class="col-12">
+          <div class="card rounded-3 border-0 shadow-sm">
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                  <thead class="bg-light border-bottom">
+                  <tr>
+                    <th class="fw-semibold text-dark px-4 py-3">Estado</th>
+                    <th class="fw-semibold text-dark py-3">Nombre</th>
+                    <th class="fw-semibold text-dark py-3">URL</th>
+                    <th class="fw-semibold text-dark py-3">Tecnología</th>
+                    <th class="fw-semibold text-dark py-3">Instrucciones</th>
+                    <th class="fw-semibold text-center text-dark py-3">Acciones</th>
+                  </tr>
+                  </thead>
+                  <tbody id="tableBody">
+                  <tr>
+                    <td class="px-4"><span class="badge bg-success">Activa</span></td>
+                    <td class="fw-medium">Página Principal</td>
+                    <td class="text-muted">www.ejemplo.com</td>
+                    <td><span class="badge bg-primary">WordPress</span></td>
+                    <td class="text-muted small">Instrucciones de configuración...</td>
+                    <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
+                  </tr>
+                  <tr>
+                    <td class="px-4"><span class="badge bg-warning text-dark">Pendiente</span></td>
+                    <td class="fw-medium">Blog Corporativo</td>
+                    <td class="text-muted">blog.ejemplo.com</td>
+                    <td><span class="badge bg-info">React</span></td>
+                    <td class="text-muted small">Configuración del blog...</td>
+                    <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
+                  </tr>
+                  <tr>
+                    <td class="px-4"><span class="badge bg-success">Activa</span></td>
+                    <td class="fw-medium">Tienda Online</td>
+                    <td class="text-muted">tienda.ejemplo.com</td>
+                    <td><span class="badge bg-success">Shopify</span></td>
+                    <td class="text-muted small">E-commerce funcional...</td>
+                    <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
+                  </tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
-            <h5 class="mb-2 card-title">Blog Corporativo</h5>
-            <p class="text-muted mb-2 small"><i class="me-1 bi bi-link-45deg"></i>blog.ejemplo.com</p>
-            <p class="text-muted mb-2 small"><i class="me-1 bi bi-code-square"></i>React</p>
-            <p class="text-truncate mb-3 card-text small">Configuración del blog en proceso...</p>
-            <div class="d-flex gap-2 mt-auto"><button class="btn btn-outline-primary btn-sm flex-fill" title="Editar"><i class="me-1 bi bi-pencil"></i>Editar</button><button class="btn btn-outline-success btn-sm flex-fill" title="Agregar"><i class="me-1 bi bi-plus-circle"></i>Agregar</button><button class="btn btn-outline-info btn-sm flex-fill" title="Auditar"><i class="me-1 bi bi-shield-check"></i>Auditar</button></div>
-          </div>
-        </div>
-      </div>
-      <div class="col-12 col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm">
-          <div class="card-body p-4">
-            <div class="d-flex justify-content-between align-items-start mb-3"><span class="badge bg-success">Activa</span>
-              <div class="dropdown"><button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown"><i class="bi bi-three-dots-vertical"></i></button>
-                <ul class="dropdown-menu">
-                  <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>Editar</a></li>
-                  <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>Ver</a></li>
-                  <li><hr class="dropdown-divider"></li>
-                  <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>Eliminar</a></li>
-                </ul>
-              </div>
-            </div>
-            <h5 class="mb-2 card-title">Tienda Online</h5>
-            <p class="text-muted mb-2 small"><i class="me-1 bi bi-link-45deg"></i>tienda.ejemplo.com</p>
-            <p class="text-muted mb-2 small"><i class="me-1 bi bi-code-square"></i>Shopify</p>
-            <p class="text-truncate mb-3 card-text small">E-commerce completamente funcional...</p>
-            <div class="d-flex gap-2 mt-auto"><button class="btn btn-outline-primary btn-sm flex-fill" title="Editar"><i class="me-1 bi bi-pencil"></i>Editar</button><button class="btn btn-outline-success btn-sm flex-fill" title="Agregar"><i class="me-1 bi bi-plus-circle"></i>Agregar</button><button class="btn btn-outline-info btn-sm flex-fill" title="Auditar"><i class="me-1 bi bi-shield-check"></i>Auditar</button></div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="row" id="tableView" style="display:none;">
-      <div class="col-12">
-        <div class="card rounded-3 border-0 shadow-sm">
-          <div class="card-body p-0">
-            <div class="table-responsive">
-              <table class="table table-hover align-middle mb-0">
-                <thead class="bg-light border-bottom">
-                <tr>
-                  <th class="fw-semibold text-dark px-4 py-3">Estado</th>
-                  <th class="fw-semibold text-dark py-3">Nombre</th>
-                  <th class="fw-semibold text-dark py-3">URL</th>
-                  <th class="fw-semibold text-dark py-3">Tecnología</th>
-                  <th class="fw-semibold text-dark py-3">Instrucciones</th>
-                  <th class="fw-semibold text-center text-dark py-3">Acciones</th>
-                </tr>
-                </thead>
-                <tbody id="tableBody">
-                <tr>
-                  <td class="px-4"><span class="badge bg-success">Activa</span></td>
-                  <td class="fw-medium">Página Principal</td>
-                  <td class="text-muted">www.ejemplo.com</td>
-                  <td><span class="badge bg-primary">WordPress</span></td>
-                  <td class="text-muted small">Instrucciones de configuración...</td>
-                  <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
-                </tr>
-                <tr>
-                  <td class="px-4"><span class="badge bg-warning text-dark">Pendiente</span></td>
-                  <td class="fw-medium">Blog Corporativo</td>
-                  <td class="text-muted">blog.ejemplo.com</td>
-                  <td><span class="badge bg-info">React</span></td>
-                  <td class="text-muted small">Configuración del blog...</td>
-                  <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
-                </tr>
-                <tr>
-                  <td class="px-4"><span class="badge bg-success">Activa</span></td>
-                  <td class="fw-medium">Tienda Online</td>
-                  <td class="text-muted">tienda.ejemplo.com</td>
-                  <td><span class="badge bg-success">Shopify</span></td>
-                  <td class="text-muted small">E-commerce funcional...</td>
-                  <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
-                </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
-<div class="row">
-  <div class="col-12 col-lg-10 col-xl-8 mx-auto">
-    <nav class="mb-3" aria-label="Navegación de páginas">
-      <ul class="justify-content-center mb-0 pagination pagination-sm" id="pagination">
-        <li class="page-item disabled"><a class="rounded-2 border-0 me-1 page-link" href="#" tabindex="-1"><i class="bi bi-chevron-left"></i></a></li>
-        <li class="page-item active"><a class="rounded-2 border-0 mx-1 page-link" href="#">1</a></li>
-        <li class="page-item"><a class="rounded-2 border-0 mx-1 page-link" href="#">2</a></li>
-        <li class="page-item"><a class="rounded-2 border-0 mx-1 page-link" href="#">3</a></li>
-        <li class="page-item"><a class="rounded-2 border-0 ms-1 page-link" href="#"><i class="bi bi-chevron-right"></i></a></li>
-      </ul>
-    </nav>
-    <div class="text-center"><small class="text-muted">Mostrando <span class="fw-semibold" id="itemCount">3</span> páginas</small></div>
-  </div>
-</div>
+}
+<app-paginator-list [data]="items()" (dataChange)="items.set($event)"></app-paginator-list>

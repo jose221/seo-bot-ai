@@ -1,0 +1,30 @@
+<div class="row  align-items-center">
+  <div class="col-md-6 text-nowrap section-element">
+    <div id="dataTable_length" class="dataTables_length" aria-controls="dataTable">
+      <label class="form-label">Show&nbsp;
+        <select class="d-inline-block form-select form-select" (ngModelChange)="limitChange($event)" [ngModel]="internalConfig().limit">
+          @if (this.listLimit.length > 0) {
+            @for (limit of this.listLimit; track limit) {
+              <option [value]="limit" [selected]="limit === this.internalConfig().limit">{{ limit }}</option>
+            }
+          }
+        </select>&nbsp;
+      </label>
+    </div>
+  </div>
+  <div class="col-md-6 section-element">
+    @if (internalConfig().search) {
+      <div class="input-group input-group border rounded-2 overflow-hidden">
+        <input
+          type="search"
+          [name]="internalConfig().search?.key ?? 'search'"
+          (ngModelChange)="eventChange($event, 'search')"
+          [ngModel]="internalConfig().search?.value"
+          class="form-control form-control"
+          aria-controls="dataTable"
+          [placeholder]="internalConfig().search?.placeholder ?? 'Search'"
+        >
+      </div>
+    }
+  </div>
+</div>

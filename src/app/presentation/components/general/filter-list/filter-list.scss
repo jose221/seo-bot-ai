@@ -1,0 +1,9 @@
+@use '/scss/styles/screen' as *;
+.form-label {
+  margin-bottom: 0 !important;
+}
+.section-element{
+  @media #{$gl-md}  {
+    margin-bottom: 1rem;
+  }
+}

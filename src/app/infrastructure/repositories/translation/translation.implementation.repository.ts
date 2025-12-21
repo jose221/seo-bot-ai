@@ -2,11 +2,12 @@ import { Injectable } from '@angular/core';
 import { TranslationRepository } from '@/app/domain/repositories/translation/translation.repository';
 import { HttpDefaultModel } from '@/app/domain/models/http/http-default.model';
 import {TranslationService} from '@/app/infrastructure/services/translation/translation.service';
+import {environment} from '@/environments/environment';
 
 
 @Injectable()
 export class TranslationImplementationRepository implements TranslationRepository {
-  public currentLanguage: string = 'es';
+  public currentLanguage: string = environment.settings.translate.default_language;
   constructor(private translationService: TranslationService) {
     this.currentLanguage = translationService.currentLanguage;
   }

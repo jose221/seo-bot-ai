@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
-import {CreateTargetRequestModel, FilterTargetRequestModel, UpdateTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
+import {CreateTargetRequestModel, FilterTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
 import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {TargetService} from '@/app/infrastructure/services/target/target.service';
 

@@ -1,0 +1,13 @@
+thead th {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+}
+
+thead th:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+thead th:active {
+  background-color: rgba(0, 0, 0, 0.1);
+}

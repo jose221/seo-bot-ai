@@ -4,7 +4,7 @@ import {Router} from '@angular/router';
 import {ValidationFormBase} from '@/app/presentation/shared/validation-form.base';
 import {NgClass} from '@angular/common';
 import {TranslateModule} from '@ngx-translate/core';
-import {LanguageSelector} from '@/app/presentation/components/language-selector/language-selector';
+import {LanguageSelector} from '@/app/presentation/components/general/language-selector/language-selector';
 import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 
