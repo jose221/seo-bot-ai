@@ -8,12 +8,14 @@ import {ListTableDefaultBase} from '@/app/presentation/shared/list-table-default
 import {ListDefaultBase} from '@/app/presentation/shared/list-default.base';
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
+import {TranslatePipe} from '@ngx-translate/core';
 
 @Component({
   selector: 'app-target-list',
   imports: [
     FilterList,
-    PaginatorList
+    PaginatorList,
+    TranslatePipe
   ],
   templateUrl: './target-list.html',
   styleUrl: './target-list.scss',

@@ -1,7 +1,7 @@
 <div class="row mb-5">
   <div class="col-12 text-center">
-    <h1 class="display-4 fw-light mb-2"><i class="text-primary bi bi-globe2"></i> Gestión de Páginas </h1>
-    <p class="fs-6 text-muted">Administra y visualiza todas tus páginas creadas</p>
+    <h1 class="display-4 fw-light mb-2"><i class="text-primary bi bi-globe2"></i> {{ 'targets.title' | translate }} </h1>
+    <p class="fs-6 text-muted">{{ 'targets.subtitle' | translate }}</p>
   </div>
 </div>
 <!--header-->
@@ -18,10 +18,10 @@
           <div class="col-12 col-lg-5">
             <div class="d-flex gap-2">
               <button class="btn btn-primary rounded-2 flex-fill">
-                <i class="me-1 bi bi-plus-circle"></i> Nueva
+                <i class="me-1 bi bi-plus-circle"></i> {{ 'targets.buttons.new' | translate }}
               </button>
               <button class="btn btn-outline-secondary rounded-2 flex-fill">
-                <i class="me-1 bi bi-clipboard-check"></i> Auditorías
+                <i class="me-1 bi bi-clipboard-check"></i> {{ 'targets.buttons.audits' | translate }}
               </button>
             </div>
           </div>
@@ -41,90 +41,42 @@
               <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-3">
                   @if (item.is_active){
-                    <span class="badge bg-success">Activa</span>
+                    <span class="badge bg-success">{{ 'general.status.active' | translate }}</span>
                   }
                   @else {
-                    <span class="badge bg-warning text-dark">Pendiente</span>
+                    <span class="badge bg-warning text-dark">{{ 'general.status.pending' | translate }}</span>
                   }
                   <div class="dropdown">
                     <button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown">
                       <i class="bi bi-three-dots-vertical"></i>
                     </button>
                     <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>Editar</a></li>
-                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>Ver</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>{{ 'general.actions.edit' | translate }}</a></li>
+                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>{{ 'general.actions.view' | translate }}</a></li>
                       <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>Eliminar</a></li>
+                      <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>{{ 'general.actions.delete' | translate }}</a></li>
                     </ul>
                   </div>
                 </div>
                 <h5 class="mb-2 card-title">{{item.name}}</h5>
                 <p class="text-muted mb-2 small"><i class="me-1 bi bi-code-square"></i>{{item.tech_stack}}</p>
                 <p class="text-truncate mb-3 card-text small">{{item.instructions}}</p>
-                <a [href]="item.url" class="text-muted my-2 small" target="_blank" >Url de acceso</a>
+                <a [href]="item.url" class="text-muted my-2 small" target="_blank" >{{ 'targets.fields.accessUrl' | translate }}</a>
               </div>
               <div  class="card-footer bg-transparent border-0 pb-4">
                 <div class="d-flex gap-2 mt-auto">
-                  <button class="btn btn-outline-danger btn-sm flex-fill" title="Editar"
-                  ><i class="me-1 bi bi-pencil"></i>
-                    Eliminar
+                  <button class="btn btn-outline-danger btn-sm flex-fill" title="{{ 'general.actions.delete' | translate }}"
+                  ><i class="me-1 bi bi-trash"></i>
+                    {{ 'general.actions.delete' | translate }}
                   </button>
-                  <button class="btn btn-outline-info btn-sm flex-fill" title="Auditar">
-                    <i class="me-1 bi bi-shield-check"></i>Auditar
+                  <button class="btn btn-outline-info btn-sm flex-fill" title="{{ 'general.actions.audit' | translate }}">
+                    <i class="me-1 bi bi-shield-check"></i>{{ 'general.actions.audit' | translate }}
                   </button>
                 </div>
               </div>
             </div>
           </div>
         }
-      </div>
-      <div class="row" id="tableView" style="display:none;">
-        <div class="col-12">
-          <div class="card rounded-3 border-0 shadow-sm">
-            <div class="card-body p-0">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                  <thead class="bg-light border-bottom">
-                  <tr>
-                    <th class="fw-semibold text-dark px-4 py-3">Estado</th>
-                    <th class="fw-semibold text-dark py-3">Nombre</th>
-                    <th class="fw-semibold text-dark py-3">URL</th>
-                    <th class="fw-semibold text-dark py-3">Tecnología</th>
-                    <th class="fw-semibold text-dark py-3">Instrucciones</th>
-                    <th class="fw-semibold text-center text-dark py-3">Acciones</th>
-                  </tr>
-                  </thead>
-                  <tbody id="tableBody">
-                  <tr>
-                    <td class="px-4"><span class="badge bg-success">Activa</span></td>
-                    <td class="fw-medium">Página Principal</td>
-                    <td class="text-muted">www.ejemplo.com</td>
-                    <td><span class="badge bg-primary">WordPress</span></td>
-                    <td class="text-muted small">Instrucciones de configuración...</td>
-                    <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
-                  </tr>
-                  <tr>
-                    <td class="px-4"><span class="badge bg-warning text-dark">Pendiente</span></td>
-                    <td class="fw-medium">Blog Corporativo</td>
-                    <td class="text-muted">blog.ejemplo.com</td>
-                    <td><span class="badge bg-info">React</span></td>
-                    <td class="text-muted small">Configuración del blog...</td>
-                    <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
-                  </tr>
-                  <tr>
-                    <td class="px-4"><span class="badge bg-success">Activa</span></td>
-                    <td class="fw-medium">Tienda Online</td>
-                    <td class="text-muted">tienda.ejemplo.com</td>
-                    <td><span class="badge bg-success">Shopify</span></td>
-                    <td class="text-muted small">E-commerce funcional...</td>
-                    <td class="text-center"><button class="btn btn-outline-primary btn-sm me-1" title="Editar"><i class="bi bi-pencil"></i></button><button class="btn btn-outline-success btn-sm me-1" title="Agregar"><i class="bi bi-plus-circle"></i></button><button class="btn btn-outline-info btn-sm me-1" title="Auditar"><i class="bi bi-shield-check"></i></button><button class="btn btn-outline-secondary btn-sm" title="Ver"><i class="bi bi-eye"></i></button></td>
-                  </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
