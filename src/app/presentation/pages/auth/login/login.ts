@@ -20,13 +20,11 @@ import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
   styleUrl: './login.scss',
 })
 export class Login extends ValidationFormBase{
-  protected readonly error = signal('');
   protected readonly form = inject(FormBuilder).group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required]
   });
   private readonly authService = inject(AuthRepository);
-  private readonly router = inject(Router);
 
   constructor() {
     super();
