@@ -1,4 +1,26 @@
-<div class="admin-layout">
+<nav class="navbar navbar-expand-lg bg-transparent shadow-sm" style="backdrop-filter: blur(10px);-webkit-backdrop-filter: blur(10px);background-color: rgba(255, 255, 255, 0.95);">
+  <div class="container-fluid"><a class="navbar-brand fw-bold text-primary" href="#">Mi Sitio</a><button data-bs-toggle="collapse" data-bs-target="#navbarNav" class="navbar-toggler border-primary" type="button" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon" style="filter:invert(0.3) sepia(1) saturate(5) hue-rotate(175deg);"></span></button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item"><a class="nav-link text-primary" href="#">Inicio</a></li>
+        <li class="nav-item"><a class="nav-link text-primary" href="#auditorias">Auditorías</a></li>
+        <li class="nav-item"><a class="nav-link active fw-semibold text-primary" aria-current="page" href="#sitios">Listado de Sitios</a></li>
+        <li class="nav-item"><a class="nav-link text-primary" href="#">Servicios</a></li>
+        <li class="nav-item"><a class="nav-link text-primary" href="#">Contacto</a></li>
+        <li class="nav-item dropdown"><a class="nav-link dropdown-toggle text-primary" aria-expanded="false" data-bs-toggle="dropdown" href="#" id="navbarDropdown" role="button"> Más opciones </a>
+          <ul class="border-0 shadow dropdown-menu" aria-labelledby="navbarDropdown">
+            <li><a class="dropdown-item text-primary" href="#">Blog</a></li>
+            <li><a class="dropdown-item text-primary" href="#">Galería</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item text-primary" href="#">FAQ</a></li>
+          </ul>
+        </li>
+      </ul>
+      <form class="d-flex"><input class="border-primary form-control me-2" type="search" aria-label="Search" placeholder="Buscar" style="border-width:2px;"><button class="btn btn-primary px-4" type="submit">Buscar</button></form>
+    </div>
+  </div>
+</nav>
+<div class="container-fluid bg-light py-5">
   <router-outlet></router-outlet>
 </div>
 
