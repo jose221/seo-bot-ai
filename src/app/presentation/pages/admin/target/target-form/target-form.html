@@ -1,6 +1,10 @@
 <div class="row justify-content-center">
   <div class="col-lg-8 col-xl-7">
-    <div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#auditorias"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-clipboard-check" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0z"></path><path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"></path><path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"></path></svg> Auditorías </a><a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#sitios"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" class="bi bi-list-ul" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"></path></svg> Listado de Sitios </a></div>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/target">
+        Listado de Sitios
+      </a>
+    </div>
     <div class="card rounded-3 border-0 shadow-sm">
       <div class="card-body p-4 p-md-5">
         <div class="text-center mb-4">
@@ -114,7 +118,10 @@
     </div>
     <div class="alert alert-success d-none mt-4 alert-dismissible fade" role="alert" id="successAlert">
       <svg class="bi bi-check-circle-fill me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-    </svg><strong>¡Éxito!</strong><span> La configuración se ha guardado correctamente. </span>
-      <button class="btn-close" type="button" data-bs-dismiss="alert" aria-label="Close"></button></div>
+    </svg>
+      <strong>{{'general.messages.success' | translate}}</strong>
+      <span>{{'targets.form.successMessage' | translate}}</span>
+      <button class="btn-close" type="button" data-bs-dismiss="alert" [attr.aria-label]="'general.actions.close' | translate"></button>
+    </div>
   </div>
 </div>

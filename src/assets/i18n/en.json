@@ -61,6 +61,7 @@
   "targets": {
     "title": "Page Management",
     "subtitle": "Manage and view all your created pages",
+    "list": "Sites List",
     "buttons": {
       "new": "New",
       "audits": "Audits"
@@ -87,6 +88,32 @@
       "technology": "Technology",
       "instructions": "Instructions",
       "actions": "Actions"
+    },
+    "form": {
+      "title": "Site Configuration",
+      "subtitle": "Complete the following fields to configure your website",
+      "name": {
+        "label": "Site Name",
+        "placeholder": "Ex: My Main Site",
+        "help": "Enter your website name"
+      },
+      "techStack": {
+        "label": "Technology",
+        "placeholder": "Ex: Uses Vue js, Node.js, MySQL",
+        "help": "Select the technology stack used"
+      },
+      "url": {
+        "label": "Site URL",
+        "placeholder": "https://example.com",
+        "help": "Enter the complete URL including https://"
+      },
+      "instructions": {
+        "label": "Instructions",
+        "placeholder": "Ex: Wait 2 seconds after loading",
+        "help": "Provide special instructions or additional notes"
+      },
+      "saveButton": "Save Configuration",
+      "successMessage": "The configuration has been saved successfully."
     }
   }
 }

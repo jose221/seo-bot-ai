@@ -61,6 +61,7 @@
   "targets": {
     "title": "Gestión de Páginas",
     "subtitle": "Administra y visualiza todas tus páginas creadas",
+    "list": "Listado de Sitios",
     "buttons": {
       "new": "Nueva",
       "audits": "Auditorías"
@@ -87,6 +88,32 @@
       "technology": "Tecnología",
       "instructions": "Instrucciones",
       "actions": "Acciones"
+    },
+    "form": {
+      "title": "Configuración del Sitio",
+      "subtitle": "Complete los siguientes campos para configurar su sitio web",
+      "name": {
+        "label": "Nombre del Sitio",
+        "placeholder": "Ej: Mi Sitio Principal",
+        "help": "Ingrese el nombre de su sitio web"
+      },
+      "techStack": {
+        "label": "Tecnología",
+        "placeholder": "Ej: Utiliza Vue js, Node.js, MySQL",
+        "help": "Seleccione el stack tecnológico utilizado"
+      },
+      "url": {
+        "label": "URL del Sitio",
+        "placeholder": "https://example.com",
+        "help": "Ingrese la URL completa incluyendo https://"
+      },
+      "instructions": {
+        "label": "Instrucciones",
+        "placeholder": "Ej: Esperar 2 segundos después de cargar",
+        "help": "Proporcione instrucciones especiales o notas adicionales"
+      },
+      "saveButton": "Guardar Configuración",
+      "successMessage": "La configuración se ha guardado correctamente."
     }
   }
 }

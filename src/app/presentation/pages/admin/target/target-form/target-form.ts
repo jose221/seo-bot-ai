@@ -5,13 +5,15 @@ import {TargetRepository} from '@/app/domain/repositories/target/target.reposito
 import {CreateTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
 import {NgClass} from '@angular/common';
 import {TranslatePipe} from '@ngx-translate/core';
+import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-target-form',
   imports: [
     ReactiveFormsModule,
     NgClass,
-    TranslatePipe
+    TranslatePipe,
+    RouterLink
   ],
   templateUrl: './target-form.html',
   styleUrl: './target-form.scss',
