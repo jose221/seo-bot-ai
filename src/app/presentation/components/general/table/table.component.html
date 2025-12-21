@@ -1,0 +1,80 @@
+
+@if (tableColumns().length) {
+  <div class="table-responsive mt-2 table" id="dataTable" role="grid" aria-describedby="dataTable_info">
+    <table class="table my-0" id="dataTable">
+      <thead>
+      <tr>
+        @for (column of tableColumns(); track column.key) {
+          <th (click)="columnClick(column)">{{ column.name }}</th>
+        }
+      </tr>
+      </thead>
+      <tbody>
+        @for (item of tableData().data; track $index) {
+          <tr>
+            @for (column of tableColumns(); track column.key) {
+              <td
+                class="text-center"
+                [class]="{ 'text-center': column.type === 'button' || column.type === 'link' || column.type === 'boolean'}"
+              >
+                @switch (column.type) {
+                  @case ('button') {
+                    <button
+                      type="button"
+                      [class]="'btn btn-sm btn-primary'+column.cssClass"
+                      (click)="handleAction(column, item)">
+                      {{ (column.innerHtml || getCellValue(item, column.key) || 'NA') }}
+                    </button>
+                  }
+                  @case ('link') {
+                    <a
+                      [href]="column?.href ?? '#'"
+                      [class]="'text-decoration-none '+column.cssClass"
+                      (click)="handleAction(column, item);(column?.href ? '': $event.preventDefault())"
+                      [innerHTML]="(column.innerHtml || getCellValue(item, column.key) || 'NA')"
+                    >
+                    </a>
+                  }
+                  @case ('boolean') {
+                    @if (getCellValue(item, column.key)) {
+                      <i class="fa-solid fa-circle-check text-success" style="font-size: 1.2rem;"></i>
+                    } @else {
+                      <i class="fa-solid fa-circle-xmark text-danger" style="font-size: 1.2rem;"></i>
+                    }
+                  }
+                  @case ('datetime') {
+                    {{ getCellValue(item, column.key) | dateFormat:'short':'es':true }}
+                  }
+                  @case ('date') {
+                    {{ getCellValue(item, column.key) | dateFormat:'short':'es':false }}
+                  }
+                  @default {
+                    {{ getCellValue(item, column.key) }}
+                  }
+                }
+              </td>
+            }
+          </tr>
+        }
+      </tbody>
+      <tfoot>
+      <tr>
+        @for (column of tableColumns(); track column.key) {
+          <td><strong>{{ column.name }}</strong></td>
+        }
+      </tr>
+      </tfoot>
+    </table>
+  </div>
+
+}
+
+
+@if (!tableColumns().length) {
+  <div class="row">
+    <div class="col-12 text-center py-5">
+      <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+      <p class="mt-3 text-muted">No hay modelos disponibles</p>
+    </div>
+  </div>
+}

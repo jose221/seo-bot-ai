@@ -4,14 +4,7 @@ export const environment = {
   endpoints: {
     auth:{
       login: '/auth/login',
-      register: '/auth/register',
-      route_guard: {
-        get: '/route-guards',
-        get_one: '/route-guards',
-        create: '/route-guards/create',
-        update: '/route-guards',
-        delete: '/route-guards',
-      }
+      register: '/auth/register'
     },
     translate:{
       translate: `/translate`,
@@ -19,12 +12,20 @@ export const environment = {
       loadTranslationsAsync: `/translate`,
       createOrUpdate: `/translate`,
       delete: `/translate`,
+    },
+    target:{
+      path: '/targets'
     }
   },
   settings:{
     auth:{
       expires_in_days: 30,
       token_name: 'seoBotAi',
+    },
+    translate:{
+      default_language: 'es',
+      expires_in_days: 30,
+      cookie_name: 'lang'
     }
   }
 };

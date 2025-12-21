@@ -1,0 +1,40 @@
+@use './../../../../../../../scss/styles/colores' as *;
+@use './../../../../../../../scss/styles/extends';
+@use './../../../../../../../scss/styles/screen' as *;
+@use './../../../../../../../scss/styles/fonts' as *;
+
+/**MODAL **/
+.custom-modal {
+  z-index: 10;
+  display: block;
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  height: auto;
+  //background-color: rgba(0, 0, 0, 0.5);
+  justify-content: center;
+  align-items: flex-end;
+  transform: translateY(100%) scale(0.98);
+  transition: transform 0.3s ease-in-out;
+  &.show {
+    transform: translateY(0) scale(1);
+  }
+  @media screen and (max-width: 992px) {
+    left: 0;
+    width: 100%;
+  }
+}
+
+.custom-modal-content {
+  background-color: #fff;
+  border-radius: 0.5rem 0.5rem 0 0;
+  width: 100%;
+  min-width: 500px;
+  max-width: 800px;
+  padding: 0.5rem;
+  box-shadow: 1px 0rem 1rem rgba(0, 0, 0, 0.2);
+  @media screen and (max-width: 992px) {
+    max-width: 100%;
+    min-width: 100%;
+  }
+}

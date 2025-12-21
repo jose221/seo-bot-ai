@@ -1,10 +1,11 @@
-import { Injectable } from '@angular/core';
+import {inject, Injectable} from '@angular/core';
 import {HttpDefaultModel} from '@/app/domain/models/http/http-default.model';
 import {AuthenticationHeader} from '@/app/infrastructure/http/authentication-header/authentication-header';
 import {TranslateService} from '@ngx-translate/core';
 import {HttpService} from '@/app/infrastructure/services/general/http.service';
 import {HttpClientHelper} from '@/app/helper/http-client.helper';
 import {environment} from '@/environments/environment';
+import {CookieService} from '@/app/infrastructure/services/general/cookie.service';
 
 @Injectable(
   {
@@ -13,7 +14,13 @@ import {environment} from '@/environments/environment';
 )
 export class TranslationService {
   authenticationHeader = new AuthenticationHeader();
-  constructor(private translateService: TranslateService, private httpService: HttpService) {}
+  private translateService = inject(TranslateService)
+  private httpService = inject(HttpService)
+  private KEY_LANGUAGE: string = environment.settings.translate.cookie_name
+  private DEFAULT_LANGUAGE: string = environment.settings.translate.default_language
+  private EXPIRE_DAYS: number = environment.settings.translate.expires_in_days
+  private cookieService = inject(CookieService)
+  constructor() {}
 
   init(): void {
     // Utiliza ngx-translate para establecer el idioma
@@ -21,7 +28,7 @@ export class TranslationService {
   }
 
   get currentLanguage(): string {
-    return localStorage.getItem('lang') ?? 'es';
+    return this.cookieService.get(this.KEY_LANGUAGE) ?? this.DEFAULT_LANGUAGE;
   }
 
   getTranslation(key: string, lang: string): string {
@@ -54,7 +61,7 @@ export class TranslationService {
 
   setLanguage(lang: string) {
     this.translateService.use(lang);
-    localStorage.setItem('lang', lang);
+    this.cookieService.set(this.KEY_LANGUAGE, lang, this.EXPIRE_DAYS)
   }
 
   async loadTranslations(key: string, search?: string) {

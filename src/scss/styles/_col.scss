@@ -1,0 +1,58 @@
+// Definiciones de variables
+$grid-columns: 12;
+$grid-gutter-width: 30px;
+$breakpoints: (
+  xs: 0,
+  sm: 576px,
+  md: 768px,
+  lg: 992px,
+  xl: 1200px,
+  xxl: 1400px
+);
+
+// Mixin para preparar la columna
+@mixin make-col-ready {
+  position: relative;
+  width: 100%;
+}
+
+// Mixin para definir el tamaño de la columna en CSS Grid
+@mixin make-col($columns) {
+  grid-column: span $columns;
+}
+
+// Generar clases col-*-* para cada punto de quiebre y tamaño de columna
+@each $breakpoint, $breakpoint-value in $breakpoints {
+  @if $breakpoint == xs {
+    @for $i from 1 through $grid-columns {
+      .col-#{$breakpoint}-#{$i} {
+        @include make-col-ready;
+        @include make-col($i);
+      }
+    }
+  } @else {
+    @media (min-width: $breakpoint-value) {
+      @for $i from 1 through $grid-columns {
+        .col-#{$breakpoint}-#{$i} {
+          @include make-col-ready;
+          @include make-col($i);
+        }
+      }
+    }
+  }
+}
+
+// Estilos básicos para el contenedor y la fila
+.container {
+  width: 100%;
+  padding-right: $grid-gutter-width / 2;
+  padding-left: $grid-gutter-width / 2;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat($grid-columns, 1fr);
+  gap: $grid-gutter-width;
+}

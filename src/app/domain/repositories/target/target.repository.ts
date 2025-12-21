@@ -1,4 +1,4 @@
-import {CreateTargetRequestModel, FilterTargetRequestModel, UpdateTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
+import {CreateTargetRequestModel, FilterTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
 import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 
 export abstract class TargetRepository {

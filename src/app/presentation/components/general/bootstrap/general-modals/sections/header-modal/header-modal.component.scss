@@ -1,0 +1,10 @@
+@use './../../../../../../../../scss/styles/fonts' as *;
+
+.custom-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  align-content: center;
+  padding: 0.5rem 0.5rem;
+  border-bottom: 1px solid #dee2e6;
+}

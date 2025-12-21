@@ -1,0 +1,50 @@
+<div class="card shadow h-100 py-2" [class]="borderClass()">
+  <div class="card-body">
+    <div class="row no-gutters align-items-center">
+      <div class="col mr-2">
+        <div class="text-xs font-weight-bold text-uppercase mb-1" [class]="textColorClass()">
+          {{ title() }}
+        </div>
+        <div class="h5 mb-0 font-weight-bold text-gray-800">
+          @switch (type_content()) {
+            @case ('coin') {
+              {{ formattedNumericContent() | currency }}
+            }
+            @case ('date') {
+              {{ dateContent() | date:'shortDate' }}
+            }
+            @case ('datetime') {
+              {{ dateContent() | date:'short' }}
+            }
+            @case ('percentage') {
+              {{ formattedNumericContent() | percent:'1.1-2' }}
+            }
+            @case ('int') {
+              {{ formattedNumericContent() | number:'1.0-0' }}
+            }
+            @case ('float') {
+              {{ formattedNumericContent() | number:'1.2-2' }}
+            }
+            @case ('progress') {
+              <div class="progress">
+                <div
+                  class="progress-bar"
+                  [class]="'bg-' + color()"
+                  role="progressbar"
+                  [style.width.%]="formattedNumericContent()"
+                  [attr.aria-valuenow]="formattedNumericContent()"
+                  aria-valuemin="0"
+                  aria-valuemax="100">
+                  {{ formattedNumericContent() }}%
+                </div>
+              </div>
+            }
+          }
+        </div>
+      </div>
+      <div class="col-auto">
+        <i [class]="iconClass() + ' fa-2x text-gray-300'"></i>
+      </div>
+    </div>
+  </div>
+</div>

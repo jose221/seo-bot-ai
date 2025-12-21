@@ -1,0 +1,146 @@
+<div class="box-data-table-and-charts w-100 mt-1">
+  <div class="d-flex justify-content-between w-100">
+    @if (!isLoading && !showAll()){
+      <div class="line-seleccion no-phone ">
+        <div
+          [ngClass]=" boolResultadosConBaseEnUnPerfilEsperado() ? 'btn-seleccion-type btn-active' : 'btn-seleccion-type' "
+          (click)=" boolResultadosConBaseEnUnPerfilEsperado.set(true) "
+        >
+          <p>{{ "Charts" | translate }}</p>
+        </div>
+
+        <div
+          [ngClass]=" !boolResultadosConBaseEnUnPerfilEsperado() ? 'btn-seleccion-type btn-active' : 'btn-seleccion-type' "
+          (click)=" boolResultadosConBaseEnUnPerfilEsperado.set(false) "
+        >
+          <p>{{ "Tables" | translate }}</p>
+        </div>
+      </div>
+    }
+    <div class="d-flex grid-gap-1">
+      @if (!options().hiddenOptions && !isLoading){
+        <button (click)="openFilters()" type="button" class="btn btn-light">Opciones</button>
+      }
+    </div>
+  </div>
+  <div class="content-chart" [ngClass]="{'d-no-show':!boolResultadosConBaseEnUnPerfilEsperado() && !showAll()}">
+    <div class="chart-container" [ngClass]="{'d-no-show':isLoading}">
+      <canvas class="w-100 h-100" [id]="chartId"  #chartCanvas></canvas>
+    </div>
+    <div class="skeleton-content-loader" >
+      @if (isLoading){
+        <ngx-skeleton-loader [count]="showAll() ? 2 : 1" appearance="line" [theme]="{height: '300px', 'width': '100%'}" />
+      }
+    </div>
+  </div>
+
+  <div class="w-100" [ngClass]="{'d-no-show':(boolResultadosConBaseEnUnPerfilEsperado() && !showAll()) || isLoading}">
+    @if (cTableData().data.length > 0) {
+      <app-filter-list [data]="cTableData()" (dataChange)="tableData.set($event)" [config]="tableDataConfigFilter()" ></app-filter-list>
+    }
+    <app-table [data]="tableData()" [labels]="tableColumn()"></app-table>
+    <app-paginator-list [data]="tableData()" (dataChange)="tableData.set($event)"></app-paginator-list>
+  </div>
+
+</div>
+@if (!options().hiddenOptions && !isLoading){
+  <app-bottom-modal [expanded]="isModalOpen()">
+    <app-header-modal>
+      <h3>Filtros</h3>
+      <button type="button" class="btn-close" (click)="closeFilters()"></button>
+    </app-header-modal>
+    <app-body-modal>
+      <div class="accordion" id="accordionPanelsStayOpenExample">
+        @for (filter of gGraphicsFilter; track filter.id){
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button" (click)="actionCollapse(filter)" [ngClass]="{'collapsed': !filter.selected}" type="button">
+                {{filter.label | translate}}
+              </button>
+            </h2>
+            <div [id]="filter.id" class="accordion-collapse collapse" [ngClass]="{'show': filter.selected}">
+              <div class="accordion-body">
+                <div class="d-flex flex-nowrap grid-gap-1">
+                  @for (configuration of filter.configurations; track configuration){
+                    <div class="form-check">
+                      <input (click)="onChangeFilter(filter, configuration)"
+                             class="form-check-input" type="radio"
+                             [ngModel]="graphicsFilter.filterSelected(filter.id).configuration?.id"
+                             [value]="configuration.id"
+                             [name]="filter.id" [id]="chartId+configuration.id">
+                      <label class="form-check-label" [for]="chartId+configuration.id">
+                        {{ configuration.label | translate }}
+                      </label>
+                    </div>
+                  }
+
+                </div>
+              </div>
+            </div>
+          </div>
+
+        }
+        @if(dataConfig().length > 0){
+          @for (configuration of dataConfig(); track configuration){
+            @if(configuration.graphicsConfig.xKeysAvailable && configuration.graphicsConfig.xKeysAvailable.length > 0){
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne"
+                          aria-expanded="false" aria-controls="collapseOne">
+                    Cambiar Eje X
+                  </button>
+                </h2>
+                <div id="collapseOne" class="accordion-collapse collapse" aria-labelledby="headingOne"
+                     data-bs-parent="#accordionPanelsStayOpenExample">
+                  <div class="accordion-body">
+                    <div class="d-flex flex-nowrap grid-gap-1">
+                      @for (xKey of configuration.graphicsConfig.xKeysAvailable; track xKey) {
+                        <div class="form-check">
+                          <input (click)="onChangeKey('x', xKey)"
+                                 class="form-check-input" type="radio"
+                                 [value]="xKey"
+                                 name="ejeX" [id]="chartId+xKey.key">
+                          <label class="form-check-label" [for]="chartId+xKey.key">
+                            {{ xKey.label | translate }}
+                          </label>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+            @if (configuration.graphicsConfig.yKeysAvailable && configuration.graphicsConfig.yKeysAvailable.length > 0) {
+              <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                  <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                          data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseOne">
+                    Cambiar Eje Y
+                  </button>
+                </h2>
+                <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="collapseTwo"
+                     data-bs-parent="#accordionPanelsStayOpenExample">
+                  <div class="accordion-body">
+                    <div class="d-flex flex-nowrap grid-gap-1">
+                      @for (yKey of configuration.graphicsConfig.yKeysAvailable; track yKey) {
+                        <div class="form-check">
+                          <input (click)="onChangeKey('y', yKey)"
+                                 class="form-check-input" type="radio"
+                                 [value]="yKey"
+                                 name="ejeX" [id]="chartId+yKey.key">
+                          <label class="form-check-label" [for]="chartId+yKey.key">
+                            {{ yKey.label | translate }}
+                          </label>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          }
+        }
+      </div>
+    </app-body-modal>
+  </app-bottom-modal>
+}
