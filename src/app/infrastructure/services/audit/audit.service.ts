@@ -7,32 +7,34 @@ import {AuditResponseDto, CreateAuditResponseDto} from '@/app/infrastructure/dto
 import {HttpClientHelper} from '@/app/helper/http-client.helper';
 import {environment} from '@/environments/environment';
 import {HttpItemsModel} from '@/app/infrastructure/dto/http/http-default.model';
+import {BaseService} from '@/app/infrastructure/services/base/base.service';
 
 
 @Injectable({
   providedIn: 'root'
 })
-export class AuditService {
+export class AuditService extends BaseService{
   itemMapper = new AuditMapper();
   constructor(private httpService: HttpService) {
+    super();
   }
 
   async create(params: CreateAuditRequestModel): Promise<CreateAuditResponseModel> {
-    const response = await this.httpService.post<CreateAuditResponseDto>(`${environment.endpoints.audit.path}`, this.itemMapper.mapCreate(params))
+    const response = await this.httpService.post<CreateAuditResponseDto>(`${environment.endpoints.audit.path}`, this.itemMapper.mapCreate(params), {}, this.getToken)
     return this.itemMapper.mapResponseCreate(response);
   }
 
   async delete(id: number): Promise<any> {
-    return await this.httpService.delete<any>(`${environment.endpoints.audit.path}/${id}`);
+    return await this.httpService.delete<any>(`${environment.endpoints.audit.path}/${id}`, {}, this.getToken);
   }
 
   async get(params?: FilterAuditRequestModel): Promise<AuditResponseModel[]> {
-    const response = await this.httpService.get<HttpItemsModel<AuditResponseDto[]>>(`${environment.endpoints.audit.path}`, params ? this.itemMapper.mapFilter(params):{});
+    const response = await this.httpService.get<HttpItemsModel<AuditResponseDto[]>>(`${environment.endpoints.audit.path}`, params ? this.itemMapper.mapFilter(params):{}, {}, this.getToken);
     return response.items.map((item: AuditResponseDto) => this.itemMapper.mapResponse(item));
   }
 
   async find(id: number): Promise<AuditResponseModel> {
-    const response = await this.httpService.get<AuditResponseDto>(`${environment.endpoints.audit.path}/${id}`);
+    const response = await this.httpService.get<AuditResponseDto>(`${environment.endpoints.audit.path}/${id}`, {},{}, this.getToken);
     return this.itemMapper.mapResponse(response);
   }
 }

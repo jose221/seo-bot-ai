@@ -3,7 +3,7 @@ import {AuthLoginResponseModel, AuthRegisterResponseModel} from '@/app/domain/mo
 
 export abstract class AuthRepository {
   abstract isAuthenticated(): boolean;
-  abstract getToken(): string;
+  public abstract getToken(): string;
   abstract login(params: AuthLoginRequestModel): Promise<AuthLoginResponseModel|any>;
   abstract register(params: AuthRegisterRequestModel): Promise<AuthRegisterResponseModel>;
   abstract logout(): void;
