@@ -1,4 +1,5 @@
 import {StatusType} from '@/app/domain/types/status.type';
+import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 
 export class CreateAuditResponseModel {
   constructor(
@@ -25,7 +26,8 @@ export class AuditResponseModel {
     public created_at: string,
     public completed_at: string,
     public lighthouse_data?: object|any,
-    public ai_suggestions?: object|any
+    public ai_suggestions?: object|any,
+    public web_page?: TargetResponseModel
   ) {}
 }
 
