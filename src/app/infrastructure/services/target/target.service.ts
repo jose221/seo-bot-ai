@@ -7,18 +7,16 @@ import {TargetResponseDto} from '@/app/infrastructure/dto/response/target-respon
 import {environment} from '@/environments/environment';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 import {HttpItemsModel} from '@/app/infrastructure/dto/http/http-default.model';
+import {BaseService} from '@/app/infrastructure/services/base/base.service';
 
 
 @Injectable({
   providedIn: 'root'
 })
-export class TargetService {
+export class TargetService extends BaseService{
   itemMapper = new TargetMapper();
-  constructor(private httpService: HttpService, private authRepository: AuthRepository) {
-  }
-
-  get getToken(): string {
-    return this.authRepository.getToken();
+  constructor(private httpService: HttpService) {
+    super();
   }
 
   async create(params: CreateTargetRequestModel): Promise<any> {
