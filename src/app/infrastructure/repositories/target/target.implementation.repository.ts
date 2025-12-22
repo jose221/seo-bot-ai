@@ -1,7 +1,14 @@
 import { Injectable } from '@angular/core';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
-import {CreateTargetRequestModel, FilterTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
-import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
+import {
+  CreateTargetRequestModel,
+  FilterTargetRequestModel,
+  SearchTargetRequestModel
+} from '@/app/domain/models/target/request/target-request.model';
+import {
+  SearchTargetResponseModel,
+  TargetResponseModel
+} from '@/app/domain/models/target/response/target-response.model';
 import {TargetService} from '@/app/infrastructure/services/target/target.service';
 
 @Injectable({
@@ -22,5 +29,8 @@ export class TargetImplementationRepository implements TargetRepository {
   }
   async find(id: number): Promise<TargetResponseModel> {
     return await this.primaryService.find(id);
+  }
+  async search(params?: SearchTargetRequestModel): Promise<SearchTargetResponseModel[]> {
+    return await this.primaryService.search(params);
   }
 }

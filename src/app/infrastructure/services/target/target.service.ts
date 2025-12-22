@@ -1,9 +1,16 @@
 import { Injectable } from '@angular/core';
 import {HttpService} from '@/app/infrastructure/services/general/http.service';
 import {TargetMapper} from '@/app/domain/mappers/target/target.mapper';
-import {CreateTargetRequestModel,FilterTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
-import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
-import {TargetResponseDto} from '@/app/infrastructure/dto/response/target-response.dto';
+import {
+  CreateTargetRequestModel,
+  FilterTargetRequestModel,
+  SearchTargetRequestModel
+} from '@/app/domain/models/target/request/target-request.model';
+import {
+  SearchTargetResponseModel,
+  TargetResponseModel
+} from '@/app/domain/models/target/response/target-response.model';
+import {SearchTargetResponseDto, TargetResponseDto} from '@/app/infrastructure/dto/response/target-response.dto';
 import {environment} from '@/environments/environment';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 import {HttpItemsModel} from '@/app/infrastructure/dto/http/http-default.model';
@@ -30,6 +37,11 @@ export class TargetService extends BaseService{
   async get(params?: FilterTargetRequestModel): Promise<TargetResponseModel[]> {
     const response = await this.httpService.get<HttpItemsModel<TargetResponseDto[]>>(`${environment.endpoints.target.path}`, params, {}, this.getToken);
     return response.items.map((item: TargetResponseDto) => this.itemMapper.mapResponse(item));
+  }
+
+  async search(params?: SearchTargetRequestModel): Promise<SearchTargetResponseModel[]> {
+    const response = await this.httpService.get<HttpItemsModel<SearchTargetResponseDto[]>>(`${environment.endpoints.target.search}`, params ? this.itemMapper.mapSearch(params) : {}, {}, this.getToken);
+    return response.items.map((item: SearchTargetResponseDto) => this.itemMapper.mapResponseSearch(item));
   }
 
   async find(id: number): Promise<TargetResponseModel> {

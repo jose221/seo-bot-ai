@@ -30,4 +30,9 @@ export abstract class ValidationFormBase {
   protected async successMessage(description?: string){
     await this._sweetAlertUtil.success("Success", description ?? "The operation was successful")
   }
+  protected catchError(e: Error | any){
+    console.log('Error logging in:', e);
+    this.error.set( `${e?.response?.statusText ?? e.name} ${e.response?.data?.detail ?? e.message} (${e?.response?.status ?? e?.code}) `);
+
+  }
 }

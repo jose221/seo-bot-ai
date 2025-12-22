@@ -41,7 +41,9 @@
       "search": "Search",
       "filter": "Filter",
       "export": "Export",
-      "import": "Import"
+      "import": "Import",
+      "clear": "Clear",
+      "close": "Close"
     },
     "status": {
       "active": "Active",

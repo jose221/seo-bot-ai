@@ -19,3 +19,10 @@ export interface FilterTargetRequestDto {
   page_size: number
   is_active: boolean
 }
+
+export interface SearchTargetRequestDto {
+  query: string
+  page: number
+  page_size: number
+  is_active: boolean
+}

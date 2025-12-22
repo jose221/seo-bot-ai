@@ -41,7 +41,9 @@
       "search": "Buscar",
       "filter": "Filtrar",
       "export": "Exportar",
-      "import": "Importar"
+      "import": "Importar",
+      "clear": "Limpiar",
+      "close": "Cerrar"
     },
     "status": {
       "active": "Activa",
