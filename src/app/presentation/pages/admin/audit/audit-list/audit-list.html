@@ -1,0 +1,130 @@
+<div class="row mb-5">
+  <div class="col-12 text-center">
+    <h1 class="display-4 fw-light mb-2"><i class="text-primary bi bi-globe2"></i> Gestión de auditorias</h1>
+    <p class="fs-6 text-muted">Administra y visualiza todas tus auditorias creadas</p>
+  </div>
+</div>
+<div class="row mb-4">
+  <div class="col-12 col-lg-10 col-xl-8 mx-auto">
+    <div class="card rounded-3 border-0 shadow-sm">
+      <div class="card-body p-4">
+        @if (!isLoading() && cItems().data.length > 0) {
+          <div class="row align-items-center g-3">
+            <div class="col-12 col-lg-8">
+              <app-filter-list class="w-100" [data]="cItems()" (dataChange)="items.set($event)" [config]="configFilter()" ></app-filter-list>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="d-flex gap-2">
+                <button class="btn btn-primary rounded-2 flex-fill">
+                  <i class="me-1 bi bi-plus-circle"></i> Nueva
+                </button>
+                <button class="btn btn-outline-secondary rounded-2 flex-fill">
+                  <i class="me-1 bi bi-clipboard-check"></i>Paginas
+                </button>
+              </div>
+            </div>
+          </div>
+        }
+        <div class="row mt-4">
+          @if (!isLoading() && items().data.length > 0){
+            <app-table [data]="items()" [labels]="tableColumn()"></app-table>
+            <div  class="mt-5" >
+              <app-paginator-list [data]="items()" (dataChange)="items.set($event)"></app-paginator-list>
+            </div>
+          }
+        </div>
+        <div class="modal fade" role="dialog" tabindex="-1" id="reportModal" aria-labelledby="reportModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
+            <div class="modal-content border-0 shadow-lg">
+              <div class="modal-header bg-gradient border-0 py-4" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                <div>
+                  <h5 class="fw-bold text-white modal-title" id="reportModalLabel"><i class="me-2 bi bi-file-earmark-text"></i>Reporte de Auditoría </h5>
+                  <p class="text-white-50 mt-1 mb-0 small">ID: 6f146978-f65e-4df5-b95f-9a1065befb72</p>
+                </div><button class="btn-close btn-close-white" aria-label="Close" data-bs-dismiss="modal" type="button"></button>
+              </div>
+              <div class="modal-body p-4">
+                <div class="row g-4">
+                  <div class="col-12">
+                    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert"><i class="fs-4 me-3 bi bi-exclamation-triangle-fill"></i>
+                      <div>
+                        <h6 class="mb-1 alert-heading">Error en la Auditoría</h6>
+                        <p class="mb-0">"Style 'ScoreVal' not found in stylesheet"</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card h-100 bg-light border-0">
+                      <div class="card-body">
+                        <h6 class="fw-semibold text-muted mb-3 card-subtitle"><i class="me-2 bi bi-info-circle"></i>Información General </h6>
+                        <ul class="list-unstyled mb-0">
+                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Estado:</span><span class="badge bg-danger px-3 py-2">Fallido</span></li>
+                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Fecha de Creación:</span><strong>12/12/2025 03:48:17</strong></li>
+                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Fecha de Finalización:</span><strong>11/12/2025 22:50:22</strong></li>
+                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">Web Page ID:</span><small class="font-monospace">a65f4165...</small></li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-md-6">
+                    <div class="card h-100 bg-light border-0">
+                      <div class="card-body">
+                        <h6 class="fw-semibold text-muted mb-3 card-subtitle"><i class="me-2 bi bi-speedometer2"></i>Métricas de Rendimiento </h6>
+                        <div class="row g-3">
+                          <div class="col-6">
+                            <div class="text-center bg-white rounded p-3">
+                              <div class="text-muted mb-1 small"><span>Performance</span></div>
+                              <div class="fs-5 fw-bold text-muted"><span>N/A</span></div>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="text-center bg-white rounded p-3">
+                              <div class="text-muted mb-1 small"><span>SEO</span></div>
+                              <div class="fs-5 fw-bold text-muted"><span>N/A</span></div>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="text-center bg-white rounded p-3">
+                              <div class="text-muted mb-1 small"><span>Accesibilidad</span></div>
+                              <div class="fs-5 fw-bold text-muted"><span>N/A</span></div>
+                            </div>
+                          </div>
+                          <div class="col-6">
+                            <div class="text-center bg-white rounded p-3">
+                              <div class="text-muted mb-1 small"><span>Mejores Prácticas</span></div>
+                              <div class="fs-5 fw-bold text-muted"><span>N/A</span></div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                      <div class="card-header bg-white border-0 py-3">
+                        <h6 class="fw-semibold mb-0"><i class="text-primary me-2 bi bi-clipboard-data"></i>Datos de Lighthouse </h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="alert alert-secondary mb-0" role="alert"><i class="me-2 bi bi-info-circle"></i><span> No hay datos de Lighthouse disponibles para esta auditoría. </span></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <div class="card border-0 shadow-sm">
+                      <div class="card-header bg-white border-0 py-3">
+                        <h6 class="fw-semibold mb-0"><i class="text-success me-2 bi bi-robot"></i>Sugerencias de IA </h6>
+                      </div>
+                      <div class="card-body">
+                        <div class="alert alert-secondary mb-0" role="alert"><i class="me-2 bi bi-info-circle"></i><span> No hay sugerencias de IA disponibles para esta auditoría. </span></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer bg-light border-0 py-3"><button class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal" type="button"><i class="me-2 bi bi-x-circle"></i>Cerrar </button><button class="btn btn-primary rounded-pill px-4" type="button"><i class="me-2 bi bi-download"></i>Descargar Reporte </button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
