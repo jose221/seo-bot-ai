@@ -131,7 +131,15 @@
       "managePages": "Administrar Páginas",
       "selectPage": "Selecciona una página web para auditar...",
       "includeAI": "Incluir Análisis Inteligente (IA)",
-      "auditButton": "Auditar"
+      "auditButton": "Auditar",
+      "confirmModal": {
+        "title": "Auditoría Iniciada",
+        "message": "Mensaje:",
+        "status": "Estado:",
+        "taskId": "ID de Tarea:",
+        "acceptButton": "Aceptar",
+        "viewListButton": "Ver Lista de Auditorías"
+      }
     },
     "modal": {
       "title": "Reporte de Auditoría",

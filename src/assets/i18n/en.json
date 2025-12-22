@@ -131,7 +131,15 @@
       "managePages": "Manage Pages",
       "selectPage": "Select a web page to audit...",
       "includeAI": "Include Intelligent Analysis (AI)",
-      "auditButton": "Audit"
+      "auditButton": "Audit",
+      "confirmModal": {
+        "title": "Audit Started",
+        "message": "Message:",
+        "status": "Status:",
+        "taskId": "Task ID:",
+        "acceptButton": "Accept",
+        "viewListButton": "View Audit List"
+      }
     },
     "modal": {
       "title": "Audit Report",
