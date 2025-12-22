@@ -115,6 +115,47 @@
       "saveButton": "Guardar Configuración",
       "successMessage": "La configuración se ha guardado correctamente."
     }
+  },
+  "audits": {
+    "title": "Gestión de auditorias",
+    "subtitle": "Administra y visualiza todas tus auditorias creadas",
+    "buttons": {
+      "new": "Nueva",
+      "pages": "Paginas"
+    },
+    "modal": {
+      "title": "Reporte de Auditoría",
+      "error": {
+        "title": "Error en la Auditoría"
+      },
+      "generalInfo": {
+        "title": "Información General",
+        "status": "Estado",
+        "createdDate": "Fecha de Creación",
+        "finishedDate": "Fecha de Finalización",
+        "webPageId": "Web Page ID"
+      },
+      "metrics": {
+        "title": "Métricas de Rendimiento",
+        "performance": "Performance",
+        "seo": "SEO",
+        "accessibility": "Accesibilidad",
+        "bestPractices": "Mejores Prácticas",
+        "na": "N/A"
+      },
+      "lighthouse": {
+        "title": "Datos de Lighthouse",
+        "noData": "No hay datos de Lighthouse disponibles para esta auditoría."
+      },
+      "ai": {
+        "title": "Sugerencias de IA",
+        "noData": "No hay sugerencias de IA disponibles para esta auditoría."
+      },
+      "buttons": {
+        "close": "Cerrar",
+        "download": "Descargar Reporte"
+      }
+    }
   }
 }
 
