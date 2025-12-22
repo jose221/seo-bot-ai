@@ -3,9 +3,11 @@ Schemas para gestión de Targets (WebPages).
 Define DTOs para crear y listar sitios web a auditar.
 """
 from pydantic import BaseModel, Field, validator
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
+
+from app.models import AuditReport
 
 
 class WebPageCreate(BaseModel):
@@ -50,6 +52,7 @@ class WebPageResponse(BaseModel):
     instructions: Optional[str]
     tech_stack: Optional[str]
     is_active: bool
+    audit_reports: Optional[List[AuditReport]] = None
 
     class Config:
         from_attributes = True

@@ -2,8 +2,8 @@
 Modelo de Página Web - Targets para auditoría.
 Representa sitios web que serán analizados por el bot.
 """
-from sqlmodel import SQLModel, Field
-from typing import Optional
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, List
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
 
@@ -42,14 +42,15 @@ class WebPage(SQLModel, table=True):
     #created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     #updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
-
+    audit_reports: List["AuditReport"] = Relationship(back_populates="web_page")
     class Config:
         json_schema_extra = {
             "example": {
                 "url": "https://example.com",
                 "name": "Mi Sitio Web",
                 "instructions": "Click en 'Aceptar cookies' si aparece",
-                "tech_stack": "WordPress + WooCommerce"
+                "tech_stack": "WordPress + WooCommerce",
+                "audit_reports": []
             }
         }
 

@@ -3,6 +3,7 @@ Endpoints para gestión de Auditorías.
 Permite iniciar análisis y consultar resultados.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks, Query
+from sqlalchemy.orm import joinedload
 from sqlmodel import select, desc
 from sqlalchemy import String, cast as sql_cast
 from typing import Optional, Dict, Any
@@ -232,7 +233,7 @@ async def get_audit(
     statement = select(AuditReport).where(
         AuditReport.id == audit_id,
         AuditReport.user_id == current_user.id
-    )
+    ).options(joinedload(AuditReport.web_page))
     result = await session.execute(statement)
     audit = result.scalars().first()
 
@@ -268,7 +269,7 @@ async def list_audits(
     if status_filter:
         statement = statement.where(sql_cast(AuditReport.status, String) == status_filter.value)
 
-    statement = statement.order_by(desc(AuditReport.created_at))
+    statement = statement.options(joinedload(AuditReport.web_page)).order_by(desc(AuditReport.created_at))
 
     # Contar total
     count_result = await session.execute(statement)

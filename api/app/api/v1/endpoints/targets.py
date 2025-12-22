@@ -3,6 +3,7 @@ Endpoints para gestión de Targets (WebPages).
 CRUD completo para sitios web a auditar.
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from sqlalchemy.orm import joinedload
 from sqlmodel import select, desc
 from uuid import UUID
 from datetime import datetime, timezone
@@ -85,10 +86,10 @@ async def list_targets(
 
     # Paginación
     offset = (page - 1) * page_size
-    statement = statement.offset(offset).limit(page_size)
+    statement = statement.options(joinedload(WebPage.audit_reports)).offset(offset).limit(page_size)
 
     result = await session.execute(statement)
-    targets = result.scalars().all()
+    targets = result.unique().scalars().all()
 
     return target_schemas.WebPageListResponse(
         items=targets,
@@ -111,7 +112,7 @@ async def get_target(
     statement = select(WebPage).where(
         WebPage.id == target_id,
         WebPage.user_id == current_user.id
-    )
+    ).options(joinedload(WebPage.audit_reports))
     result = await session.execute(statement)
     target = result.scalars().first()
 
