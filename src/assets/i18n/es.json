@@ -125,6 +125,14 @@
       "new": "Nueva",
       "pages": "Paginas"
     },
+    "form": {
+      "title": "Auditoría Web",
+      "viewAudits": "Ver Auditorías",
+      "managePages": "Administrar Páginas",
+      "selectPage": "Selecciona una página web para auditar...",
+      "includeAI": "Incluir Análisis Inteligente (IA)",
+      "auditButton": "Auditar"
+    },
     "modal": {
       "title": "Reporte de Auditoría",
       "error": {

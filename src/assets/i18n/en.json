@@ -125,6 +125,14 @@
       "new": "New",
       "pages": "Pages"
     },
+    "form": {
+      "title": "Web Audit",
+      "viewAudits": "View Audits",
+      "managePages": "Manage Pages",
+      "selectPage": "Select a web page to audit...",
+      "includeAI": "Include Intelligent Analysis (AI)",
+      "auditButton": "Audit"
+    },
     "modal": {
       "title": "Audit Report",
       "error": {

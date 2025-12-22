@@ -1,13 +1,21 @@
 <div class="container-form">
   <div class="row">
     <div class="col-12">
-      <div class="d-flex justify-content-end gap-2 p-3"><button class="btn btn-outline-secondary btn-sm" type="button"><i class="me-1 bi bi-list-check"></i>Ver Auditorías </button><button class="btn btn-outline-secondary btn-sm" type="button"><i class="me-1 bi bi-gear"></i>Administrar Páginas </button></div>
+      <div class="d-flex justify-content-end gap-2 p-3">
+        <button class="btn btn-outline-secondary btn-sm" type="button">
+          <i class="me-1 bi bi-list-check"></i>{{ 'audits.form.viewAudits' | translate }}
+        </button>
+        <button class="btn btn-outline-secondary btn-sm" type="button">
+          <i class="me-1 bi bi-gear"></i>{{ 'audits.form.managePages' | translate }}
+        </button>
+      </div>
     </div>
   </div>
   <div class="row justify-content-center" style="margin-top:15vh;">
     <div class="col-lg-6 col-xl-5">
-      <div class="text-center mb-5"><i class="text-primary bi bi-shield-check" style="font-size:5rem;"></i>
-        <h1 class="fw-bold text-primary mt-3">Auditoría Web</h1>
+      <div class="text-center mb-5">
+        <i class="text-primary bi bi-shield-check" style="font-size:5rem;"></i>
+        <h1 class="fw-bold text-primary mt-3">{{ 'audits.form.title' | translate }}</h1>
       </div>
       @if (error()) {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -23,7 +31,7 @@
             formControlName="web_page_id"
             aria-describedby="validationWebPageId"
             [ngClass]="{'is-invalid': messages('web_page_id').length > 0}">
-            <option value="" selected disabled>Selecciona una página web para auditar...</option>
+            <option value="" selected disabled>{{ 'audits.form.selectPage' | translate }}</option>
             @for (target of targetSearchList(); track target.id){
               <option [value]="target.id">{{target.name}}</option>
             }
@@ -43,12 +51,14 @@
               id="aiAnalysisSwitch"
               role="switch" style="width:3rem;height:1.5rem;cursor:pointer;">
             <label class="ms-2 form-check-label" for="aiAnalysisSwitch" style="cursor:pointer;font-size:0.95rem;">
-              <i class="text-primary me-1 bi bi-cpu"></i>Incluir Análisis Inteligente (IA) </label>
+              <i class="text-primary me-1 bi bi-cpu"></i>{{ 'audits.form.includeAI' | translate }}
+            </label>
           </div>
         </div>
         <div class="d-flex justify-content-center gap-2">
           <button class="btn btn-primary btn-lg shadow-sm px-4 py-2" type="submit">
-            <i class="me-2 bi bi-search"></i>Auditar </button>
+            <i class="me-2 bi bi-search"></i>{{ 'audits.form.auditButton' | translate }}
+          </button>
         </div>
       </form>
     </div>
