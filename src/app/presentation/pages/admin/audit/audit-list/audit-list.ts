@@ -10,6 +10,7 @@ import {PaginatorList} from '@/app/presentation/components/general/paginator-lis
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
 import {TranslatePipe} from '@ngx-translate/core';
 import {RouterLink} from '@angular/router';
+import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
 
 @Component({
   selector: 'app-audit-list',
@@ -24,6 +25,7 @@ import {RouterLink} from '@angular/router';
   styleUrl: './audit-list.scss',
 })
 export class AuditList extends ListDefaultBase<AuditResponseModel>{
+  statusAuditUtil = inject(StatusAuditUtil);
   configFilter  = signal<FilterListConfig>({
     limit: 6,
     search: {
@@ -49,7 +51,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
         type: 'text',
         innerHtml: (element: AuditResponseModel)=>{
           const statusClass = `status-${element.status.replace('_', '-')}`;
-          const statusText = this.getStatusText(element.status);
+          const statusText = this.statusAuditUtil.getStatusText(element.status);
           return `<span class="badge ${statusClass}"><span class="status-text">${statusText}</span></span>`;
         },
       },
@@ -132,16 +134,6 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
   }
   async toDelete(item: AuditResponseModel){
     await this._router.navigate(['/admin/modules', item?.id])
-  }
-
-  private getStatusText(status: string): string {
-    const statusMap: Record<string, string> = {
-      'pending': 'Pendiente',
-      'in_progress': 'En Progreso',
-      'completed': 'Completado',
-      'failed': 'Fallido'
-    };
-    return statusMap[status] || status;
   }
 
 }

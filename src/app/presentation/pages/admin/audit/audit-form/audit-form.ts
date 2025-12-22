@@ -19,6 +19,8 @@ import {
   FooterModalComponent
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 import {RouterLink} from '@angular/router';
+import {CreateAuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
+import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
 
 @Component({
   selector: 'app-audit-form',
@@ -36,7 +38,9 @@ import {RouterLink} from '@angular/router';
   styleUrl: './audit-form.scss',
 })
 export class AuditForm extends ValidationFormBase implements OnInit {
+  public statusAuditUtil = inject(StatusAuditUtil)
   showMessageConfirmation = signal<boolean>(false);
+  responseCreateAudit = signal<CreateAuditResponseModel>({} as CreateAuditResponseModel);
   protected readonly form = inject(FormBuilder).group({
     include_ai_analysis: [true],
     web_page_id: ['', Validators.required]
@@ -57,18 +61,18 @@ export class AuditForm extends ValidationFormBase implements OnInit {
   async onSubmit() {
     this.submitted.set(true);
     if (this.form.invalid) return;
-    this.showMessageConfirmation.set(true);
-    //await this.create();
+    await this.create();
   }
   async create(){
     this.error.set('');
     this.loading.set(true);
     try {
-      await this.formRepository.create(
+      const response = await this.formRepository.create(
         this.form.value as CreateAuditRequestModel
       );
-      //await this.successMessage()
-      await this.router.navigateByUrl('/admin/audit');
+      console.log(response)
+      this.responseCreateAudit.set(response)
+      this.showMessageConfirmation.set(true);
     } catch (e: Error | any) {
       this.catchError(e)
     } finally {
