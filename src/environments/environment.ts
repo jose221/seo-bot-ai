@@ -15,6 +15,9 @@ export const environment = {
     },
     target:{
       path: '/targets'
+    },
+    audit:{
+      path: '/audits'
     }
   },
   settings:{
