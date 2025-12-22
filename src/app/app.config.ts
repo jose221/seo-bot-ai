@@ -19,6 +19,8 @@ import {TargetImplementationRepository} from '@/app/infrastructure/repositories/
 import {TranslateLoader, TranslateModule} from '@ngx-translate/core';
 import {HttpClient, provideHttpClient, withFetch} from '@angular/common/http';
 import {Observable} from 'rxjs';
+import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
+import {AuditImplementationRepository} from '@/app/infrastructure/repositories/audit/audit.implementation.repository';
 
 // Custom TranslateLoader
 export class CustomTranslateLoader implements TranslateLoader {
@@ -52,6 +54,7 @@ export const appConfig: ApplicationConfig = {
     ),
     { provide: TranslationRepository, useClass: TranslationImplementationRepository },
     { provide: AuthRepository, useClass: AuthImplementationRepository },
-    { provide: TargetRepository, useClass: TargetImplementationRepository }
+    { provide: TargetRepository, useClass: TargetImplementationRepository },
+    { provide: AuditRepository, useClass: AuditImplementationRepository }
   ]
 };
