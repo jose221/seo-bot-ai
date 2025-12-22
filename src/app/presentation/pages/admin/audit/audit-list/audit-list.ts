@@ -35,19 +35,19 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
   tableColumn = signal<TableColumn[]>(
     [
       {
-        key: 'id',
-        name: 'ID',
-        type: 'text'
-      },
-      {
-        key: 'web_page_id',
+        key: 'web_page.name',
         name: 'Página Web',
         type: 'text'
       },
       {
         key: 'status',
         name: 'Estado',
-        type: 'text'
+        type: 'text',
+        innerHtml: (element: AuditResponseModel)=>{
+          const statusClass = `status-${element.status.replace('_', '-')}`;
+          const statusText = this.getStatusText(element.status);
+          return `<span class="badge ${statusClass}"><span class="status-text">${statusText}</span></span>`;
+        },
       },
       {
         key: 'performance_score',
@@ -88,14 +88,14 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
         key: 'created_at',
         name: 'Ver',
         type: 'link',
-        innerHtml: 'Ver',
+        innerHtml: (element: any)=>'Ver',
         action: (item: any) => this.toDelete(item)
       },
       {
         key: 'created_at',
         name: 'Eliminar',
         type: 'link',
-        innerHtml: 'Eliminar',
+        innerHtml: (element: any)=>'Eliminar',
         action: (item: any) => this.toDelete(item)
       }
     ]
@@ -128,6 +128,16 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
   }
   async toDelete(item: AuditResponseModel){
     await this._router.navigate(['/admin/modules', item?.id])
+  }
+
+  private getStatusText(status: string): string {
+    const statusMap: Record<string, string> = {
+      'pending': 'Pendiente',
+      'in_progress': 'En Progreso',
+      'completed': 'Completado',
+      'failed': 'Fallido'
+    };
+    return statusMap[status] || status;
   }
 
 }

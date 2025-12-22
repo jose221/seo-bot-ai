@@ -23,7 +23,7 @@
                       type="button"
                       [class]="'btn btn-sm btn-primary'+column.cssClass"
                       (click)="handleAction(column, item)">
-                      {{ (column.innerHtml || getCellValue(item, column.key) || 'NA') }}
+                      {{ (column?.innerHtml ? column?.innerHtml(item) : getCellValue(item, column.key) || 'NA') }}
                     </button>
                   }
                   @case ('link') {
@@ -31,7 +31,7 @@
                       [href]="column?.href ?? '#'"
                       [class]="'text-decoration-none '+column.cssClass"
                       (click)="handleAction(column, item);(column?.href ? '': $event.preventDefault())"
-                      [innerHTML]="(column.innerHtml || getCellValue(item, column.key) || 'NA')"
+                      [innerHTML]="(column?.innerHtml ? column?.innerHtml(item) : getCellValue(item, column.key) || 'NA')"
                     >
                     </a>
                   }
@@ -49,7 +49,9 @@
                     {{ (getCellValue(item, column.key) | dateFormat:'short':'es':false) || 'NA'  }}
                   }
                   @default {
-                    {{ getCellValue(item, column.key) || 'NA' }}
+                    <div [innerHTML]="column?.innerHtml ? column?.innerHtml(item) : getCellValue(item, column.key) ?? 'NA'">
+
+                    </div>
                   }
                 }
               </td>

@@ -1,7 +1,7 @@
 import {ChangeDetectionStrategy, Component, computed, effect, input, output, signal} from '@angular/core';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
 import {DateFormatPipe} from '@/app/pipes/date-format-pipe';
-import {orderBy, orderByDate, orderByString} from '@/app/helper/map-data.helper';
+import {getValueByKey, orderBy, orderByDate, orderByString} from '@/app/helper/map-data.helper';
 import {RouterLink} from '@angular/router';
 import {TableColumn} from '@/app/domain/models/general/table-column.model';
 
@@ -52,7 +52,7 @@ export class TableComponent {
 
   // Método para obtener el valor de una celda
   protected getCellValue(item: unknown, key: string): unknown {
-    return (item as Record<string, unknown>)[key];
+    return  getValueByKey(item, key);
   }
 
   // Método para manejar click en columnas
