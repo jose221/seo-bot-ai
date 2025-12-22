@@ -9,6 +9,7 @@ import {TableComponent} from '@/app/presentation/components/general/table/table.
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
 import {TranslatePipe} from '@ngx-translate/core';
+import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-audit-list',
@@ -16,7 +17,8 @@ import {TranslatePipe} from '@ngx-translate/core';
     TableComponent,
     PaginatorList,
     FilterList,
-    TranslatePipe
+    TranslatePipe,
+    RouterLink
   ],
   templateUrl: './audit-list.html',
   styleUrl: './audit-list.scss',

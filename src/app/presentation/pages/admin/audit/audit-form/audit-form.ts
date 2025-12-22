@@ -8,18 +8,35 @@ import {TranslatePipe} from '@ngx-translate/core';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
 import {SearchTargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {SearchTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
+import {DefaultModal} from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
+import {
+  HeaderModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
+import {
+  BodyModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
+import {
+  FooterModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
+import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-audit-form',
   imports: [
     ReactiveFormsModule,
     NgClass,
-    TranslatePipe
+    TranslatePipe,
+    DefaultModal,
+    HeaderModalComponent,
+    BodyModalComponent,
+    FooterModalComponent,
+    RouterLink
   ],
   templateUrl: './audit-form.html',
   styleUrl: './audit-form.scss',
 })
 export class AuditForm extends ValidationFormBase implements OnInit {
+  showMessageConfirmation = signal<boolean>(false);
   protected readonly form = inject(FormBuilder).group({
     include_ai_analysis: [true],
     web_page_id: ['', Validators.required]
@@ -40,7 +57,8 @@ export class AuditForm extends ValidationFormBase implements OnInit {
   async onSubmit() {
     this.submitted.set(true);
     if (this.form.invalid) return;
-    await this.create();
+    this.showMessageConfirmation.set(true);
+    //await this.create();
   }
   async create(){
     this.error.set('');
