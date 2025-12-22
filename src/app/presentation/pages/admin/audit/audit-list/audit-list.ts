@@ -8,13 +8,15 @@ import {TableColumn} from '@/app/domain/models/general/table-column.model';
 import {TableComponent} from '@/app/presentation/components/general/table/table.component';
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
+import {TranslatePipe} from '@ngx-translate/core';
 
 @Component({
   selector: 'app-audit-list',
   imports: [
     TableComponent,
     PaginatorList,
-    FilterList
+    FilterList,
+    TranslatePipe
   ],
   templateUrl: './audit-list.html',
   styleUrl: './audit-list.scss',

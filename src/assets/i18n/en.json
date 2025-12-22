@@ -115,6 +115,47 @@
       "saveButton": "Save Configuration",
       "successMessage": "The configuration has been saved successfully."
     }
+  },
+  "audits": {
+    "title": "Audit Management",
+    "subtitle": "Manage and view all your created audits",
+    "buttons": {
+      "new": "New",
+      "pages": "Pages"
+    },
+    "modal": {
+      "title": "Audit Report",
+      "error": {
+        "title": "Audit Error"
+      },
+      "generalInfo": {
+        "title": "General Information",
+        "status": "Status",
+        "createdDate": "Creation Date",
+        "finishedDate": "Completion Date",
+        "webPageId": "Web Page ID"
+      },
+      "metrics": {
+        "title": "Performance Metrics",
+        "performance": "Performance",
+        "seo": "SEO",
+        "accessibility": "Accessibility",
+        "bestPractices": "Best Practices",
+        "na": "N/A"
+      },
+      "lighthouse": {
+        "title": "Lighthouse Data",
+        "noData": "No Lighthouse data available for this audit."
+      },
+      "ai": {
+        "title": "AI Suggestions",
+        "noData": "No AI suggestions available for this audit."
+      },
+      "buttons": {
+        "close": "Close",
+        "download": "Download Report"
+      }
+    }
   }
 }
 
