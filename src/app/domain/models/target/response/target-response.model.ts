@@ -9,3 +9,12 @@ export class TargetResponseModel {
     public is_active: boolean
   ) {}
 }
+
+export class SearchTargetResponseModel {
+  constructor(
+    public id: string,
+    public name: string,
+    public url: string,
+    public is_active: boolean
+  ) {}
+}

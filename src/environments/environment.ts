@@ -14,7 +14,8 @@ export const environment = {
       delete: `/translate`,
     },
     target:{
-      path: '/targets'
+      path: '/targets',
+      search: '/targets/search'
     },
     audit:{
       path: '/audits'

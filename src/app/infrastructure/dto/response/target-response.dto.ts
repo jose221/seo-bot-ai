@@ -7,3 +7,10 @@ export interface TargetResponseDto {
   url: string,
   is_active: boolean
 }
+
+export interface SearchTargetResponseDto {
+  id: string
+  name: string
+  url: string,
+  is_active: boolean
+}

@@ -16,3 +16,13 @@ export class FilterTargetRequestModel {
   ) {
   }
 }
+
+export class SearchTargetRequestModel {
+  constructor(
+    public query?: string,
+    public page?: number,
+    public page_size?: number,
+    public is_active?: boolean,
+  ) {
+  }
+}

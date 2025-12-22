@@ -2,14 +2,14 @@
   <div class="col-lg-8 col-xl-7">
     <div class="d-flex flex-wrap gap-2 mb-4">
       <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/target">
-        Listado de Sitios
+        {{ 'targets.list' | translate }}
       </a>
     </div>
     <div class="card rounded-3 border-0 shadow-sm">
       <div class="card-body p-4 p-md-5">
         <div class="text-center mb-4">
-          <h2 class="fw-bold text-primary mb-2">Configuración del Sitio</h2>
-          <p class="text-muted">Complete los siguientes campos para configurar su sitio web</p>
+          <h2 class="fw-bold text-primary mb-2">{{ 'targets.form.title' | translate }}</h2>
+          <p class="text-muted">{{ 'targets.form.subtitle' | translate }}</p>
         </div>
         @if (error()) {
           <div class="alert alert-danger alert-dismissible fade show" role="alert">
@@ -20,7 +20,7 @@
         <form id="siteConfigForm" [formGroup]="form" (ngSubmit)="onSubmit()" class="user">
           <div class="mb-4">
             <label class="form-label fw-semibold" for="siteName">
-              Nombre del Sitio
+              {{ 'targets.form.name.label' | translate }}
               <span class="text-danger">*</span>
             </label>
             <input
@@ -28,12 +28,12 @@
               class="border-2 form-control form-control-lg form-control form-control"
               type="text"
               id="siteName"
-              placeholder="Ej: Mi Sitio Principal"
+              [placeholder]="'targets.form.name.placeholder' | translate"
               aria-describedby="validationName"
               [ngClass]="{'is-invalid': messages('name').length > 0}"
             >
             @if (!messages('name').length) {
-              <div class="form-text"><span>Ingrese el nombre de su sitio web</span></div>
+              <div class="form-text"><span>{{ 'targets.form.name.help' | translate }}</span></div>
             }
             @for(msg of messages('name'); track msg){
               <div id="validationName" class="invalid-feedback">
@@ -43,7 +43,7 @@
           </div>
           <div class="mb-4">
             <label class="form-label fw-semibold" for="siteName">
-              Tecnología
+              {{ 'targets.form.techStack.label' | translate }}
               <span class="text-danger">*</span>
             </label>
             <input
@@ -51,12 +51,12 @@
               class="border-2 form-control form-control-lg form-control form-control"
               type="text"
               id="techStack"
-              placeholder="Ej: Utiliza Vue js, Node.js, MySQL"
+              [placeholder]="'targets.form.techStack.placeholder' | translate"
               aria-describedby="validationTechStack"
               [ngClass]="{'is-invalid': messages('tech_stack').length > 0}"
             >
             @if (!messages('tech_stack').length) {
-              <div class="form-text"><span>Seleccione el stack tecnológico utilizado</span></div>
+              <div class="form-text"><span>{{ 'targets.form.techStack.help' | translate }}</span></div>
             }
             @for(msg of messages('tech_stack'); track msg){
               <div id="validationTechStack" class="invalid-feedback">
@@ -65,18 +65,18 @@
             }
           </div>
           <div class="mb-4">
-            <label class="form-label fw-semibold" for="siteUrl">URL del Sitio <span class="text-danger">*</span></label>
+            <label class="form-label fw-semibold" for="siteUrl">{{ 'targets.form.url.label' | translate }} <span class="text-danger">*</span></label>
             <input
               class="border-2 form-control form-control-lg form-control form-control"
               type="url"
               id="url"
-              placeholder="https://example.com"
+              [placeholder]="'targets.form.url.placeholder' | translate"
               aria-describedby="validationUrl"
               formControlName="url"
               [ngClass]="{'is-invalid': messages('url').length > 0}"
             >
             @if (!messages('url').length) {
-              <div class="form-text"><span>Ingrese la URL completa incluyendo https://</span></div>
+              <div class="form-text"><span>{{ 'targets.form.url.help' | translate }}</span></div>
             }
             @for(msg of messages('url'); track msg){
               <div id="validationUrl" class="invalid-feedback">
@@ -86,20 +86,20 @@
           </div>
           <div class="mb-4">
             <label class="form-label fw-semibold" for="instructions">
-              Instrucciones
+              {{ 'targets.form.instructions.label' | translate }}
               <span class="text-danger">*</span>
             </label>
             <textarea
               class="border-2 form-control form-control-lg form-control form-control"
               id="instructions"
-              placeholder="Ej: Esperar 2 segundos después de cargar"
+              [placeholder]="'targets.form.instructions.placeholder' | translate"
               aria-describedby="validationInstructions"
               formControlName="instructions"
               [ngClass]="{'is-invalid': messages('instructions').length > 0}"
               rows="4">
             </textarea>
             @if (!messages('instructions').length) {
-              <div class="form-text"><span>Proporcione instrucciones especiales o notas adicionales</span></div>
+              <div class="form-text"><span>{{ 'targets.form.instructions.help' | translate }}</span></div>
             }
             @for(msg of messages('instructions'); track msg){
               <div id="validationInstructions" class="invalid-feedback">
@@ -109,8 +109,8 @@
           </div>
           <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5">
             <button class="btn btn-outline-secondary btn-lg px-4" type="submit">
-              <svg class="bi bi-arrow-counterclockwise me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"></path></svg> Limpiar </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"><svg class="bi bi-check-circle me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"></path></svg>
-              Guardar Configuración
+              <svg class="bi bi-arrow-counterclockwise me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"></path></svg> {{ 'general.actions.clear' | translate }} </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"><svg class="bi bi-check-circle me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"></path></svg>
+              {{ 'targets.form.saveButton' | translate }}
             </button>
           </div>
         </form>
