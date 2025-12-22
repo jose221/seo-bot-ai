@@ -33,3 +33,5 @@ openpyxl
 playwright-stealth
 nodriver
 pyvirtualdisplay
+
+sqlalchemy

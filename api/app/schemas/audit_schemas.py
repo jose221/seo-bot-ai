@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 from uuid import UUID
 from datetime import datetime
+
+from app.models import WebPage
 from app.models.audit import AuditStatus
 
 
@@ -86,6 +88,7 @@ class AuditResponse(BaseModel):
     error_message: Optional[str]
     created_at: datetime
     completed_at: Optional[datetime]
+    web_page: Optional[WebPage] = None
 
     class Config:
         from_attributes = True

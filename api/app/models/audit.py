@@ -2,7 +2,7 @@
 Modelo de Reporte de Auditoría.
 Almacena resultados de análisis Lighthouse + IA.
 """
-from sqlmodel import SQLModel, Field, Column
+from sqlmodel import SQLModel, Field, Column, Relationship
 from sqlalchemy import JSON, String
 from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
@@ -72,7 +72,7 @@ class AuditReport(SQLModel, table=True):
     error_message: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
-
+    web_page: Optional["WebPage"] = Relationship(back_populates="audit_reports")
     class Config:
         json_schema_extra = {
             "example": {
@@ -83,7 +83,8 @@ class AuditReport(SQLModel, table=True):
                 "ai_suggestions": {
                     "summary": "El sitio tiene buen SEO pero necesita mejorar rendimiento",
                     "actions": ["Optimizar imágenes", "Reducir JavaScript"]
-                }
+                },
+                "web_page": {}
             }
         }
 
