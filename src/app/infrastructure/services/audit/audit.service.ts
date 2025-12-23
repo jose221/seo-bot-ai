@@ -4,22 +4,23 @@ import {AuditMapper} from '@/app/domain/mappers/audit/audit.mapper';
 import {
   CompareAuditRequestModel,
   CreateAuditRequestModel,
-  FilterAuditRequestModel
+  FilterAuditRequestModel, SearchAuditRequestModel
 } from '@/app/domain/models/audit/request/audit-request.model';
 import {
   AuditResponseModel,
   CompareAuditResponseModel,
-  CreateAuditResponseModel
+  CreateAuditResponseModel, SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
 import {
   AuditResponseDto,
   CompareAuditResponseDto,
-  CreateAuditResponseDto
+  CreateAuditResponseDto, SearchAuditResponseDto
 } from '@/app/infrastructure/dto/response/audit-response.dto';
 import {HttpClientHelper} from '@/app/helper/http-client.helper';
 import {environment} from '@/environments/environment';
 import {HttpItemsModel} from '@/app/infrastructure/dto/http/http-default.model';
 import {BaseService} from '@/app/infrastructure/services/base/base.service';
+import {SearchAuditRequestDto} from '@/app/infrastructure/dto/request/audit-request.dto';
 
 
 @Injectable({
@@ -53,5 +54,10 @@ export class AuditService extends BaseService{
   async compare(params: CompareAuditRequestModel): Promise<CompareAuditResponseModel>{
     const response = await this.httpService.post<CompareAuditResponseDto>(`${environment.endpoints.audit.compare}`, this.itemMapper.mapCompare(params), {}, this.getToken)
     return this.itemMapper.mapResponseCompare(response);
+  }
+
+  async search(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]>{
+    const response = await this.httpService.post<HttpItemsModel<SearchAuditResponseDto[]>>(`${environment.endpoints.audit.sarch}`, params ? this.itemMapper.mapSearch(params) : {}, {}, this.getToken)
+    return response.items.map((item: SearchAuditResponseDto) => this.itemMapper.mapResponseSearch(item));
   }
 }

@@ -19,7 +19,8 @@ export const environment = {
     },
     audit:{
       path: '/audits',
-      compare: '/audits/compare'
+      compare: '/audits/compare',
+      sarch: '/audits/sarch'
     }
   },
   settings:{

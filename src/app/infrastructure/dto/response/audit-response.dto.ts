@@ -54,3 +54,17 @@ export interface ComparisonsAuditResponseDto {
   recommendations: RecommendationsAuditResponseDto[]
   summary: SummaryAuditResponseDto
 }
+
+export interface SearchAuditResponseDto{
+  id: string
+  web_page_id: string
+  status: StatusType
+  performance_score: number
+  seo_score: number
+  accessibility_score: number
+  best_practices_score: number
+  created_at: string
+  completed_at: string
+  web_page_url: string
+  web_page_name: string
+}

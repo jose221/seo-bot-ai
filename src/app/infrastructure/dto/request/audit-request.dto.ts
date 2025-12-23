@@ -16,3 +16,14 @@ export interface CompareAuditRequestDto {
   web_page_id: string
   web_page_id_to_compare: string[]
 }
+
+export interface SearchAuditRequestDto {
+  query?: string
+  page?: number
+  page_size?: number
+  status_filter?: StatusType
+  min_performance_score?: number
+  min_seo_score?: number
+  unique_web_page?: boolean
+  exclude_web_page_id?: string
+}
