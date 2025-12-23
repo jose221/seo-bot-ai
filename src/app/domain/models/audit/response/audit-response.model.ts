@@ -31,3 +31,40 @@ export class AuditResponseModel {
   ) {}
 }
 
+export class CompareAuditResponseModel {
+  constructor(
+    public ai_schema_comparison: string,
+    public base_url: string,
+    public comparisons: ComparisonsAuditResponseModel[],
+    public overall_summary: OverallSummaryAuditResponseModel
+  ) {}
+}
+
+export class OverallSummaryAuditResponseModel {
+  constructor(
+    public best_in_performance: string,
+    public best_in_seo: string,
+    public areas_to_improve: string[]
+  ){}
+}
+
+export class RecommendationsAuditResponseModel {
+  constructor(
+    public category: string,
+    public priority: string,
+    public title: string
+){}
+}
+export class SummaryAuditResponseModel {
+  constructor(
+    public overall_winner: string
+  ){}
+}
+
+export class ComparisonsAuditResponseModel {
+  constructor(
+    public compare_url: string,
+    public recommendations: RecommendationsAuditResponseModel[],
+    public summary: SummaryAuditResponseModel
+  ){}
+}
