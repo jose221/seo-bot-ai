@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import {Component, input} from '@angular/core';
 
 @Component({
   selector: 'app-header-modal',
@@ -8,5 +8,5 @@ import { Component } from '@angular/core';
   styleUrl: './header-modal.component.scss'
 })
 export class HeaderModalComponent {
-
+  public classModal = input<string>('');
 }
