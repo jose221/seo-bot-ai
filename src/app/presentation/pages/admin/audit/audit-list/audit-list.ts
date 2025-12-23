@@ -68,7 +68,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
         name: 'Estado',
         type: 'text',
         innerHtml: (element: AuditResponseModel)=>{
-          const statusClass = `status-${element.status.replace('_', '-')}`;
+          const statusClass = this.statusAuditUtil.getStatusClass(element.status);
           const statusText = this.statusAuditUtil.getStatusText(element.status);
           return `<span class="badge ${statusClass}"><span class="status-text">${statusText}</span></span>`;
         },
