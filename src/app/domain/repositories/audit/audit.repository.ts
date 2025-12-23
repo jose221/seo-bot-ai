@@ -3,7 +3,7 @@ import {CreateAuditRequestModel, FilterAuditRequestModel} from '@/app/domain/mod
 
 export abstract class AuditRepository {
   abstract create(params: CreateAuditRequestModel): Promise<CreateAuditResponseModel>;
-  abstract delete(id: number): Promise<any>;
+  abstract delete(id: string): Promise<any>;
   abstract get(params?: FilterAuditRequestModel): Promise<AuditResponseModel[]>;
-  abstract find(id: number): Promise<AuditResponseModel>;
+  abstract find(id: string): Promise<AuditResponseModel>;
 }

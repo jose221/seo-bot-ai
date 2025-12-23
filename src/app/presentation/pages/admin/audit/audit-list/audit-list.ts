@@ -153,7 +153,8 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
     this.showItem.set(item);
   }
   async toDelete(item: AuditResponseModel){
-    await this._router.navigate(['/admin/modules', item?.id])
+    if(item.id) await this._auditRepository.delete(item.id)
+    this.init()
   }
 
 }
