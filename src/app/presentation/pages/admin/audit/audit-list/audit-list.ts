@@ -149,6 +149,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
   }
   showItem = signal<AuditResponseModel|any>({} as AuditResponseModel)
   async toShow(item: AuditResponseModel){
+    console.log('item:', item);
     this.showItem.set(item);
   }
   async toDelete(item: AuditResponseModel){

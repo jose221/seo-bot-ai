@@ -76,11 +76,11 @@
               </li>
               <li class="d-flex justify-content-between mb-2">
                 <span class="text-muted">{{ 'audits.modal.generalInfo.createdDate' | translate }}:</span>
-                <strong>{{showItem()?.created_at | dateFormat:'short': 'es'}}</strong>
+                <strong>{{showItem()?.created_at | dateFormat:'short': 'es': true}}</strong>
               </li>
               <li class="d-flex justify-content-between mb-2">
                 <span class="text-muted">{{ 'audits.modal.generalInfo.finishedDate' | translate }}:</span>
-                <strong>{{showItem()?.finished_at | dateFormat:'short': 'es'}}</strong>
+                <strong>{{showItem()?.completed_at | dateFormat:'short': 'es': true}}</strong>
               </li>
               <li class="d-flex justify-content-between mb-2">
                 <span class="text-muted">{{ 'audits.modal.generalInfo.webPageId' | translate }}:</span>
@@ -100,25 +100,57 @@
               <div class="col-6">
                 <div class="text-center bg-white rounded p-3">
                   <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.performance' | translate }}</span></div>
-                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted">
+                    <span>
+                      @if (showItem()?.performance_score) {
+                        {{showItem()?.performance_score}}
+                      } @else {
+                        {{ 'audits.modal.metrics.na' | translate }}
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="text-center bg-white rounded p-3">
                   <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.seo' | translate }}</span></div>
-                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted">
+                  <span>
+                      @if (showItem()?.seo_score) {
+                        {{showItem()?.seo_score}}
+                      } @else {
+                        {{ 'audits.modal.metrics.na' | translate }}
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="text-center bg-white rounded p-3">
                   <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.accessibility' | translate }}</span></div>
-                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted">
+                    <span>
+                      @if (showItem()?.accessibility_score) {
+                        {{showItem()?.accessibility_score}}
+                      } @else {
+                        {{ 'audits.modal.metrics.na' | translate }}
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
               <div class="col-6">
                 <div class="text-center bg-white rounded p-3">
                   <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.bestPractices' | translate }}</span></div>
-                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted">
+                    <span>
+                      @if (showItem()?.best_practices_score) {
+                        {{showItem()?.best_practices_score}}
+                      } @else {
+                        {{ 'audits.modal.metrics.na' | translate }}
+                      }
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -148,7 +180,11 @@
           </div>
           <div class="card-body">
             <div class="alert alert-secondary mb-0" role="alert">
-              <i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.ai.noData' | translate }} </span>
+              @if (showItem()?.ai_suggestions) {
+                {{showItem()?.ai_suggestions?.analysis}}
+              } @else {
+                <i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.ai.noData' | translate }} </span>
+              }
             </div>
           </div>
         </div>
