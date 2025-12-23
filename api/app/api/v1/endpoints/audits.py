@@ -251,7 +251,7 @@ async def list_audits(
         web_page_id: Optional[UUID] = Query(None, description="Filtrar por target"),
         status_filter: Optional[AuditStatus] = Query(None, description="Filtrar por estado"),
         page: int = Query(1, ge=1),
-        page_size: int = Query(10, ge=1, le=100),
+        page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
         current_user: User = Depends(get_current_user),
         session=Depends(get_session)
 ):
@@ -273,14 +273,15 @@ async def list_audits(
 
     # Contar total
     count_result = await session.execute(statement)
-    total = len(count_result.scalars().all())
+    total = len(count_result.unique().scalars().all())
 
     # Paginación
-    offset = (page - 1) * page_size
-    statement = statement.offset(offset).limit(page_size)
+    if page_size is not None:
+        offset = (page - 1) * page_size
+        statement = statement.offset(offset).limit(page_size)
 
     result = await session.execute(statement)
-    audits = result.scalars().all()
+    audits = result.unique().scalars().all()
 
     return audit_schemas.AuditListResponse(
         items=[audit_schemas.AuditResponse.model_validate(a) for a in audits],
