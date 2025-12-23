@@ -26,3 +26,17 @@ export class CompareAuditRequestModel {
   ) {
   }
 }
+
+export class SearchAuditRequestModel {
+  constructor(
+    public query?: string,
+    public page?: number,
+    public page_size?: number,
+    public status_filter?: StatusType,
+    public min_performance_score?: number,
+    public min_seo_score?: number,
+    public unique_web_page?: boolean,
+    public exclude_web_page_id?: string
+  ) {
+  }
+}

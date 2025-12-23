@@ -68,3 +68,20 @@ export class ComparisonsAuditResponseModel {
     public summary: SummaryAuditResponseModel
   ){}
 }
+
+export class SearchAuditResponseModel{
+  constructor(
+    public id: string,
+    public web_page_id: string,
+    public status: StatusType,
+    public performance_score: number,
+    public seo_score: number,
+    public accessibility_score: number,
+    public best_practices_score: number,
+    public created_at: string,
+    public completed_at: string,
+    public web_page_url: string,
+    public web_page_name: string
+  ) {
+  }
+}
