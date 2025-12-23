@@ -99,7 +99,7 @@ class AuditListResponse(BaseModel):
     items: list[AuditResponse]
     total: int
     page: int
-    page_size: int
+    page_size: Optional[int] = None
 
 
 class SchemaComparisonResult(BaseModel):
