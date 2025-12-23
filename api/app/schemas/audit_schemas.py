@@ -171,3 +171,28 @@ class AuditComparisonResponse(BaseModel):
         }
 
 
+class AuditSearchItem(BaseModel):
+    """Item de búsqueda simplificado para audits"""
+    id: UUID
+    web_page_id: UUID
+    status: AuditStatus
+    performance_score: Optional[float]
+    seo_score: Optional[float]
+    accessibility_score: Optional[float]
+    best_practices_score: Optional[float]
+    created_at: datetime
+    completed_at: Optional[datetime]
+    # Información de la página web asociada
+    web_page_url: Optional[str] = None
+    web_page_name: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AuditSearchResponse(BaseModel):
+    """Respuesta de búsqueda de audits con paginación"""
+    items: List[AuditSearchItem]
+    total: int
+    page: int
+    page_size: Optional[int] = None
