@@ -18,7 +18,8 @@ export const environment = {
       search: '/targets/search'
     },
     audit:{
-      path: '/audits'
+      path: '/audits',
+      compare: '/audits/compare'
     }
   },
   settings:{
