@@ -33,98 +33,134 @@
             </div>
           }
         </div>
-        <div class="modal fade" role="dialog" tabindex="-1" id="reportModal" aria-labelledby="reportModalLabel" aria-hidden="true">
-          <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-            <div class="modal-content border-0 shadow-lg">
-              <div class="modal-header bg-gradient border-0 py-4" style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                <div>
-                  <h5 class="fw-bold text-white modal-title" id="reportModalLabel"><i class="me-2 bi bi-file-earmark-text"></i>{{ 'audits.modal.title' | translate }} </h5>
-                  <p class="text-white-50 mt-1 mb-0 small">ID: 6f146978-f65e-4df5-b95f-9a1065befb72</p>
-                </div><button class="btn-close btn-close-white" aria-label="Close" data-bs-dismiss="modal" type="button"></button>
-              </div>
-              <div class="modal-body p-4">
-                <div class="row g-4">
-                  <div class="col-12">
-                    <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert"><i class="fs-4 me-3 bi bi-exclamation-triangle-fill"></i>
-                      <div>
-                        <h6 class="mb-1 alert-heading">{{ 'audits.modal.error.title' | translate }}</h6>
-                        <p class="mb-0">"Style 'ScoreVal' not found in stylesheet"</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="card h-100 bg-light border-0">
-                      <div class="card-body">
-                        <h6 class="fw-semibold text-muted mb-3 card-subtitle"><i class="me-2 bi bi-info-circle"></i>{{ 'audits.modal.generalInfo.title' | translate }} </h6>
-                        <ul class="list-unstyled mb-0">
-                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">{{ 'audits.modal.generalInfo.status' | translate }}:</span><span class="badge bg-danger px-3 py-2">{{ 'general.status.failed' | translate }}</span></li>
-                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">{{ 'audits.modal.generalInfo.createdDate' | translate }}:</span><strong>12/12/2025 03:48:17</strong></li>
-                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">{{ 'audits.modal.generalInfo.finishedDate' | translate }}:</span><strong>11/12/2025 22:50:22</strong></li>
-                          <li class="d-flex justify-content-between mb-2"><span class="text-muted">{{ 'audits.modal.generalInfo.webPageId' | translate }}:</span><small class="font-monospace">a65f4165...</small></li>
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-md-6">
-                    <div class="card h-100 bg-light border-0">
-                      <div class="card-body">
-                        <h6 class="fw-semibold text-muted mb-3 card-subtitle"><i class="me-2 bi bi-speedometer2"></i>{{ 'audits.modal.metrics.title' | translate }} </h6>
-                        <div class="row g-3">
-                          <div class="col-6">
-                            <div class="text-center bg-white rounded p-3">
-                              <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.performance' | translate }}</span></div>
-                              <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
-                            </div>
-                          </div>
-                          <div class="col-6">
-                            <div class="text-center bg-white rounded p-3">
-                              <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.seo' | translate }}</span></div>
-                              <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
-                            </div>
-                          </div>
-                          <div class="col-6">
-                            <div class="text-center bg-white rounded p-3">
-                              <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.accessibility' | translate }}</span></div>
-                              <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
-                            </div>
-                          </div>
-                          <div class="col-6">
-                            <div class="text-center bg-white rounded p-3">
-                              <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.bestPractices' | translate }}</span></div>
-                              <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                      <div class="card-header bg-white border-0 py-3">
-                        <h6 class="fw-semibold mb-0"><i class="text-primary me-2 bi bi-clipboard-data"></i>{{ 'audits.modal.lighthouse.title' | translate }} </h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="alert alert-secondary mb-0" role="alert"><i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.lighthouse.noData' | translate }} </span></div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="col-12">
-                    <div class="card border-0 shadow-sm">
-                      <div class="card-header bg-white border-0 py-3">
-                        <h6 class="fw-semibold mb-0"><i class="text-success me-2 bi bi-robot"></i>{{ 'audits.modal.ai.title' | translate }} </h6>
-                      </div>
-                      <div class="card-body">
-                        <div class="alert alert-secondary mb-0" role="alert"><i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.ai.noData' | translate }} </span></div>
-                      </div>
-                    </div>
-                  </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<app-default-modal classModalDialog="modal-xl modal-dialog-scrollable" [expanded]="showItem()?.id != null">
+  <app-header-modal>
+    <div>
+      <h5 class="fw-bold text-white modal-title" id="reportModalLabel">
+        <i class="me-2 bi bi-file-earmark-text"></i>{{ 'audits.modal.title' | translate }}
+      </h5>
+      <p class="text-white-50 mt-1 mb-0 small">ID: {{showItem()?.id}}</p>
+    </div>
+    <button class="btn-close btn-close-white" [attr.aria-label]="'general.actions.close' | translate" (click)="showItem.set(null)" type="button"></button>
+  </app-header-modal>
+  <app-body-modal>
+    <div class="row g-4">
+      @if (showItem()?.error_message) {
+        <div class="col-12">
+          <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center" role="alert">
+            <i class="fs-4 me-3 bi bi-exclamation-triangle-fill"></i>
+            <div>
+              <h6 class="mb-1 alert-heading">{{ 'audits.modal.error.title' | translate }}</h6>
+              <p class="mb-0">{{showItem()?.error_message}}</p>
+            </div>
+          </div>
+        </div>
+      }
+      <div class="col-md-6">
+        <div class="card h-100 bg-light border-0">
+          <div class="card-body">
+            <h6 class="fw-semibold text-muted mb-3 card-subtitle">
+              <i class="me-2 bi bi-info-circle"></i>{{ 'audits.modal.generalInfo.title' | translate }}
+            </h6>
+            <ul class="list-unstyled mb-0">
+              <li class="d-flex justify-content-between mb-2">
+                <span class="text-muted">{{ 'audits.modal.generalInfo.status' | translate }}:</span>
+                <span class="badge px-3 py-2" [ngClass]="[statusAuditUtil.getStatusText(showItem()?.status ?? '')]">
+                  {{statusAuditUtil.getStatusText(showItem()?.status)}}
+                </span>
+              </li>
+              <li class="d-flex justify-content-between mb-2">
+                <span class="text-muted">{{ 'audits.modal.generalInfo.createdDate' | translate }}:</span>
+                <strong>{{showItem()?.created_at | dateFormat:'short': 'es'}}</strong>
+              </li>
+              <li class="d-flex justify-content-between mb-2">
+                <span class="text-muted">{{ 'audits.modal.generalInfo.finishedDate' | translate }}:</span>
+                <strong>{{showItem()?.finished_at | dateFormat:'short': 'es'}}</strong>
+              </li>
+              <li class="d-flex justify-content-between mb-2">
+                <span class="text-muted">{{ 'audits.modal.generalInfo.webPageId' | translate }}:</span>
+                <small class="font-monospace">{{showItem()?.web_page_id}}</small>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card h-100 bg-light border-0">
+          <div class="card-body">
+            <h6 class="fw-semibold text-muted mb-3 card-subtitle">
+              <i class="me-2 bi bi-speedometer2"></i>{{ 'audits.modal.metrics.title' | translate }}
+            </h6>
+            <div class="row g-3">
+              <div class="col-6">
+                <div class="text-center bg-white rounded p-3">
+                  <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.performance' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
                 </div>
               </div>
-              <div class="modal-footer bg-light border-0 py-3"><button class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal" type="button"><i class="me-2 bi bi-x-circle"></i>{{ 'audits.modal.buttons.close' | translate }} </button><button class="btn btn-primary rounded-pill px-4" type="button"><i class="me-2 bi bi-download"></i>{{ 'audits.modal.buttons.download' | translate }} </button></div>
+              <div class="col-6">
+                <div class="text-center bg-white rounded p-3">
+                  <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.seo' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="text-center bg-white rounded p-3">
+                  <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.accessibility' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="text-center bg-white rounded p-3">
+                  <div class="text-muted mb-1 small"><span>{{ 'audits.modal.metrics.bestPractices' | translate }}</span></div>
+                  <div class="fs-5 fw-bold text-muted"><span>{{ 'audits.modal.metrics.na' | translate }}</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-0 py-3">
+            <h6 class="fw-semibold mb-0">
+              <i class="text-primary me-2 bi bi-clipboard-data"></i>{{ 'audits.modal.lighthouse.title' | translate }}
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-secondary mb-0" role="alert">
+              <i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.lighthouse.noData' | translate }} </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-0 py-3">
+            <h6 class="fw-semibold mb-0">
+              <i class="text-success me-2 bi bi-robot"></i>{{ 'audits.modal.ai.title' | translate }}
+            </h6>
+          </div>
+          <div class="card-body">
+            <div class="alert alert-secondary mb-0" role="alert">
+              <i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.ai.noData' | translate }} </span>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
+  </app-body-modal>
+  <app-footer-modal>
+    <button class="btn btn-secondary rounded-pill px-4" (click)="showItem.set({})" type="button">
+      <i class="me-2 bi bi-x-circle"></i>{{ 'audits.modal.buttons.close' | translate }}
+    </button>
+    <button class="btn btn-primary rounded-pill px-4" type="button">
+      <i class="me-2 bi bi-download"></i>{{ 'audits.modal.buttons.download' | translate }}
+    </button>
+  </app-footer-modal>
+</app-default-modal>

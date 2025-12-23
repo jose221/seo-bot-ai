@@ -11,6 +11,18 @@ import {FilterList} from '@/app/presentation/components/general/filter-list/filt
 import {TranslatePipe} from '@ngx-translate/core';
 import {RouterLink} from '@angular/router';
 import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
+import {DefaultModal} from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
+import {
+  BodyModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
+import {
+  HeaderModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
+import {
+  FooterModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
+import {DateFormatPipe} from '@/app/pipes/date-format-pipe';
+import {NgClass} from '@angular/common';
 
 @Component({
   selector: 'app-audit-list',
@@ -19,13 +31,19 @@ import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
     PaginatorList,
     FilterList,
     TranslatePipe,
-    RouterLink
+    RouterLink,
+    DefaultModal,
+    BodyModalComponent,
+    HeaderModalComponent,
+    FooterModalComponent,
+    DateFormatPipe,
+    NgClass
   ],
   templateUrl: './audit-list.html',
   styleUrl: './audit-list.scss',
 })
 export class AuditList extends ListDefaultBase<AuditResponseModel>{
-  statusAuditUtil = inject(StatusAuditUtil);
+  public statusAuditUtil = inject(StatusAuditUtil);
   configFilter  = signal<FilterListConfig>({
     limit: 6,
     search: {
@@ -95,7 +113,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
         name: 'Ver',
         type: 'link',
         innerHtml: (element: any)=>'Ver',
-        action: (item: any) => this.toDelete(item)
+        action: (item: any) => this.toShow(item)
       },
       {
         key: 'created_at',
@@ -129,8 +147,9 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
   async toUpdate(item: AuditResponseModel){
     await this._router.navigate(['/admin/modules/update', item?.id])
   }
+  showItem = signal<AuditResponseModel|any>({} as AuditResponseModel)
   async toShow(item: AuditResponseModel){
-    await this._router.navigate(['/admin/modules', item?.id])
+    this.showItem.set(item);
   }
   async toDelete(item: AuditResponseModel){
     await this._router.navigate(['/admin/modules', item?.id])

@@ -1,6 +1,6 @@
 @if (expanded()) {
   <div class="modal fade show" role="dialog" tabindex="-1" id="responseModal" aria-labelledby="responseModalLabel" [attr.aria-hidden]="!expanded()" [style.display]="'block'">
-    <div class="modal-dialog modal-dialog-centered" role="document">
+    <div [class]="'modal-dialog ' + (classModalDialog().includes('scrollable') ? '' : 'modal-dialog-centered ') + classModalDialog()" role="document">
       <div class="modal-content">
         <ng-content></ng-content>
       </div>
