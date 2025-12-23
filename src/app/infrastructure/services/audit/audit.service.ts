@@ -24,7 +24,7 @@ export class AuditService extends BaseService{
     return this.itemMapper.mapResponseCreate(response);
   }
 
-  async delete(id: number): Promise<any> {
+  async delete(id: string): Promise<any> {
     return await this.httpService.delete<any>(`${environment.endpoints.audit.path}/${id}`, {}, this.getToken);
   }
 
@@ -33,7 +33,7 @@ export class AuditService extends BaseService{
     return response.items.map((item: AuditResponseDto) => this.itemMapper.mapResponse(item));
   }
 
-  async find(id: number): Promise<AuditResponseModel> {
+  async find(id: string): Promise<AuditResponseModel> {
     const response = await this.httpService.get<AuditResponseDto>(`${environment.endpoints.audit.path}/${id}`, {},{}, this.getToken);
     return this.itemMapper.mapResponse(response);
   }

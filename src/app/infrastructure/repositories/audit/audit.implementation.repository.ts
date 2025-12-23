@@ -14,13 +14,13 @@ export class AuditImplementationRepository implements AuditRepository {
   async create(params: CreateAuditRequestModel): Promise<CreateAuditResponseModel> {
     return await this.primaryService.create(params);
   }
-  async delete(id: number): Promise<any> {
+  async delete(id: string): Promise<any> {
     return await this.primaryService.delete(id);
   }
   async get(params?: FilterAuditRequestModel): Promise<AuditResponseModel[]> {
     return await this.primaryService.get(params);
   }
-  async find(id: number): Promise<AuditResponseModel> {
+  async find(id: string): Promise<AuditResponseModel> {
     return await this.primaryService.find(id);
   }
 }
