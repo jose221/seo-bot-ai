@@ -165,9 +165,167 @@
             </h6>
           </div>
           <div class="card-body">
-            <div class="alert alert-secondary mb-0" role="alert">
-              <i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.lighthouse.noData' | translate }} </span>
-            </div>
+            @if (showItem()?.lighthouse_data) {
+              <div class="row g-4">
+                <!-- URL y Método -->
+                <div class="col-12">
+                  <div class="p-3 bg-light rounded">
+                    <div class="row align-items-center">
+                      <div class="col-md-8">
+                        <small class="text-muted d-block mb-1">URL Analizada</small>
+                        <div class="d-flex align-items-center">
+                          <i class="bi bi-link-45deg text-primary me-2"></i>
+                          <a [href]="showItem()?.lighthouse_data?.url" target="_blank" class="text-truncate">
+                            {{showItem()?.lighthouse_data?.url}}
+                          </a>
+                        </div>
+                      </div>
+                      <div class="col-md-4 text-md-end mt-2 mt-md-0">
+                        <small class="text-muted d-block mb-1">Método</small>
+                        <span class="badge bg-info">{{showItem()?.lighthouse_data?.method}}</span>
+                        @if (showItem()?.lighthouse_data?.status_code) {
+                          <span class="badge ms-2" [ngClass]="showItem()?.lighthouse_data?.status_code === 200 ? 'bg-success' : 'bg-danger'">
+                            HTTP {{showItem()?.lighthouse_data?.status_code}}
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Core Web Vitals -->
+                @if (showItem()?.lighthouse_data?.cls !== null || showItem()?.lighthouse_data?.lcp !== null) {
+                  <div class="col-12">
+                    <h6 class="fw-semibold mb-3">
+                      <i class="bi bi-activity text-danger me-2"></i>Core Web Vitals
+                    </h6>
+                    <div class="row g-3">
+                      @if (showItem()?.lighthouse_data?.lcp !== null) {
+                        <div class="col-md-4">
+                          <div class="p-3 border rounded">
+                            <small class="text-muted d-block mb-1">LCP (Largest Contentful Paint)</small>
+                            <div class="fw-bold">{{showItem()?.lighthouse_data?.lcp}}s</div>
+                          </div>
+                        </div>
+                      }
+                      @if (showItem()?.lighthouse_data?.cls !== null) {
+                        <div class="col-md-4">
+                          <div class="p-3 border rounded">
+                            <small class="text-muted d-block mb-1">CLS (Cumulative Layout Shift)</small>
+                            <div class="fw-bold">{{showItem()?.lighthouse_data?.cls}}</div>
+                          </div>
+                        </div>
+                      }
+                      @if (showItem()?.lighthouse_data?.fid !== null) {
+                        <div class="col-md-4">
+                          <div class="p-3 border rounded">
+                            <small class="text-muted d-block mb-1">FID (First Input Delay)</small>
+                            <div class="fw-bold">{{showItem()?.lighthouse_data?.fid}}ms</div>
+                          </div>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
+                <!-- Análisis SEO -->
+                @if (showItem()?.lighthouse_data?.seo_analysis) {
+                  <div class="col-12">
+                    <h6 class="fw-semibold mb-3">
+                      <i class="bi bi-search text-success me-2"></i>Análisis SEO
+                    </h6>
+                    <div class="card border-0 bg-light">
+                      <div class="card-body">
+                        <div class="row g-3">
+                          @if (showItem()?.lighthouse_data?.seo_analysis?.title) {
+                            <div class="col-12">
+                              <small class="text-muted d-block mb-1">
+                                <i class="bi bi-type-h1 me-1"></i>Título
+                              </small>
+                              <div class="fw-semibold">{{showItem()?.lighthouse_data?.seo_analysis?.title}}</div>
+                            </div>
+                          }
+                          @if (showItem()?.lighthouse_data?.seo_analysis?.metaDescription) {
+                            <div class="col-12">
+                              <small class="text-muted d-block mb-1">
+                                <i class="bi bi-file-text me-1"></i>Meta Descripción
+                              </small>
+                              <div>{{showItem()?.lighthouse_data?.seo_analysis?.metaDescription}}</div>
+                            </div>
+                          }
+                          <div class="col-12">
+                            <div class="row g-2">
+                              @if (showItem()?.lighthouse_data?.seo_analysis?.h1Count !== undefined) {
+                                <div class="col-6 col-md-3">
+                                  <div class="p-2 bg-white rounded text-center">
+                                    <div class="fw-bold text-primary">{{showItem()?.lighthouse_data?.seo_analysis?.h1Count}}</div>
+                                    <small class="text-muted">H1 Tags</small>
+                                  </div>
+                                </div>
+                              }
+                              @if (showItem()?.lighthouse_data?.seo_analysis?.imageCount !== undefined) {
+                                <div class="col-6 col-md-3">
+                                  <div class="p-2 bg-white rounded text-center">
+                                    <div class="fw-bold text-primary">{{showItem()?.lighthouse_data?.seo_analysis?.imageCount}}</div>
+                                    <small class="text-muted">Imágenes</small>
+                                  </div>
+                                </div>
+                              }
+                              @if (showItem()?.lighthouse_data?.seo_analysis?.imagesWithoutAlt !== undefined) {
+                                <div class="col-6 col-md-3">
+                                  <div class="p-2 bg-white rounded text-center">
+                                    <div class="fw-bold" [ngClass]="showItem()?.lighthouse_data?.seo_analysis?.imagesWithoutAlt > 0 ? 'text-danger' : 'text-success'">
+                                      {{showItem()?.lighthouse_data?.seo_analysis?.imagesWithoutAlt}}
+                                    </div>
+                                    <small class="text-muted">Sin Alt</small>
+                                  </div>
+                                </div>
+                              }
+                              @if (showItem()?.lighthouse_data?.seo_analysis?.linksCount !== undefined) {
+                                <div class="col-6 col-md-3">
+                                  <div class="p-2 bg-white rounded text-center">
+                                    <div class="fw-bold text-primary">{{showItem()?.lighthouse_data?.seo_analysis?.linksCount}}</div>
+                                    <small class="text-muted">Enlaces</small>
+                                  </div>
+                                </div>
+                              }
+                            </div>
+                          </div>
+                          <div class="col-12">
+                            <div class="d-flex gap-2 flex-wrap">
+                              @if (showItem()?.lighthouse_data?.seo_analysis?.hasViewport) {
+                                <span class="badge bg-success">
+                                  <i class="bi bi-check-circle me-1"></i>Viewport Meta
+                                </span>
+                              }
+                              @if (showItem()?.lighthouse_data?.seo_analysis?.hasCanonical) {
+                                <span class="badge bg-success">
+                                  <i class="bi bi-check-circle me-1"></i>Canonical Tag
+                                </span>
+                              }
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                }
+
+                <!-- Timestamp -->
+                @if (showItem()?.lighthouse_data?.timestamp) {
+                  <div class="col-12">
+                    <small class="text-muted">
+                      <i class="bi bi-clock me-1"></i>
+                      Análisis realizado: {{showItem()?.lighthouse_data?.timestamp | dateFormat:'short': 'es': true}}
+                    </small>
+                  </div>
+                }
+              </div>
+            } @else {
+              <div class="alert alert-secondary mb-0" role="alert">
+                <i class="me-2 bi bi-info-circle"></i><span> {{ 'audits.modal.lighthouse.noData' | translate }} </span>
+              </div>
+            }
           </div>
         </div>
       </div>
