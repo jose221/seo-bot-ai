@@ -221,6 +221,141 @@ async def create_audit(
     )
 
 
+@router.get("/audits/search", response_model=audit_schemas.AuditSearchResponse)
+async def search_audits(
+        query: Optional[str] = Query(None, description="Buscar por URL o nombre del target"),
+        status_filter: Optional[AuditStatus] = Query(None, description="Filtrar por estado"),
+        min_performance_score: Optional[float] = Query(None, ge=0, le=100, description="Score mínimo de performance"),
+        min_seo_score: Optional[float] = Query(None, ge=0, le=100, description="Score mínimo de SEO"),
+        unique_web_page: bool = Query(False, description="Si es True, devuelve solo la auditoría más reciente por web_page_id"),
+        exclude_web_page_id: Optional[UUID] = Query(None, description="Excluir auditorías de este web_page_id"),
+        page: int = Query(1, ge=1, description="Número de página"),
+        page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session)
+):
+    """
+    Buscar auditorías del usuario autenticado.
+    Permite filtrar por URL/nombre del target, estado y scores mínimos.
+    Soporta paginación.
+    """
+    from sqlalchemy import func, or_
+
+    # Query base con join a WebPage para buscar por URL/nombre
+    statement = select(
+        AuditReport.id,
+        AuditReport.web_page_id,
+        AuditReport.status,
+        AuditReport.performance_score,
+        AuditReport.seo_score,
+        AuditReport.accessibility_score,
+        AuditReport.best_practices_score,
+        AuditReport.created_at,
+        AuditReport.completed_at,
+        WebPage.url.label('web_page_url'),
+        WebPage.name.label('web_page_name')
+    ).join(WebPage, AuditReport.web_page_id == WebPage.id).where(
+        AuditReport.user_id == current_user.id
+    )
+
+    # Aplicar filtros
+    if query:
+        statement = statement.where(
+            or_(
+                WebPage.url.ilike(f"%{query}%"),
+                WebPage.name.ilike(f"%{query}%")
+            )
+        )
+
+    if status_filter:
+        statement = statement.where(sql_cast(AuditReport.status, String) == status_filter.value)
+
+    if min_performance_score is not None:
+        statement = statement.where(AuditReport.performance_score >= min_performance_score)
+
+    if min_seo_score is not None:
+        statement = statement.where(AuditReport.seo_score >= min_seo_score)
+
+    # Excluir web_page_id específico
+    if exclude_web_page_id is not None:
+        statement = statement.where(AuditReport.web_page_id != exclude_web_page_id)
+
+    statement = statement.order_by(desc(AuditReport.created_at))
+
+    # Contar total
+    count_statement = select(func.count()).select_from(AuditReport).join(
+        WebPage, AuditReport.web_page_id == WebPage.id
+    ).where(AuditReport.user_id == current_user.id)
+
+    if query:
+        count_statement = count_statement.where(
+            or_(
+                WebPage.url.ilike(f"%{query}%"),
+                WebPage.name.ilike(f"%{query}%")
+            )
+        )
+
+    if status_filter:
+        count_statement = count_statement.where(sql_cast(AuditReport.status, String) == status_filter.value)
+
+    if min_performance_score is not None:
+        count_statement = count_statement.where(AuditReport.performance_score >= min_performance_score)
+
+    if min_seo_score is not None:
+        count_statement = count_statement.where(AuditReport.seo_score >= min_seo_score)
+
+    if exclude_web_page_id is not None:
+        count_statement = count_statement.where(AuditReport.web_page_id != exclude_web_page_id)
+
+    count_result = await session.execute(count_statement)
+    total = count_result.scalar()
+
+    # Paginación
+    if page_size is not None:
+        offset = (page - 1) * page_size
+        statement = statement.offset(offset).limit(page_size)
+
+    result = await session.execute(statement)
+    audits = result.all()
+
+    # Si unique_web_page=True, filtrar para obtener solo la más reciente por web_page_id
+    if unique_web_page:
+        # Crear diccionario para almacenar solo la auditoría más reciente por web_page_id
+        unique_audits_dict = {}
+        for audit in audits:
+            web_page_id = audit.web_page_id
+            # Si no existe o la actual es más reciente, reemplazar
+            if web_page_id not in unique_audits_dict or audit.created_at > unique_audits_dict[web_page_id].created_at:
+                unique_audits_dict[web_page_id] = audit
+
+        # Convertir de vuelta a lista
+        audits = list(unique_audits_dict.values())
+        # Actualizar el total
+        total = len(audits)
+
+    return audit_schemas.AuditSearchResponse(
+        items=[
+            audit_schemas.AuditSearchItem(
+                id=a.id,
+                web_page_id=a.web_page_id,
+                status=a.status,
+                performance_score=a.performance_score,
+                seo_score=a.seo_score,
+                accessibility_score=a.accessibility_score,
+                best_practices_score=a.best_practices_score,
+                created_at=a.created_at,
+                completed_at=a.completed_at,
+                web_page_url=a.web_page_url,
+                web_page_name=a.web_page_name
+            )
+            for a in audits
+        ],
+        total=total,
+        page=page,
+        page_size=page_size
+    )
+
+
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)
 async def get_audit(
         audit_id: UUID,
