@@ -15,4 +15,7 @@ export class StatusAuditUtil{
     };
     return statusMap[status] || status;
   }
+  public getStatusClass(status: string): string {
+    return `status-${status.replace('_', '-')}`;
+  }
 }

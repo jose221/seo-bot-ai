@@ -70,7 +70,7 @@
             <ul class="list-unstyled mb-0">
               <li class="d-flex justify-content-between mb-2">
                 <span class="text-muted">{{ 'audits.modal.generalInfo.status' | translate }}:</span>
-                <span class="badge px-3 py-2" [ngClass]="[statusAuditUtil.getStatusText(showItem()?.status ?? '')]">
+                <span class="badge px-3 py-2" [ngClass]="[statusAuditUtil.getStatusClass(showItem()?.status ?? '')]">
                   {{statusAuditUtil.getStatusText(showItem()?.status)}}
                 </span>
               </li>
@@ -240,7 +240,7 @@
                           @if (showItem()?.lighthouse_data?.seo_analysis?.title) {
                             <div class="col-12">
                               <small class="text-muted d-block mb-1">
-                                <i class="bi bi-type-h1 me-1"></i>Título
+                                <i class="bi bi-type-h1 me-1"></i>{{ 'audits.modal.lighthouse.pageTitle' | translate }}
                               </small>
                               <div class="fw-semibold">{{showItem()?.lighthouse_data?.seo_analysis?.title}}</div>
                             </div>
@@ -300,7 +300,7 @@
                               }
                               @if (showItem()?.lighthouse_data?.seo_analysis?.hasCanonical) {
                                 <span class="badge bg-success">
-                                  <i class="bi bi-check-circle me-1"></i>Canonical Tag
+                                  <i class="bi bi-check-circle me-1"></i>{{ 'audits.modal.lighthouse.canonicalTag' | translate }}
                                 </span>
                               }
                             </div>
@@ -311,12 +311,13 @@
                   </div>
                 }
 
+
                 <!-- Timestamp -->
                 @if (showItem()?.lighthouse_data?.timestamp) {
                   <div class="col-12">
                     <small class="text-muted">
                       <i class="bi bi-clock me-1"></i>
-                      Análisis realizado: {{showItem()?.lighthouse_data?.timestamp | dateFormat:'short': 'es': true}}
+                      {{ 'audits.modal.lighthouse.analysisPerformed' | translate }}: {{showItem()?.lighthouse_data?.timestamp | dateFormat:'short': 'es': true}}
                     </small>
                   </div>
                 }

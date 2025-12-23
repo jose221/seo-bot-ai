@@ -163,7 +163,46 @@
       },
       "lighthouse": {
         "title": "Datos de Lighthouse",
-        "noData": "No hay datos de Lighthouse disponibles para esta auditoría."
+        "noData": "No hay datos de Lighthouse disponibles para esta auditoría.",
+        "urlAnalyzed": "URL Analizada",
+        "method": "Método",
+        "coreWebVitals": "Core Web Vitals",
+        "lcp": "LCP (Largest Contentful Paint)",
+        "cls": "CLS (Cumulative Layout Shift)",
+        "fid": "FID (First Input Delay)",
+        "seoAnalysis": "Análisis SEO",
+        "pageTitle": "Título",
+        "metaDescription": "Meta Descripción",
+        "h1Tags": "H1 Tags",
+        "images": "Imágenes",
+        "withoutAlt": "Sin Alt",
+        "links": "Enlaces",
+        "viewportMeta": "Viewport Meta",
+        "canonicalTag": "Canonical Tag",
+        "robotsMeta": "Robots Meta",
+        "structuredData": "Structured Data",
+        "openGraph": "Open Graph",
+        "twitterCard": "Twitter Card",
+        "performance": {
+          "title": "Rendimiento",
+          "firstContentfulPaint": "FCP (First Contentful Paint)",
+          "speedIndex": "Speed Index",
+          "timeToInteractive": "TTI (Time to Interactive)",
+          "totalBlockingTime": "TBT (Total Blocking Time)"
+        },
+        "accessibility": {
+          "title": "Accesibilidad",
+          "colorContrast": "Contraste de Color",
+          "ariaLabels": "ARIA Labels",
+          "altTexts": "Textos Alt"
+        },
+        "bestPractices": {
+          "title": "Mejores Prácticas",
+          "https": "HTTPS",
+          "noErrors": "Sin Errores de Consola",
+          "modernImages": "Imágenes Modernas"
+        },
+        "analysisPerformed": "Análisis realizado"
       },
       "ai": {
         "title": "Sugerencias de IA",
