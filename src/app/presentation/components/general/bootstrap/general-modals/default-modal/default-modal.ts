@@ -8,4 +8,5 @@ import {Component, input} from '@angular/core';
 })
 export class DefaultModal {
   expanded = input<boolean>(true);
+  classModalDialog = input<string>('');
 }

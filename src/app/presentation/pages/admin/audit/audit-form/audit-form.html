@@ -88,12 +88,10 @@
     </div>
   </app-body-modal>
   <app-footer-modal>
-    <div class="modal-footer border-0">
-      <button class="btn btn-secondary" (click)="showMessageConfirmation.set(false)" type="button">{{ 'audits.form.confirmModal.acceptButton' | translate }}</button>
-      <a class="btn btn-primary" id="viewAuditsBtn" routerLink="/admin/audit">
-        <i class="me-1 bi bi-list-check"></i>{{ 'audits.form.confirmModal.viewListButton' | translate }}
-      </a>
-    </div>
+    <button class="btn btn-secondary" (click)="showMessageConfirmation.set(false)" type="button">{{ 'audits.form.confirmModal.acceptButton' | translate }}</button>
+    <a class="btn btn-primary" id="viewAuditsBtn" routerLink="/admin/audit">
+      <i class="me-1 bi bi-list-check"></i>{{ 'audits.form.confirmModal.viewListButton' | translate }}
+    </a>
   </app-footer-modal>
 
 </app-default-modal>
