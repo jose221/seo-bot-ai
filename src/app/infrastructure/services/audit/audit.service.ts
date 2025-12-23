@@ -57,7 +57,7 @@ export class AuditService extends BaseService{
   }
 
   async search(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]>{
-    const response = await this.httpService.post<HttpItemsModel<SearchAuditResponseDto[]>>(`${environment.endpoints.audit.sarch}`, params ? this.itemMapper.mapSearch(params) : {}, {}, this.getToken)
+    const response = await this.httpService.get<HttpItemsModel<SearchAuditResponseDto[]>>(`${environment.endpoints.audit.search}`, params ? this.itemMapper.mapSearch(params) : {}, {}, this.getToken)
     return response.items.map((item: SearchAuditResponseDto) => this.itemMapper.mapResponseSearch(item));
   }
 }

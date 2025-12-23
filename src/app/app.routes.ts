@@ -6,6 +6,7 @@ import {TargetList} from '@/app/presentation/pages/admin/target/target-list/targ
 import {TargetForm} from '@/app/presentation/pages/admin/target/target-form/target-form';
 import {AuditList} from '@/app/presentation/pages/admin/audit/audit-list/audit-list';
 import {AuditForm} from '@/app/presentation/pages/admin/audit/audit-form/audit-form';
+import {CompareAuditForm} from '@/app/presentation/pages/admin/audit/compare-audit-form/compare-audit-form';
 
 export const routes: Routes = [
   { path: '', component: Login },
@@ -19,6 +20,7 @@ export const routes: Routes = [
       {path: 'target/create', component: TargetForm},
       {path: 'audit', component: AuditList},
       {path: 'audit/create', component: AuditForm},
+      {path: 'audit/compare', component: CompareAuditForm},
     ]
   }
 ];
