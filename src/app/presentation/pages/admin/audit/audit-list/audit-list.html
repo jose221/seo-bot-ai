@@ -38,8 +38,8 @@
   </div>
 </div>
 
-<app-default-modal classModalDialog="modal-xl modal-dialog-scrollable" [expanded]="showItem()?.id != null">
-  <app-header-modal>
+<app-default-modal classModalDialog="modal-xl" [expanded]="showItem()?.id != null">
+  <app-header-modal classModal="bg-gradient border-0 py-3 bg-primary">
     <div>
       <h5 class="fw-bold text-white modal-title" id="reportModalLabel">
         <i class="me-2 bi bi-file-earmark-text"></i>{{ 'audits.modal.title' | translate }}

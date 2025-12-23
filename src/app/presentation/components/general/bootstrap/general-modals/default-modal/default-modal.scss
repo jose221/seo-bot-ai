@@ -1,0 +1,20 @@
+// Estilos para modal-dialog-scrollable
+.modal-dialog-scrollable {
+  .modal-content {
+    max-height: calc(100vh - 3.5rem);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-body {
+    overflow-y: auto;
+    flex: 1 1 auto;
+  }
+
+  .modal-header,
+  .modal-footer {
+    flex-shrink: 0;
+  }
+}
+
