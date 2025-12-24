@@ -23,6 +23,7 @@ export class SearchTargetRequestModel {
     public page?: number,
     public page_size?: number,
     public is_active?: boolean,
+    public only_page_with_audits_completed?: boolean,
   ) {
   }
 }

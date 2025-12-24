@@ -21,8 +21,8 @@
                 [ngClass]="{'is-invalid': messages('web_page_id').length > 0}"
               >
               <option value="" disabled>Seleccione una página web...</option>
-              @for (audit of auditSearchList(); track audit.id){
-                <option [value]="audit.id">{{audit.web_page_name}} ({{audit.web_page_url}})</option>
+              @for (audit of targetSearchList(); track audit.id){
+                <option [value]="audit.id">{{audit.name}} ({{audit.url}})</option>
               }
             </select>
               @if(messages('web_page_id').length > 0){
@@ -45,39 +45,45 @@
                   <input type="text"
                          class="form-control form-control-sm"
                          placeholder="Buscar por nombre o URL..."
-                         [ngModel]="formAuditSearchListToCompare().query"
+                         [ngModel]="formTargetSearchListToCompare().query"
                          (ngModelChange)="updateQuery($event)"
                          [ngModelOptions]="{standalone: true}">
-                </div>
-                <div class="col-md-6 d-flex align-items-end">
-                  <label class="form-label small mb-1 mx-2">Solo páginas únicas</label>
-                  <div class="form-check form-switch mt-2">
-                    <input type="checkbox"
-                           class="form-check-input"
-                           [ngModel]="formAuditSearchListToCompare().unique_web_page"
-                           (ngModelChange)="updateUniqueWebPage($event)"
-                           [ngModelOptions]="{standalone: true}"
-                           id="uniqueWebPageFilter">
-                    <label class="form-check-label small" for="uniqueWebPageFilter">
-                      Activar
-                    </label>
-                  </div>
                 </div>
               </div>
 
               <div class="bg-light border rounded-3 p-3">
                 <div class="mb-3 form-text"><span>Seleccione una o más páginas web para comparar con la base</span></div>
-                @for (audit of auditSearchListToCompare(); track audit.id){
-                  <div class="mb-3 form-check">
-                    <input type="checkbox"
-                           class="form-check-input"
-                           [id]="'compare-' + audit.id"
-                           [checked]="isPageSelected(audit.id)"
-                           (change)="onComparePageChange(audit.id, $event)">
-                    <label class="form-check-label" [for]="'compare-' + audit.id">
-                      {{audit.web_page_name}} ({{audit.web_page_url}})
-                    </label>
+
+                @if (loadingCompareList()) {
+                  <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                      <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="text-muted mt-2 mb-0">Buscando páginas...</p>
                   </div>
+                } @else if (targetSearchListToCompare().length === 0) {
+                  <div class="text-center py-4">
+                    <svg class="bi bi-inbox mb-3 text-muted" fill="currentColor" height="48" viewBox="0 0 16 16" width="48" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.981 3h6.038a1.5 1.5 0 0 1 1.172.563l3.7 4.625a.5.5 0 0 1 .105.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/>
+                    </svg>
+                    <p class="text-muted mb-0">No se encontraron páginas para comparar</p>
+                    <small class="text-muted">Intenta ajustar los filtros de búsqueda</small>
+                  </div>
+                } @else {
+                  @for (audit of targetSearchListToCompare(); track audit.id){
+                    <div class="mb-3 form-check">
+                      <input type="checkbox"
+                             class="form-check-input"
+                             [id]="'compare-' + audit.id"
+                             [checked]="isPageSelected(audit.id)"
+                             (change)="onComparePageChange(audit.id, $event)">
+                      <label class="form-check-label text-truncate d-block"
+                             [for]="'compare-' + audit.id"
+                             [title]="audit.name + ' (' + audit.url + ')'">
+                        {{audit.name}} ({{audit.url}})
+                      </label>
+                    </div>
+                  }
                 }
               </div>
               @if (submitted() && form.get('web_page_id_compare')?.invalid) {

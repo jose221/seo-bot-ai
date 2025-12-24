@@ -5,11 +5,13 @@ import {FormBuilder, Validators, FormsModule, ReactiveFormsModule, FormControl} 
 import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
 import {
   CompareAuditResponseModel,
-  SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
 import {CompareAuditRequestModel, SearchAuditRequestModel} from '@/app/domain/models/audit/request/audit-request.model';
 import {StatusType} from '@/app/domain/types/status.type';
 import {NgClass} from '@angular/common';
+import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
+import {SearchTargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
+import {SearchTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
 
 @Component({
   selector: 'app-compare-audit-form',
@@ -27,33 +29,33 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
     include_ai_analysis: [true]
   });
   private readonly formRepository = inject(AuditRepository);
-  private readonly targetRepository = inject(AuditRepository)
-  public auditSearchList = signal<SearchAuditResponseModel[]>([] as SearchAuditResponseModel[])
+  private readonly targetRepository = inject(TargetRepository)
+  public targetSearchList = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[])
+  public loadingCompareList = signal<boolean>(false);
 
   constructor() {
     super();
 
     // Suscribirse a cambios del campo web_page_id
     this.form.get('web_page_id')?.valueChanges.subscribe(value => {
-      this.formAuditSearchListToCompare.update(current => ({
+      this.formTargetSearchListToCompare.update(current => ({
         ...current,
         exclude_web_page_id: value || undefined
       }));
       // Actualizar la lista cuando cambie web_page_id
-      setTimeout(() => this.auditSearchToCompare());
+      setTimeout(() => this.targetSearchToCompare());
     });
   }
 
   async ngOnInit(): Promise<void> {
-    const response = await this.auditSearch({
-      unique_web_page: true,
-      status_filter: 'completed',
-    } as SearchAuditRequestModel)
-    this.auditSearchList.set(response);
+    const response = await this.targetSearch({
+      only_page_with_audits_completed: true,
+    } as SearchTargetRequestModel)
+    this.targetSearchList.set(response);
 
     // Cargar la lista inicial después del ciclo de detección de cambios
     setTimeout(async () => {
-      await this.auditSearchToCompare();
+      await this.targetSearchToCompare();
     });
   }
   messages(name: string){
@@ -80,48 +82,52 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
       this.loading.set(false);
     }
   }
-  public auditSearchListToCompare = signal<SearchAuditResponseModel[]>([] as SearchAuditResponseModel[])
-  public formAuditSearchListToCompare = signal<SearchAuditRequestModel>({
-    unique_web_page: true,
-    web_page_id: null,
-    status_filter: 'completed',
-    exclude_web_page_id: this.form.value.web_page_id,
+  public targetSearchListToCompare = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[])
+  public formTargetSearchListToCompare = signal<SearchTargetRequestModel>({
+    only_page_with_audits_completed: true,
     query: ''
 
-  } as SearchAuditRequestModel)
-  async auditSearchToCompare(){
-    const response = await this.auditSearch(this.formAuditSearchListToCompare())
-    this.auditSearchListToCompare.set(response);
+  } as SearchTargetRequestModel)
+  async targetSearchToCompare(){
+    this.loadingCompareList.set(true);
+    try {
+      const response = await this.targetSearch(this.formTargetSearchListToCompare())
+      this.targetSearchListToCompare.set(response);
+    } catch (e) {
+      this.targetSearchListToCompare.set([]);
+    } finally {
+      this.loadingCompareList.set(false);
+    }
   }
-  async auditSearch(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]>{
+  async targetSearch(params?: SearchAuditRequestModel): Promise<SearchTargetResponseModel[]>{
     return await this.targetRepository.search(params)
   }
 
   updateStatusFilter(value: string) {
-    this.formAuditSearchListToCompare.update(current => ({
+    this.formTargetSearchListToCompare.update(current => ({
       ...current,
       status_filter: value as StatusType
     }));
     // Actualizar la lista después de cambiar el filtro
-    setTimeout(() => this.auditSearchToCompare());
+    setTimeout(() => this.targetSearchToCompare());
   }
 
   updateUniqueWebPage(value: boolean) {
-    this.formAuditSearchListToCompare.update(current => ({
+    this.formTargetSearchListToCompare.update(current => ({
       ...current,
       unique_web_page: value
     }));
     // Actualizar la lista después de cambiar el filtro
-    setTimeout(() => this.auditSearchToCompare());
+    setTimeout(() => this.targetSearchToCompare());
   }
 
   updateQuery(value: string) {
-    this.formAuditSearchListToCompare.update(current => ({
+    this.formTargetSearchListToCompare.update(current => ({
       ...current,
       query: value
     }));
     // Actualizar la lista después de cambiar el filtro
-    setTimeout(() => this.auditSearchToCompare());
+    setTimeout(() => this.targetSearchToCompare());
   }
 
   // Método para manejar el cambio de checkboxes de páginas web a comparar

@@ -109,6 +109,7 @@ async def search_targets(
   query: Optional[str] = Query(None, description="Query de búsqueda por nombre o url"),
   is_active: bool = Query(True, description="Filtrar por activos/inactivos"),
   only_page_with_audits_completed: bool = Query(False, description="Mostrar solo páginas con auditorías completadas"),
+  exclude_web_page_id: Optional[UUID] = Query(None, description="ID de web_page a excluir de los resultados"),
   page: int = Query(1, ge=1, description="Número de página"),
   page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
   current_user: User = Depends(get_current_user),
@@ -129,6 +130,10 @@ async def search_targets(
         WebPage.url.ilike(f"%{query}%")
       )
     )
+
+  # Excluir un web_page_id específico si se proporciona
+  if exclude_web_page_id is not None:
+    filters.append(WebPage.id != exclude_web_page_id)
 
   # Solo seleccionar las columnas necesarias
   statement = select(
