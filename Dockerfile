@@ -1,59 +1,53 @@
-# Etapa 1: Build de la aplicación Angular
+# Stage 1: Build process
 FROM node:20-alpine AS builder
+
+# Check: https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec9ee063c5aaaf153#nodealpine
+# Instalar dependencias necesarias para node-gyp u otros módulos nativos si fuera necesario
+RUN apk add --no-cache libc6-compat
 
 WORKDIR /app
 
-# Aumentar memoria de Node.js para el build
+# Aumentar memoria para evitar OOM (Out of Memory) en servidores pequeños
 ENV NODE_OPTIONS="--max-old-space-size=4096"
 
-# Copiar package.json y package-lock.json
 COPY package*.json ./
 
-# Instalar dependencias
-RUN npm install --legacy-peer-deps
+# Usamos ci para instalaciones más rápidas y consistentes en CI
+# Si tienes problemas de versiones, mantén --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
-# Copiar todos los archivos necesarios para el build
 COPY . .
 
-# Build de la aplicación para producción
+# Ejecutar el build.
+# Nota: Asegúrate de que 'npm run build' ejecute 'ng build --configuration production'
 RUN npm run build
 
-# Verificar y preparar los archivos para nginx
-RUN echo "=== Verificando estructura del build ===" && \
-    ls -la dist/ && \
+# Lógica de verificación simplificada directamente al destino final
+RUN mkdir -p /app/final-dist && \
     if [ -d "dist/seo-bot-ai/browser" ]; then \
-      echo "✓ Encontrado: dist/seo-bot-ai/browser"; \
-      mkdir -p /tmp/dist && cp -r dist/seo-bot-ai/browser/* /tmp/dist/; \
-    elif [ -d "dist/browser" ]; then \
-      echo "✓ Encontrado: dist/browser"; \
-      mkdir -p /tmp/dist && cp -r dist/browser/* /tmp/dist/; \
+        cp -r dist/seo-bot-ai/browser/* /app/final-dist/; \
     elif [ -d "dist/seo-bot-ai" ]; then \
-      echo "✓ Encontrado: dist/seo-bot-ai"; \
-      mkdir -p /tmp/dist && cp -r dist/seo-bot-ai/* /tmp/dist/; \
-    elif [ -d "dist" ]; then \
-      echo "✓ Usando: dist"; \
-      mkdir -p /tmp/dist && cp -r dist/* /tmp/dist/; \
+        cp -r dist/seo-bot-ai/* /app/final-dist/; \
     else \
-      echo "✗ ERROR: No se encontró ningún directorio de build!"; \
-      exit 1; \
-    fi && \
-    echo "=== Contenido final ===" && \
-    ls -la /tmp/dist/
+        cp -r dist/* /app/final-dist/; \
+    fi
 
-# Etapa 2: Servidor de producción con Nginx
-FROM nginx:alpine
+# Stage 2: Production server
+FROM nginx:stable-alpine
 
-# Copiar la configuración personalizada de Nginx
-COPY nginx.conf /etc/nginx/nginx.conf
+# Limpiar el directorio por defecto de nginx
+RUN rm -rf /usr/share/nginx/html/*
 
-# Copiar los archivos build desde la etapa anterior
-COPY --from=builder /tmp/dist /usr/share/nginx/html
+# Copiar configuración personalizada
+# Asegúrate de que tu nginx.conf maneje el ruteo de Angular (try_files $uri $uri/ /index.html)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Exponer el puerto 80
+# Copiar desde la carpeta normalizada en la etapa anterior
+COPY --from=builder /app/final-dist /usr/share/nginx/html
+
 EXPOSE 80
 
-# Comando para iniciar Nginx
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -qO- http://localhost:80/ || exit 1
+
 CMD ["nginx", "-g", "daemon off;"]
-
-
-
