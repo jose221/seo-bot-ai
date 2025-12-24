@@ -23,6 +23,7 @@ import {
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 import {DateFormatPipe} from '@/app/pipes/date-format-pipe';
 import {NgClass} from '@angular/common';
+import {MarkdownComponent} from 'ngx-markdown';
 
 @Component({
   selector: 'app-audit-list',
@@ -37,7 +38,8 @@ import {NgClass} from '@angular/common';
     HeaderModalComponent,
     FooterModalComponent,
     DateFormatPipe,
-    NgClass
+    NgClass,
+    MarkdownComponent
   ],
   templateUrl: './audit-list.html',
   styleUrl: './audit-list.scss',
