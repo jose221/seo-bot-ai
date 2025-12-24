@@ -66,18 +66,18 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Instalar navegadores Playwright
 RUN playwright install --with-deps chromium
 
-# Copiar código de la aplicación desde el directorio api
-COPY ./api ./api
+# Copiar código de la aplicación
+COPY . .
 
 # Dar permisos de ejecución al entrypoint
-RUN chmod +x ./api/docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 # Exponer puerto
 EXPOSE 8000
 
 # Usar entrypoint para iniciar Xvfb primero
-ENTRYPOINT ["./api/docker-entrypoint.sh"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
 
-# Comando de inicio (ajustado para la nueva ruta)
-CMD ["uvicorn", "api.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Comando de inicio
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
