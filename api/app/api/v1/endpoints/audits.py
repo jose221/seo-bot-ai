@@ -244,7 +244,7 @@ async def search_audits(
     """
     from sqlalchemy import func, or_
 
-    # Query base con join a WebPage para buscar por URL/nombre
+    # Solo seleccionar las columnas necesarias para la búsqueda
     statement = select(
         AuditReport.id,
         AuditReport.web_page_id,
@@ -255,6 +255,8 @@ async def search_audits(
         AuditReport.best_practices_score,
         AuditReport.created_at,
         AuditReport.completed_at,
+        AuditReport.report_pdf_path,
+        AuditReport.report_excel_path,
         WebPage.url.label('web_page_url'),
         WebPage.name.label('web_page_name')
     ).join(WebPage, AuditReport.web_page_id == WebPage.id).where(
@@ -349,7 +351,9 @@ async def search_audits(
                 created_at=a.created_at,
                 completed_at=a.completed_at,
                 web_page_url=a.web_page_url,
-                web_page_name=a.web_page_name
+                web_page_name=a.web_page_name,
+                report_pdf_path=a.report_pdf_path,
+                report_excel_path=a.report_excel_path
             )
             for a in audits
         ],
@@ -377,7 +381,9 @@ async def list_comparisons(
         AuditComparison.created_at,
         AuditComparison.completed_at,
         AuditComparison.error_message,
-        AuditComparison.comparison_result
+        AuditComparison.comparison_result,
+        AuditComparison.report_pdf_path,
+        AuditComparison.report_excel_path
     ).where(
         AuditComparison.user_id == current_user.id
     ).order_by(desc(AuditComparison.created_at))
@@ -415,7 +421,9 @@ async def list_comparisons(
             completed_at=comp.completed_at,
             base_url=base_url,
             total_competitors=total_competitors,
-            error_message=comp.error_message
+            error_message=comp.error_message,
+            report_pdf_path=comp.report_pdf_path,
+            report_excel_path=comp.report_excel_path
         ))
 
     return audit_schemas.ComparisonListResponse(
