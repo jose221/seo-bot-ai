@@ -67,16 +67,9 @@ RUN playwright install --with-deps chromium
 # Copiar código de la aplicación
 COPY . .
 
-# Dar permisos de ejecución al entrypoint
-RUN chmod +x /app/docker-entrypoint.sh && \
-    ls -la /app/docker-entrypoint.sh
-
 # Exponer puerto
 EXPOSE 8000
 
-# Usar entrypoint para iniciar Xvfb primero (ruta absoluta)
-ENTRYPOINT ["/app/docker-entrypoint.sh"]
-
-# Comando de inicio
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Iniciar Xvfb y luego uvicorn (sin entrypoint separado)
+CMD ["/bin/sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset & sleep 2 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
 
