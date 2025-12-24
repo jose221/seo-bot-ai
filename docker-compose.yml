@@ -48,9 +48,6 @@ services:
       DEBUG: "True"
       ENVIRONMENT: production
       DISPLAY: ":99"
-    depends_on:
-      db:
-        condition: service_healthy
     # Recursos necesarios para Chrome + Xvfb
     shm_size: '2gb'
     deploy:
