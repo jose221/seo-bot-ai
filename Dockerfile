@@ -37,9 +37,8 @@ FROM nginx:stable-alpine
 # Limpiar el directorio por defecto de nginx
 RUN rm -rf /usr/share/nginx/html/*
 
-# Copiar configuración personalizada
-# Asegúrate de que tu nginx.conf maneje el ruteo de Angular (try_files $uri $uri/ /index.html)
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copiar configuración completa de nginx (reemplaza el nginx.conf principal)
+COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copiar desde la carpeta normalizada en la etapa anterior
 COPY --from=builder /app/final-dist /usr/share/nginx/html
