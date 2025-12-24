@@ -12,9 +12,8 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 COPY package*.json ./
 
-# Usamos ci para instalaciones más rápidas y consistentes en CI
-# Si tienes problemas de versiones, mantén --legacy-peer-deps
-RUN npm ci --legacy-peer-deps
+# Instalar dependencias con legacy-peer-deps para compatibilidad
+RUN npm install --legacy-peer-deps
 
 COPY . .
 
