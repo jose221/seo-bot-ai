@@ -36,7 +36,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
       status_filter: 'completed',
     } as SearchAuditRequestModel)
     this.auditSearchList.set(response);
-    console.log("this.targetSearchList", this.auditSearchList())
+    await this.auditSearchToCompare()
   }
   messages(name: string){
     return this.formMessages(name)
