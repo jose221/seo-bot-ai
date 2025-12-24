@@ -6,9 +6,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: seo_bot_frontend
     ports:
-      - "4200:80"
+      - "3100:80"
     depends_on:
       - api
     environment:
@@ -20,12 +19,10 @@ services:
     build:
       context: ./api
       dockerfile: Dockerfile
-    container_name: seo_bot_api
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./api:/app
     ports:
-      - "8000:8000"
+      - "3101:8000"
     environment:
       # Database Configuration
       DB_DRIVER: postgresql
