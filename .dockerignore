@@ -1,0 +1,51 @@
+# Node modules
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Angular
+.angular
+dist
+.ng_build_cache
+.ng_pkg_build
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+
+# API folder (no necesario para el frontend)
+api
+
+# Documentación
+*.md
+docs
+
+# Logs
+*.log
+logs
+
