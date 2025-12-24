@@ -19,8 +19,8 @@ COPY angular.json tsconfig*.json ./
 COPY src ./src
 COPY public ./public
 
-# Build de la aplicación para producción (sin SSR por ahora para simplificar)
-RUN npm run build -- --configuration production --output-path=dist/browser
+# Build de la aplicación para producción
+RUN npm run build
 
 # Etapa 2: Servidor de producción con Nginx
 FROM nginx:alpine
@@ -29,7 +29,8 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copiar los archivos build desde la etapa anterior
-COPY --from=builder /app/dist/browser /usr/share/nginx/html
+# Angular 21 genera los archivos en dist/seo-bot-ai/browser
+COPY --from=builder /app/dist/seo-bot-ai/browser /usr/share/nginx/html
 
 # Exponer el puerto 80
 EXPOSE 80
