@@ -12,17 +12,27 @@ import {NgClass} from '@angular/common';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
 import {SearchTargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {SearchTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
+import {DefaultModal} from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
+import {
+  HeaderModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
+import {
+  BodyModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
+import {
+  FooterModalComponent
+} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 
 @Component({
   selector: 'app-compare-audit-form',
-  imports: [FormsModule, ReactiveFormsModule, NgClass],
+  imports: [FormsModule, ReactiveFormsModule, NgClass, DefaultModal, HeaderModalComponent, BodyModalComponent, FooterModalComponent],
   templateUrl: './compare-audit-form.html',
   styleUrl: './compare-audit-form.scss',
 })
 export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   public statusAuditUtil = inject(StatusAuditUtil)
   showMessageConfirmation = signal<boolean>(false);
-  responseCreateAudit = signal<CompareAuditResponseModel>({} as CompareAuditResponseModel);
+  responseCompareAudit = signal<CompareAuditResponseModel>({} as CompareAuditResponseModel);
   protected readonly form = inject(FormBuilder).group({
     web_page_id_compare: new FormControl<string[]>([], Validators.required),
     web_page_id: ['', Validators.required],
@@ -74,7 +84,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
         this.form.value as CompareAuditRequestModel
       );
       console.log(response)
-      this.responseCreateAudit.set(response)
+      this.responseCompareAudit.set(response)
       this.showMessageConfirmation.set(true);
     } catch (e: Error | any) {
       this.catchError(e)

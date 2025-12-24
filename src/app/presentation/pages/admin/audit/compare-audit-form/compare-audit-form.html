@@ -111,79 +111,118 @@
     </div>
   </div>
 </div>
-<div class="modal fade" role="dialog" tabindex="-1" id="resultsModal" aria-labelledby="resultsModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-    <div class="modal-content">
-      <div class="modal-header text-white bg-primary">
-        <h5 class="fw-bold modal-title" id="resultsModalLabel">Resultados de la Comparativa</h5><button class="btn-close btn-close-white" aria-label="Close" data-bs-dismiss="modal" type="button"></button>
-      </div>
-      <div class="modal-body">
-        <div class="mb-4">
-          <h6 class="fw-bold text-primary">Página Web Base</h6>
-          <p class="mb-0"><a class="text-decoration-none" href="https://example.com" target="_blank">https://example.com</a></p>
-        </div>
-        <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
-          <h6 class="fw-bold mb-2"><svg class="bi bi-robot me-2" fill="currentColor" height="20" viewbox="0 0 16 16" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"></path><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"></path></svg> Análisis con IA </h6>
-          <p class="mb-0">El sitio base tiene un 80% de schemas implementados, mientras que los competidores tienen un promedio del 65%. Se recomienda añadir los siguientes schemas: Product, FAQ, HowTo.</p>
-        </div>
-        <div class="card border-0 shadow-sm mb-4">
-          <div class="card-header bg-white border-0 pt-3">
-            <h6 class="fw-bold text-primary mb-0">Resumen General</h6>
-          </div>
-          <div class="card-body">
-            <div class="row g-3">
-              <div class="col-md-4">
-                <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">Mejor en Rendimiento</small><span class="badge bg-success">Base</span></div>
-              </div>
-              <div class="col-md-4">
-                <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">Mejor en SEO</small><span class="badge bg-warning text-dark">competitor1</span></div>
-              </div>
-              <div class="col-md-4">
-                <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">Áreas a Mejorar</small><span class="badge bg-danger me-1">schema_markup</span><span class="badge bg-danger">core_web_vitals</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <h6 class="fw-bold text-primary mb-3">Comparaciones Detalladas</h6>
-        <div class="accordion" role="tablist" id="comparisonsAccordion">
-          <div class="accordion-item border-0 shadow-sm mb-3">
-            <h2 class="accordion-header" role="tab" id="heading1"><button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="true" aria-controls="collapse1"><div class="d-flex align-items-center justify-content-between w-100 pe-3"><span class="fw-semibold">https://competitor1.com</span><span class="badge bg-success">Ganador: Base</span></div></button></h2>
-            <div class="accordion-collapse collapse show item-1 show" role="tabpanel" data-bs-parent="#comparisonsAccordion" aria-labelledby="heading1" id="collapse1">
-              <div class="accordion-body">
-                <h6 class="fw-bold mb-3">Recomendaciones</h6>
-                <div class="list-group">
-                  <div class="list-group-item">
-                    <div class="d-flex w-100 justify-content-between align-items-center">
-                      <h6 class="mb-1">Implementar schemas faltantes</h6><span class="badge bg-danger">Prioridad Alta</span>
-                    </div><small class="text-muted">Categoría: schema_markup</small>
-                  </div>
-                  <div class="list-group-item">
-                    <div class="d-flex w-100 justify-content-between align-items-center">
-                      <h6 class="mb-1">Optimizar Core Web Vitals</h6><span class="badge bg-warning text-dark">Prioridad Media</span>
-                    </div><small class="text-muted">Categoría: core_web_vitals</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="accordion-item border-0 shadow-sm mb-3">
-            <h2 class="accordion-header" role="tab" id="heading2"><button class="accordion-button collapsed collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse2" aria-expanded="false" aria-controls="collapse2"><div class="d-flex align-items-center justify-content-between w-100 pe-3"><span class="fw-semibold">https://competitor2.com</span><span class="badge bg-warning text-dark">Ganador: Empate</span></div></button></h2>
-            <div class="accordion-collapse collapse item-2" role="tabpanel" data-bs-parent="#comparisonsAccordion" aria-labelledby="heading2" id="collapse2">
-              <div class="accordion-body">
-                <h6 class="fw-bold mb-3">Recomendaciones</h6>
-                <div class="list-group">
-                  <div class="list-group-item">
-                    <div class="d-flex w-100 justify-content-between align-items-center">
-                      <h6 class="mb-1">Mejorar velocidad de carga</h6><span class="badge bg-info text-dark">Prioridad Baja</span>
-                    </div><small class="text-muted">Categoría: performance</small>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer"><button class="btn btn-secondary" data-bs-dismiss="modal" type="button">Cerrar</button><button class="btn btn-primary" type="button">Exportar Reporte</button></div>
+
+<app-default-modal classModalDialog="modal-xl" [expanded]="true">
+  <app-header-modal classModal=" text-white bg-primary">
+    <h5 class="fw-bold modal-title" id="resultsModalLabel">
+      Resultados de la Comparativa
+    </h5>
+    <button class="btn-close btn-close-white" aria-label="Close" (click)="showMessageConfirmation.set(false)" type="button"></button>
+  </app-header-modal>
+  <app-body-modal>
+    <div class="mb-4">
+      <h6 class="fw-bold text-primary">Página Web Base</h6>
+      <p class="mb-0">
+        <a class="text-decoration-none" href="https://example.com" target="_blank">
+          {{ responseCompareAudit()?.base_url }}
+        </a>
+      </p>
     </div>
-  </div>
-</div>
+    <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
+      <h6 class="fw-bold mb-2">
+        <svg class="bi bi-robot me-2" fill="currentColor" height="20" viewbox="0 0 16 16" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"></path><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"></path></svg>
+        Análisis con IA
+      </h6>
+      <p class="mb-0">
+        {{ responseCompareAudit()?.ai_schema_comparison }}
+      </p>
+    </div>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-0 pt-3">
+        <h6 class="fw-bold text-primary mb-0">Resumen General</h6>
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">
+              Mejor en Rendimiento</small>
+              <span class="badge bg-success">
+                {{responseCompareAudit()?.overall_summary?.best_in_performance}}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-light rounded-3 p-3">
+              <small class="text-muted d-block mb-1">
+                Mejor en SEO
+              </small>
+              <span class="badge bg-warning text-dark">
+                {{responseCompareAudit()?.overall_summary?.best_in_seo}}
+              </span>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="bg-light rounded-3 p-3">
+              <small class="text-muted d-block mb-1">
+              Áreas a Mejorar
+              </small>
+              @for (area_to_improve of responseCompareAudit().overall_summary?.areas_to_improve; track area_to_improve){
+                <span class="badge bg-danger me-1">
+                  {{area_to_improve}}
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <h6 class="fw-bold text-primary mb-3">Comparaciones Detalladas</h6>
+    <div class="accordion" role="tablist" id="comparisonsAccordion">
+      @for (comparison of responseCompareAudit().comparisons; track comparison.compare_url){
+        <div class="accordion-item border-0 shadow-sm mb-3">
+          <h2 class="accordion-header" role="tab" id="heading1">
+            <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapse1" aria-expanded="true" aria-controls="collapse1">
+              <div class="d-flex align-items-center justify-content-between w-100 pe-3">
+                <span class="fw-semibold">
+                  {{comparison.compare_url}}
+                </span>
+                <span class="badge bg-success">
+                  Ganador: {{comparison.summary.overall_winner}}
+                </span>
+              </div>
+            </button>
+          </h2>
+          <div class="accordion-collapse collapse show item-1 show" role="tabpanel" data-bs-parent="#comparisonsAccordion" aria-labelledby="heading1" id="collapse1">
+            <div class="accordion-body">
+              <h6 class="fw-bold mb-3">Recomendaciones</h6>
+              <div class="list-group">
+                @for (recommendation of comparison.recommendations; track recommendation){
+                  <div class="list-group-item">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                      <h6 class="mb-1">
+                        {{recommendation.title}}
+                      </h6>
+                      <span class="badge bg-danger">
+                        {{recommendation.priority}}
+                      </span>
+                    </div>
+                    <small class="text-muted">
+                      Categoría: {{recommendation.category}}
+                    </small>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+
+  </app-body-modal>
+  <app-footer-modal>
+    <button class="btn btn-secondary" type="button" (click)="showMessageConfirmation.set(false)">
+      Cerrar
+    </button>
+    <button class="btn btn-primary" type="button">Exportar Reporte</button>
+  </app-footer-modal>
+</app-default-modal>
