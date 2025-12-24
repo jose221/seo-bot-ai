@@ -4,9 +4,9 @@ import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
 import {FormBuilder, Validators, FormsModule, ReactiveFormsModule, FormControl} from '@angular/forms';
 import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
 import {
-  CompareAuditResponseModel,
-} from '@/app/domain/models/audit/response/audit-response.model';
-import {CompareAuditRequestModel, SearchAuditRequestModel} from '@/app/domain/models/audit/request/audit-request.model';
+  CreateCompareAuditRequestModel,
+  SearchAuditRequestModel
+} from '@/app/domain/models/audit/request/audit-request.model';
 import {StatusType} from '@/app/domain/types/status.type';
 import {DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
@@ -23,6 +23,7 @@ import {
   FooterModalComponent
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 import {TranslateModule} from '@ngx-translate/core';
+import {CreateCompareAuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
 
 @Component({
   selector: 'app-compare-audit-form',
@@ -33,7 +34,7 @@ import {TranslateModule} from '@ngx-translate/core';
 export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   public statusAuditUtil = inject(StatusAuditUtil)
   showMessageConfirmation = signal<boolean>(false);
-  responseCompareAudit = signal<CompareAuditResponseModel>({} as CompareAuditResponseModel);
+  responseCompareAudit = signal<CreateCompareAuditResponseModel>({} as CreateCompareAuditResponseModel);
   protected readonly form = inject(FormBuilder).group({
     web_page_id_to_compare: new FormControl<string[]>([], Validators.required),
     web_page_id: ['', Validators.required],
@@ -82,7 +83,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
     this.loading.set(true);
     try {
       const response = await this.formRepository.compare(
-        this.form.value as CompareAuditRequestModel
+        this.form.value as CreateCompareAuditRequestModel
       );
       console.log(response)
       this.responseCompareAudit.set(response)

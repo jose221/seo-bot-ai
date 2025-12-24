@@ -11,10 +11,17 @@ export interface FilterAuditRequestDto {
   page: number
   page_size: number
 }
-export interface CompareAuditRequestDto {
+
+
+export interface CreateCompareAuditRequestDto {
   include_ai_analysis: boolean
   web_page_id: string
   web_page_id_to_compare: string[]
+}
+
+export interface FilterCompareAuditRequestDto {
+  page: number
+  page_size: number
 }
 
 export interface SearchAuditRequestDto {

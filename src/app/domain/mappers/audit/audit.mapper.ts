@@ -1,25 +1,23 @@
 import {
-  CompareAuditRequestModel,
-  FilterAuditRequestModel,
+  CreateCompareAuditRequestModel,
+  FilterAuditRequestModel, FilterCompareAuditRequestModel,
   SearchAuditRequestModel
 } from '@/app/domain/models/audit/request/audit-request.model';
 import {
-  CompareAuditRequestDto,
-  FilterAuditRequestDto,
+  CreateCompareAuditRequestDto,
+  FilterAuditRequestDto, FilterCompareAuditRequestDto,
   SearchAuditRequestDto
 } from '@/app/infrastructure/dto/request/audit-request.dto';
 import {CreateAuditRequestModel} from '@/app/domain/models/audit/request/audit-request.model';
 import {CreateAuditRequestDto} from '@/app/infrastructure/dto/request/audit-request.dto';
 import { AppMapper } from "../app.mapper";
 import {
-  AuditResponseDto,
-  CompareAuditResponseDto,
-  CreateAuditResponseDto, SearchAuditResponseDto
+  AuditResponseDto, CompareAuditResponseDto,
+  CreateAuditResponseDto, CreateCompareAuditResponseDto, FindCompareAuditResponseDto, SearchAuditResponseDto
 } from '@/app/infrastructure/dto/response/audit-response.dto';
 import {
-  AuditResponseModel,
-  CompareAuditResponseModel,
-  CreateAuditResponseModel, SearchAuditResponseModel
+  AuditResponseModel, CompareAuditResponseModel,
+  CreateAuditResponseModel, CreateCompareAuditResponseModel, FindCompareAuditResponseModel, SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
 
 
@@ -35,6 +33,13 @@ export class AuditMapper extends AppMapper {
     return this.autoMap<any, any>(input, { except: [] });
   }
 
+  // --------- mapResponse find comparisons (sobrecargas)
+  mapResponseFindComparisons(dto: FindCompareAuditResponseDto): FindCompareAuditResponseModel;
+  mapResponseFindComparisons(model: FindCompareAuditResponseModel): FindCompareAuditResponseDto;
+  mapResponseFindComparisons(input: FindCompareAuditResponseDto | FindCompareAuditResponseModel) {
+    return this.autoMap<any, any>(input, { except: [] });
+  }
+
   // --------- mapResponse Create(sobrecargas)
   mapResponseCreate(dto: CreateAuditResponseDto): CreateAuditResponseModel;
   mapResponseCreate(model: CreateAuditResponseModel): CreateAuditResponseDto;
@@ -43,9 +48,16 @@ export class AuditMapper extends AppMapper {
   }
 
   // --------- mapResponse Create(sobrecargas)
-  mapResponseCompare(dto: CompareAuditResponseDto): CompareAuditResponseModel;
-  mapResponseCompare(model: CompareAuditResponseModel): CompareAuditResponseDto;
-  mapResponseCompare(input: CompareAuditResponseDto | CompareAuditResponseModel) {
+  mapResponseCreateCompare(dto: CreateCompareAuditResponseDto): CreateCompareAuditResponseModel;
+  mapResponseCreateCompare(model: CreateCompareAuditResponseModel): CreateCompareAuditResponseDto;
+  mapResponseCreateCompare(input: CreateCompareAuditResponseDto | CreateCompareAuditResponseModel) {
+    return this.autoMap<any, any>(input, { except: [] });
+  }
+
+  // --------- mapResponse comparisons(sobrecargas)
+  mapResponseComparisons(dto: CompareAuditResponseDto): CompareAuditResponseModel;
+  mapResponseComparisons(model: CompareAuditResponseModel): CompareAuditResponseDto;
+  mapResponseComparisons(input: CompareAuditResponseDto | CompareAuditResponseModel) {
     return this.autoMap<any, any>(input, { except: [] });
   }
 
@@ -64,9 +76,9 @@ export class AuditMapper extends AppMapper {
   }
 
   // --------- mapCompare (sobrecargas)
-  mapCompare(dto: CompareAuditRequestDto): CompareAuditRequestModel;
-  mapCompare(model: CompareAuditRequestModel): CompareAuditRequestDto;
-  mapCompare(input: CompareAuditRequestDto | CompareAuditRequestModel) {
+  mapCreateCompare(dto: CreateCompareAuditRequestDto): CreateCompareAuditRequestModel;
+  mapCreateCompare(model: CreateCompareAuditRequestModel): CreateCompareAuditRequestDto;
+  mapCreateCompare(input: CreateCompareAuditRequestDto | CreateCompareAuditRequestModel) {
     return this.autoMap<any, any>(input, { except: [] });
   }
 
@@ -81,6 +93,12 @@ export class AuditMapper extends AppMapper {
   mapFilter(dto: FilterAuditRequestDto): FilterAuditRequestModel;
   mapFilter(model: FilterAuditRequestModel): FilterAuditRequestDto;
   mapFilter(input: FilterAuditRequestDto | FilterAuditRequestModel) {
+    return this.autoMap<any, any>(input, { except: [] });
+  }
+  // --------- mapFilterComparisons (sobrecargas)
+  mapFilterComparisons(dto: FilterCompareAuditRequestDto): FilterCompareAuditRequestModel;
+  mapFilterComparisons(model: FilterCompareAuditRequestModel): FilterCompareAuditRequestDto;
+  mapFilterComparisons(input: FilterCompareAuditRequestDto | FilterCompareAuditRequestModel) {
     return this.autoMap<any, any>(input, { except: [] });
   }
 }

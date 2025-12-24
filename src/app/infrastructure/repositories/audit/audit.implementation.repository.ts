@@ -2,14 +2,14 @@ import { Injectable } from '@angular/core';
 import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
 import {
   AuditResponseModel, CompareAuditResponseModel,
-  CreateAuditResponseModel,
+  CreateAuditResponseModel, CreateCompareAuditResponseModel, FindCompareAuditResponseModel,
   SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
 import {
-  CompareAuditRequestModel,
+  CreateCompareAuditRequestModel,
   CreateAuditRequestModel,
   FilterAuditRequestModel,
-  SearchAuditRequestModel
+  SearchAuditRequestModel, FilterCompareAuditRequestModel
 } from '@/app/domain/models/audit/request/audit-request.model';
 import {AuditService} from '@/app/infrastructure/services/audit/audit.service';
 
@@ -35,7 +35,13 @@ export class AuditImplementationRepository implements AuditRepository {
   async search(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]> {
     return await this.primaryService.search(params);
   }
-  async compare(params: CompareAuditRequestModel): Promise<CompareAuditResponseModel> {
+  async compare(params: CreateCompareAuditRequestModel): Promise<CreateCompareAuditResponseModel> {
     return await this.primaryService.compare(params);
+  }
+  async findComparisons(id: string): Promise<FindCompareAuditResponseModel>{
+    return await this.primaryService.findComparisons(id);
+  }
+  async getComparisons(params?: FilterCompareAuditRequestModel): Promise<CompareAuditResponseModel[]>{
+    return await this.primaryService.getComparisons(params);
   }
 }

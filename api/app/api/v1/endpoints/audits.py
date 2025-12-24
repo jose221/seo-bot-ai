@@ -362,7 +362,7 @@ async def search_audits(
 @router.get("/audits/comparisons", response_model=audit_schemas.ComparisonListResponse)
 async def list_comparisons(
         page: int = Query(1, ge=1, description="Número de página"),
-        page_size: Optional[int] = Query(10, ge=1, le=100, description="Elementos por página"),
+        page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
         current_user: User = Depends(get_current_user),
         session=Depends(get_session)
 ):
