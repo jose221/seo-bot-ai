@@ -51,6 +51,10 @@ class AuditComparison(SQLModel, table=True):
         description="Resultado completo de la comparación"
     )
 
+    # Rutas de reportes generados
+    report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+    report_excel_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+
     # Metadata
     include_ai_analysis: bool = Field(default=True)
     error_message: Optional[str] = Field(default=None)

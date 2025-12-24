@@ -85,6 +85,10 @@ class AuditResponse(BaseModel):
     lighthouse_data: Optional[Dict[str, Any]]
     ai_suggestions: Optional[Dict[str, Any]]
 
+    # Rutas de reportes generados
+    report_pdf_path: Optional[str] = None
+    report_excel_path: Optional[str] = None
+
     error_message: Optional[str]
     created_at: datetime
     completed_at: Optional[datetime]
@@ -185,6 +189,9 @@ class AuditSearchItem(BaseModel):
     # Información de la página web asociada
     web_page_url: Optional[str] = None
     web_page_name: Optional[str] = None
+    # Rutas de reportes generados
+    report_pdf_path: Optional[str] = None
+    report_excel_path: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -225,6 +232,9 @@ class ComparisonListItem(BaseModel):
     base_url: Optional[str] = None
     total_competitors: Optional[int] = None
     error_message: Optional[str] = None
+    # Rutas de reportes generados
+    report_pdf_path: Optional[str] = None
+    report_excel_path: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -247,6 +257,9 @@ class ComparisonDetailResponse(BaseModel):
     completed_at: Optional[datetime]
     comparison_result: Optional[AuditComparisonResponse] = None
     error_message: Optional[str] = None
+    # Rutas de reportes generados
+    report_pdf_path: Optional[str] = None
+    report_excel_path: Optional[str] = None
 
     class Config:
         from_attributes = True

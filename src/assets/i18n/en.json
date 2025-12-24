@@ -123,7 +123,12 @@
     "subtitle": "Manage and view all your created audits",
     "buttons": {
       "new": "New",
-      "pages": "Pages"
+      "pages": "Pages",
+      "audits": "Audits"
+    },
+    "comparisons": {
+      "title": "Audit Comparisons",
+      "subtitle": "View and manage all your audit comparisons"
     },
     "form": {
       "title": "Web Audit",

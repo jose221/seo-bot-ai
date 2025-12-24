@@ -125,6 +125,10 @@ async def run_audit_task(
                 report = ReportGenerator(audit=audit).generate_all()
                 print(f"📄 Reporte generado: {report}")
 
+                # Guardar rutas de los reportes generados
+                audit.report_pdf_path = report.get('pdf_path')
+                audit.report_excel_path = report.get('xlsx_path')
+
                 session.add(audit)
 
         print(f"✅ Auditoría completada: {audit_id}")
@@ -291,6 +295,11 @@ async def run_comparison_task(
                 comparison.status = ComparisonStatus.COMPLETED
                 comparison.comparison_result = comparison_result
                 comparison.completed_at = datetime.now(timezone.utc)
+
+                # Guardar rutas de los reportes generados
+                comparison.report_pdf_path = report.get('pdf_path')
+                comparison.report_excel_path = report.get('xlsx_path')
+
                 session.add(comparison)
 
         print(f"✅ Comparación completada: {comparison_id}")
