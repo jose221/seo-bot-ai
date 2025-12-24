@@ -25,4 +25,5 @@ export interface SearchTargetRequestDto {
   page: number
   page_size: number
   is_active: boolean
+  only_page_with_audits_completed?: boolean
 }
