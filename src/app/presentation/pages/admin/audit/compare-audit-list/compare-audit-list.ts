@@ -26,6 +26,7 @@ import {
   CompareAuditResponseModel,
   FindCompareAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
+import {MarkdownModule} from 'ngx-markdown';
 
 @Component({
   selector: 'app-compare-audit-list',
@@ -41,7 +42,8 @@ import {
     TranslatePipe,
     NgClass,
     DatePipe,
-    DecimalPipe
+    DecimalPipe,
+    MarkdownModule
   ],
   templateUrl: './compare-audit-list.html',
   styleUrl: './compare-audit-list.scss',
