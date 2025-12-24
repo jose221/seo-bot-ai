@@ -16,14 +16,12 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # Build de la aplicación para producción (mostrar errores completos)
-RUN npm run build 2>&1 | tee /tmp/build.log; \
-    if [ ${PIPESTATUS[0]} -ne 0 ]; then \
-      echo "================================"; \
-      echo "BUILD FAILED - Últimos 100 líneas:"; \
-      echo "================================"; \
-      tail -100 /tmp/build.log; \
-      exit 1; \
-    fi
+RUN set -o pipefail && npm run build 2>&1 | tee /tmp/build.log || \
+    (echo "================================" && \
+     echo "BUILD FAILED - Mostrando log completo:" && \
+     echo "================================" && \
+     cat /tmp/build.log && \
+     exit 1)
 
 # Verificar y preparar los archivos para nginx
 RUN echo "=== Verificando estructura del build ===" && \
