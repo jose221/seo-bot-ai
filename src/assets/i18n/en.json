@@ -1,4 +1,16 @@
 {
+  "admin": {
+    "navbar": {
+      "brand": "SEO Bot AI",
+      "sites": "Site List",
+      "audits": "Audits",
+      "comparisons": "Comparisons",
+      "searchPlaceholder": "Search...",
+      "searchButton": "Search",
+      "logout": "Logout",
+      "logoutTitle": "Logout and exit the application"
+    }
+  },
   "login": {
     "title": "Log In",
     "email": {
