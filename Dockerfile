@@ -15,11 +15,30 @@ RUN npm install --legacy-peer-deps
 # Copiar todos los archivos necesarios para el build
 COPY . .
 
-# Desactivar SSR/Prerender para simplificar el build
-ENV NG_BUILD_CACHE=false
+# Build de la aplicación para producción
+RUN npm run build || (echo "Build failed!" && exit 1)
 
-# Build de la aplicación para producción (solo client-side)
-RUN npm run build 2>&1 | tee build.log || (cat build.log && exit 1)
+# Verificar y preparar los archivos para nginx
+RUN echo "=== Verificando estructura del build ===" && \
+    ls -la dist/ && \
+    if [ -d "dist/seo-bot-ai/browser" ]; then \
+      echo "✓ Encontrado: dist/seo-bot-ai/browser"; \
+      mkdir -p /tmp/dist && cp -r dist/seo-bot-ai/browser/* /tmp/dist/; \
+    elif [ -d "dist/browser" ]; then \
+      echo "✓ Encontrado: dist/browser"; \
+      mkdir -p /tmp/dist && cp -r dist/browser/* /tmp/dist/; \
+    elif [ -d "dist/seo-bot-ai" ]; then \
+      echo "✓ Encontrado: dist/seo-bot-ai"; \
+      mkdir -p /tmp/dist && cp -r dist/seo-bot-ai/* /tmp/dist/; \
+    elif [ -d "dist" ]; then \
+      echo "✓ Usando: dist"; \
+      mkdir -p /tmp/dist && cp -r dist/* /tmp/dist/; \
+    else \
+      echo "✗ ERROR: No se encontró ningún directorio de build!"; \
+      exit 1; \
+    fi && \
+    echo "=== Contenido final ===" && \
+    ls -la /tmp/dist/
 
 # Etapa 2: Servidor de producción con Nginx
 FROM nginx:alpine
@@ -28,8 +47,7 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # Copiar los archivos build desde la etapa anterior
-# Angular 21 genera los archivos en dist/seo-bot-ai/browser
-COPY --from=builder /app/dist/seo-bot-ai/browser /usr/share/nginx/html
+COPY --from=builder /tmp/dist /usr/share/nginx/html
 
 # Exponer el puerto 80
 EXPOSE 80
