@@ -67,9 +67,15 @@ RUN playwright install --with-deps chromium
 # Copiar código de la aplicación
 COPY . .
 
+# Verificar estructura y agregar el directorio al PYTHONPATH
+RUN ls -la /app && \
+    if [ -d "/app/app" ]; then echo "✓ Módulo app encontrado"; else echo "✗ ERROR: Módulo app no encontrado"; exit 1; fi
+
+ENV PYTHONPATH=/app
+
 # Exponer puerto
 EXPOSE 8000
 
-# Iniciar Xvfb y luego uvicorn (sin entrypoint separado)
-CMD ["/bin/sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset & sleep 2 && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"]
+# Iniciar Xvfb y luego uvicorn (sin --reload en producción)
+CMD ["/bin/sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset & sleep 2 && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 
