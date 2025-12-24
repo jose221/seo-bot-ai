@@ -21,6 +21,7 @@ import {HttpClient, provideHttpClient, withFetch} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
 import {AuditImplementationRepository} from '@/app/infrastructure/repositories/audit/audit.implementation.repository';
+import {provideMarkdown} from 'ngx-markdown';
 
 // Custom TranslateLoader
 export class CustomTranslateLoader implements TranslateLoader {
@@ -42,6 +43,7 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideClientHydration(withEventReplay()),
     provideHttpClient(withFetch()),
+    provideMarkdown(),
     importProvidersFrom(
       TranslateModule.forRoot({
         fallbackLang: 'es',

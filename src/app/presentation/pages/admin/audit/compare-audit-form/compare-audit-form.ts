@@ -27,7 +27,7 @@ import {CreateCompareAuditResponseModel} from '@/app/domain/models/audit/respons
 
 @Component({
   selector: 'app-compare-audit-form',
-  imports: [FormsModule, ReactiveFormsModule, NgClass, DefaultModal, HeaderModalComponent, BodyModalComponent, FooterModalComponent, TranslateModule, DecimalPipe, DatePipe],
+  imports: [FormsModule, ReactiveFormsModule, NgClass, TranslateModule],
   templateUrl: './compare-audit-form.html',
   styleUrl: './compare-audit-form.scss',
 })
