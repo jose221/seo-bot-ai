@@ -2,11 +2,14 @@
   <div class="row justify-content-center">
     <div class="col-lg-10 col-xl-9">
       <div class="d-flex flex-wrap gap-2 mb-4">
-        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#auditorias">
+        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/audit">
           {{ 'audits.compare.buttons.audits' | translate }}
         </a>
-        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#sitios">
+        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/target">
           {{ 'audits.compare.buttons.sites' | translate }}
+        </a>
+        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/audit/comparisons">
+          {{ 'audits.compare.buttons.sites_compare' | translate }}
         </a>
       </div>
       <div class="card rounded-3 border-0 shadow-sm">

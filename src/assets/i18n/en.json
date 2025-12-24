@@ -224,7 +224,8 @@
       "buttons": {
         "audits": "Audits",
         "sites": "Sites List",
-        "compare": "Compare Audits"
+        "compare": "Compare Audits",
+        "sites_compare": "Listado de Sitios a comparar"
       },
       "basePage": {
         "label": "Base Web Page",

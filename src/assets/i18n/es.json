@@ -224,6 +224,7 @@
       "buttons": {
         "audits": "Auditorías",
         "sites": "Listado de Sitios",
+        "sites_compare": "Listado de Sitios a comparar",
         "compare": "Comparar Auditorías"
       },
       "basePage": {
