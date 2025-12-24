@@ -108,6 +108,7 @@ async def list_targets(
 async def search_targets(
   query: Optional[str] = Query(None, description="Query de búsqueda por nombre o url"),
   is_active: bool = Query(True, description="Filtrar por activos/inactivos"),
+  only_page_with_audits_completed: bool = Query(False, description="Mostrar solo páginas con auditorías completadas"),
   page: int = Query(1, ge=1, description="Número de página"),
   page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
   current_user: User = Depends(get_current_user),
@@ -134,10 +135,26 @@ async def search_targets(
     WebPage.id,
     WebPage.url,
     WebPage.name,
-    WebPage.is_active
-  ).where(*filters).order_by(desc(WebPage.created_at))
+    WebPage.is_active,
+    WebPage.created_at
+  ).where(*filters)
+
+  # Si se requiere filtrar por páginas con auditorías completadas
+  if only_page_with_audits_completed:
+    from app.models.audit import AuditReport, AuditStatus
+    statement = statement.join(AuditReport, WebPage.id == AuditReport.web_page_id).where(
+      AuditReport.status == AuditStatus.COMPLETED.value
+    ).distinct()
+
+  statement = statement.order_by(desc(WebPage.created_at))
 
   count_statement = select(func.count()).select_from(WebPage).where(*filters)
+  if only_page_with_audits_completed:
+    from app.models.audit import AuditReport, AuditStatus
+    count_statement = select(func.count(WebPage.id.distinct())).select_from(WebPage).join(
+      AuditReport, WebPage.id == AuditReport.web_page_id
+    ).where(*filters).where(AuditReport.status == AuditStatus.COMPLETED.value)
+
   count_result = await session.execute(count_statement)
   total = count_result.scalar()
 
