@@ -8,9 +8,10 @@ import {AuditList} from '@/app/presentation/pages/admin/audit/audit-list/audit-l
 import {AuditForm} from '@/app/presentation/pages/admin/audit/audit-form/audit-form';
 import {CompareAuditForm} from '@/app/presentation/pages/admin/audit/compare-audit-form/compare-audit-form';
 import {CompareAuditList} from '@/app/presentation/pages/admin/audit/compare-audit-list/compare-audit-list';
+import {loginGuard} from '@/app/presentation/guards/login.guard';
 
 export const routes: Routes = [
-  { path: '', component: Login },
+  { path: '', component: Login, canActivate: [loginGuard] },
   {
     path: 'admin',
     component: Admin,
@@ -24,5 +25,6 @@ export const routes: Routes = [
       {path: 'audit/comparisons', component: CompareAuditList},
       {path: 'audit/compare', component: CompareAuditForm},
     ]
-  }
+  },
+  { path: '**', redirectTo: '/admin' }
 ];

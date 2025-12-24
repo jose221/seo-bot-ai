@@ -1,22 +1,60 @@
 <nav class="navbar navbar-expand-lg bg-transparent shadow-sm" style="backdrop-filter: blur(10px);-webkit-backdrop-filter: blur(10px);background-color: rgba(255, 255, 255, 0.95);">
-  <div class="container-fluid"><a class="navbar-brand fw-bold text-primary" href="#">Mi Sitio</a><button data-bs-toggle="collapse" data-bs-target="#navbarNav" class="navbar-toggler border-primary" type="button" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon" style="filter:invert(0.3) sepia(1) saturate(5) hue-rotate(175deg);"></span></button>
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold text-primary" href="#">{{ 'admin.navbar.brand' | translate }}</a>
+    <button data-bs-toggle="collapse" data-bs-target="#navbarNav" class="navbar-toggler border-primary" type="button" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon" style="filter:invert(0.3) sepia(1) saturate(5) hue-rotate(175deg);"></span>
+    </button>
     <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item"><a class="nav-link text-primary" href="#">Inicio</a></li>
-        <li class="nav-item"><a class="nav-link text-primary" href="#auditorias">Auditorías</a></li>
-        <li class="nav-item"><a class="nav-link active fw-semibold text-primary" aria-current="page" href="#sitios">Listado de Sitios</a></li>
-        <li class="nav-item"><a class="nav-link text-primary" href="#">Servicios</a></li>
-        <li class="nav-item"><a class="nav-link text-primary" href="#">Contacto</a></li>
-        <li class="nav-item dropdown"><a class="nav-link dropdown-toggle text-primary" aria-expanded="false" data-bs-toggle="dropdown" href="#" id="navbarDropdown" role="button"> Más opciones </a>
-          <ul class="border-0 shadow dropdown-menu" aria-labelledby="navbarDropdown">
-            <li><a class="dropdown-item text-primary" href="#">Blog</a></li>
-            <li><a class="dropdown-item text-primary" href="#">Galería</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item text-primary" href="#">FAQ</a></li>
-          </ul>
+        <li class="nav-item">
+          <a class="nav-link text-primary"
+             routerLink="/admin/target"
+             routerLinkActive="active fw-semibold"
+             [routerLinkActiveOptions]="{exact: false}"
+             [attr.aria-current]="isActive('/admin/target') ? 'page' : null">
+            {{ 'admin.navbar.sites' | translate }}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-primary"
+             routerLink="/admin/audit"
+             routerLinkActive="active fw-semibold"
+             [routerLinkActiveOptions]="{exact: true}"
+             [attr.aria-current]="isActive('/admin/audit') ? 'page' : null">
+            {{ 'admin.navbar.audits' | translate }}
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link text-primary"
+             routerLink="/admin/audit/comparisons"
+             routerLinkActive="active fw-semibold"
+             [routerLinkActiveOptions]="{exact: false}"
+             [attr.aria-current]="isActive('/admin/audit/comparisons') ? 'page' : null">
+            {{ 'admin.navbar.comparisons' | translate }}
+          </a>
         </li>
       </ul>
-      <form class="d-flex"><input class="border-primary form-control me-2" type="search" aria-label="Search" placeholder="Buscar" style="border-width:2px;"><button class="btn btn-primary px-4" type="submit">Buscar</button></form>
+      <div class="d-flex align-items-center gap-3">
+        <form class="d-flex">
+          <input class="border-primary form-control me-2"
+                 type="search"
+                 aria-label="Search"
+                 [placeholder]="'admin.navbar.searchPlaceholder' | translate"
+                 style="border-width:2px;">
+          <button class="btn btn-primary px-4" type="submit">{{ 'admin.navbar.searchButton' | translate }}</button>
+        </form>
+        <div class="vr d-none d-lg-block" style="height: 30px;"></div>
+        <button class="btn btn-outline-danger d-flex align-items-center gap-2 px-3"
+                type="button"
+                (click)="logout()"
+                title="{{ 'admin.navbar.logoutTitle' | translate }}">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+          </svg>
+          <span class="d-none d-md-inline">{{ 'admin.navbar.logout' | translate }}</span>
+        </button>
+      </div>
     </div>
   </div>
 </nav>
