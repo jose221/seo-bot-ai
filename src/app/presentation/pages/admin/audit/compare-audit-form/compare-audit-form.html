@@ -8,31 +8,85 @@
             <h2 class="fw-bold text-primary mb-2">Comparativa de Páginas Web</h2>
             <p class="text-muted">Seleccione una página web base y las páginas con las que desea compararla</p>
           </div>
-          <form id="compareForm" class="needs-validation" novalidate="">
-            <div class="mb-4"><label class="form-label fw-semibold" for="baseWebPage">Página Web Base <span class="text-danger">*</span></label><select class="border-2 form-select form-select-lg form-select" id="baseWebPage" required="">
+          <form id="compareForm" class="needs-validation" [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="baseWebPage">
+                Página Web Base <span class="text-danger">*</span>
+            </label>
+              <select
+                class="border-2 form-select form-select-lg form-select"
+                id="baseWebPage"
+                formControlName="web_page_id"
+                aria-describedby="validationBaseWebPage"
+                [ngClass]="{'is-invalid': messages('web_page_id').length > 0}"
+              >
               <option value="" disabled>Seleccione una página web...</option>
               @for (audit of auditSearchList(); track audit.id){
                 <option [value]="audit.id">{{audit.web_page_name}} ({{audit.web_page_url}})</option>
               }
             </select>
-              <div class="form-text"><span>Seleccione la página web que será la base de la comparación</span></div>
-              <div class="invalid-feedback"><span>Por favor seleccione una página web base.</span></div>
+              @if(messages('web_page_id').length > 0){
+                @for(msg of messages('web_page_id'); track msg){
+                  <div id="validationWebPageId" class="invalid-feedback">
+                    {{msg}}
+                  </div>
+                }
+              } @else {
+                <div class="form-text"><span>Seleccione la página web que será la base de la comparación</span></div>
+              }
 
             </div>
             <div class="mb-4"><label class="form-label fw-semibold">Páginas Web para Comparar <span class="text-danger">*</span></label>
+
+              <!-- Filtros -->
+              <div class="row g-2 mb-3">
+                <div class="col-md-4 d-flex align-items-end">
+                  <label class="form-label small mb-1 mx-2">Solo páginas únicas</label>
+                  <div class="form-check form-switch mt-2">
+                    <input type="checkbox"
+                           class="form-check-input"
+                           [ngModel]="formAuditSearchListToCompare().unique_web_page"
+                           (ngModelChange)="updateUniqueWebPage($event)"
+                           [ngModelOptions]="{standalone: true}"
+                           id="uniqueWebPageFilter">
+                    <label class="form-check-label small" for="uniqueWebPageFilter">
+                      Activar
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               <div class="bg-light border rounded-3 p-3">
                 <div class="mb-3 form-text"><span>Seleccione una o más páginas web para comparar con la base</span></div>
                 @for (audit of auditSearchListToCompare(); track audit.id){
                   <div class="mb-3 form-check">
-                    <input type="checkbox" class="form-check-input" id="compare1" name="comparePages" [value]="audit.id">
-                    <label class="form-check-label" for="compare1"> {{audit.web_page_name}} ({{audit.web_page_url}}) </label>
+                    <input type="checkbox"
+                           class="form-check-input"
+                           [id]="'compare-' + audit.id"
+                           [checked]="isPageSelected(audit.id)"
+                           (change)="onComparePageChange(audit.id, $event)">
+                    <label class="form-check-label" [for]="'compare-' + audit.id">
+                      {{audit.web_page_name}} ({{audit.web_page_url}})
+                    </label>
                   </div>
                 }
               </div>
-              <div class="d-block invalid-feedback" id="checkboxError" style="display:none;"><span>Por favor seleccione al menos una página para comparar.</span></div>
+              @if (submitted() && form.get('web_page_id_compare')?.invalid) {
+                <div class="d-block invalid-feedback">
+                  <span>Por favor seleccione al menos una página para comparar.</span>
+                </div>
+              }
             </div>
             <div class="mb-4">
-              <div class="form-check form-switch"><input type="checkbox" checked="" class="form-check-input" id="includeAiAnalysis"><label class="fw-semibold form-check-label" for="includeAiAnalysis"> Incluir Análisis con IA </label></div>
+              <div class="form-check form-switch">
+                <input type="checkbox"
+                       class="form-check-input"
+                       id="includeAiAnalysis"
+                       formControlName="include_ai_analysis">
+                <label class="fw-semibold form-check-label" for="includeAiAnalysis">
+                  Incluir Análisis con IA
+                </label>
+              </div>
               <div class="form-text"><span>Active esta opción para obtener recomendaciones generadas por inteligencia artificial</span></div>
             </div>
             <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5"><button class="btn btn-outline-secondary btn-lg px-4" type="reset"> Limpiar </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"> Generar Comparativa </button></div>
