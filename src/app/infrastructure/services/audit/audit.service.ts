@@ -2,19 +2,18 @@ import { Injectable } from '@angular/core';
 import {HttpService} from '@/app/infrastructure/services/general/http.service';
 import {AuditMapper} from '@/app/domain/mappers/audit/audit.mapper';
 import {
-  CompareAuditRequestModel,
-  CreateAuditRequestModel,
-  FilterAuditRequestModel, SearchAuditRequestModel
+  CreateAuditRequestModel, CreateCompareAuditRequestModel,
+  FilterAuditRequestModel, FilterCompareAuditRequestModel, SearchAuditRequestModel
 } from '@/app/domain/models/audit/request/audit-request.model';
 import {
   AuditResponseModel,
   CompareAuditResponseModel,
-  CreateAuditResponseModel, SearchAuditResponseModel
+  CreateAuditResponseModel, CreateCompareAuditResponseModel, FindCompareAuditResponseModel, SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
 import {
   AuditResponseDto,
   CompareAuditResponseDto,
-  CreateAuditResponseDto, SearchAuditResponseDto
+  CreateAuditResponseDto, CreateCompareAuditResponseDto, FindCompareAuditResponseDto, SearchAuditResponseDto
 } from '@/app/infrastructure/dto/response/audit-response.dto';
 import {HttpClientHelper} from '@/app/helper/http-client.helper';
 import {environment} from '@/environments/environment';
@@ -51,9 +50,19 @@ export class AuditService extends BaseService{
     return this.itemMapper.mapResponse(response);
   }
 
-  async compare(params: CompareAuditRequestModel): Promise<CompareAuditResponseModel>{
-    const response = await this.httpService.post<CompareAuditResponseDto>(`${environment.endpoints.audit.compare}`, this.itemMapper.mapCompare(params), {}, this.getToken)
-    return this.itemMapper.mapResponseCompare(response);
+  async compare(params: CreateCompareAuditRequestModel): Promise<CreateCompareAuditResponseModel>{
+    const response = await this.httpService.post<CreateCompareAuditResponseDto>(`${environment.endpoints.audit.compare}`, this.itemMapper.mapCreateCompare(params), {}, this.getToken)
+    return this.itemMapper.mapResponseCreateCompare(response);
+  }
+
+  async getComparisons(params?: FilterCompareAuditRequestModel): Promise<CompareAuditResponseModel[]>{
+    const response = await this.httpService.get<HttpItemsModel<CompareAuditResponseDto[]>>(`${environment.endpoints.audit.comparisons}`, params ? this.itemMapper.mapFilterComparisons(params):{}, {}, this.getToken);
+    return response.items.map((item: CompareAuditResponseDto) => this.itemMapper.mapResponseComparisons(item));
+  }
+
+  async findComparisons(id: string): Promise<FindCompareAuditResponseModel> {
+    const response = await this.httpService.get<FindCompareAuditResponseDto>(`${environment.endpoints.audit.comparisons}/${id}`, {},{}, this.getToken);
+    return this.itemMapper.mapResponseFindComparisons(response);
   }
 
   async search(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]>{

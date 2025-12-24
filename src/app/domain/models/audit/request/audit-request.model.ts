@@ -18,11 +18,19 @@ export class FilterAuditRequestModel {
   }
 }
 
-export class CompareAuditRequestModel {
+export class CreateCompareAuditRequestModel {
   constructor(
     public include_ai_analysis: boolean,
     public web_page_id: string,
     public web_page_id_to_compare: string[]
+  ) {
+  }
+}
+
+export class FilterCompareAuditRequestModel {
+  constructor(
+    public page: number,
+    public page_size: number
   ) {
   }
 }

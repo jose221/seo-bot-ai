@@ -25,9 +25,28 @@ export interface CreateAuditResponseDto {
   status: StatusType
   task_id: string
 }
+// ============ COMPARE AUDIT MODELS ============
+
+export interface CreateCompareAuditResponseDto {
+  message: string
+  status: string
+  task_id: string
+
+}
+
+export interface CompareAuditResponseDto{
+  id: string
+  base_web_page_id: string
+  status: string
+  created_at: string
+  completed_at: string
+  base_url: string
+  total_competitors: number
+  error_message: string
+}
 
 
-export interface CompareAuditResponseDto {
+export interface FindCompareAuditResponseDto {
   ai_schema_comparison: string
   base_url: string
   comparisons: ComparisonsAuditResponseDto[]

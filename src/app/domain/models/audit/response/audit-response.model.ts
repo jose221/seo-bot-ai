@@ -32,8 +32,33 @@ export class AuditResponseModel {
 }
 
 // ============ COMPARE AUDIT MODELS ============
+export class CreateCompareAuditResponseModel {
+  constructor(
+    public message: string,
+    public status: string,
+    public task_id: string
+  ) {
+  }
 
-export class CompareAuditResponseModel {
+}
+
+export class CompareAuditResponseModel{
+  constructor(
+    public id: string,
+    public base_web_page_id: string,
+    public status: string,
+    public created_at: string,
+    public completed_at: string,
+    public base_url: string,
+    public total_competitors: number,
+    public error_message: string
+  ) {
+  }
+}
+
+
+
+export class FindCompareAuditResponseModel {
   constructor(
     public base_url: string,
     public comparisons: ComparisonsAuditResponseModel[],

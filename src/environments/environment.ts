@@ -21,6 +21,7 @@ export const environment = {
     audit:{
       path: '/audits',
       compare: '/audits/compare',
+      comparisons: '/audits/comparisons',
       search: '/audits/search'
     }
   },
