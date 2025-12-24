@@ -12,6 +12,7 @@ export class HttpService {
   constructor() {
     this.axiosInstance = axios.create({
       baseURL: environment.apiUrl,
+      timeout: environment.timeout,
       headers: {
         'Content-Type': 'application/json'
       }
