@@ -15,13 +15,8 @@ RUN npm install --legacy-peer-deps
 # Copiar todos los archivos necesarios para el build
 COPY . .
 
-# Build de la aplicación para producción (mostrar errores completos)
-RUN set -o pipefail && npm run build 2>&1 | tee /tmp/build.log || \
-    (echo "================================" && \
-     echo "BUILD FAILED - Mostrando log completo:" && \
-     echo "================================" && \
-     cat /tmp/build.log && \
-     exit 1)
+# Build de la aplicación para producción
+RUN npm run build
 
 # Verificar y preparar los archivos para nginx
 RUN echo "=== Verificando estructura del build ===" && \
