@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Servicio de Frontend Angular
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seo_bot_frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  # Servicio de Backend API
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: seo_bot_api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./api:/app
+    ports:
+      - "8000:8000"
+    environment:
+      # Database Configuration
+      DB_DRIVER: postgresql
+      DB_ASYNC_DRIVER: asyncpg
+      DB_SYNC_DRIVER: psycopg2
+      DB_HOST: 84.247.137.97
+      DB_PORT: 5432
+      DB_NAME: seo_bot_db
+      DB_USER: herandro
+      DB_PASSWORD: Gonzales220
+      DATABASE_URL: postgresql+asyncpg://herandro:Gonzales220@84.247.137.97:5432/seo_bot_db
+
+      # API Externa
+      HERANDRO_API_URL: https://herandro-services-api.herandro.com.mx
+
+      # Security
+      SECRET_KEY: dev-secret-key-change-in-production
+
+      # App Configuration
+      DEBUG: "True"
+      ENVIRONMENT: production
+      DISPLAY: ":99"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Recursos necesarios para Chrome + Xvfb
+    shm_size: '2gb'
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    restart: unless-stopped
+
+  # Servicio de Base de Datos PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: seo_bot_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: seo_bot_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: seo_bot_network
