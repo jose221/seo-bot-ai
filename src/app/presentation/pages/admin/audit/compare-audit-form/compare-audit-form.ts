@@ -8,7 +8,7 @@ import {
 } from '@/app/domain/models/audit/response/audit-response.model';
 import {CompareAuditRequestModel, SearchAuditRequestModel} from '@/app/domain/models/audit/request/audit-request.model';
 import {StatusType} from '@/app/domain/types/status.type';
-import {NgClass} from '@angular/common';
+import {DatePipe, DecimalPipe, NgClass} from '@angular/common';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
 import {SearchTargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {SearchTargetRequestModel} from '@/app/domain/models/target/request/target-request.model';
@@ -26,7 +26,7 @@ import {TranslateModule} from '@ngx-translate/core';
 
 @Component({
   selector: 'app-compare-audit-form',
-  imports: [FormsModule, ReactiveFormsModule, NgClass, DefaultModal, HeaderModalComponent, BodyModalComponent, FooterModalComponent, TranslateModule],
+  imports: [FormsModule, ReactiveFormsModule, NgClass, DefaultModal, HeaderModalComponent, BodyModalComponent, FooterModalComponent, TranslateModule, DecimalPipe, DatePipe],
   templateUrl: './compare-audit-form.html',
   styleUrl: './compare-audit-form.scss',
 })
