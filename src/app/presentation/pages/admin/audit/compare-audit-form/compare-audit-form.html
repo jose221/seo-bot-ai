@@ -1,17 +1,24 @@
 <div class="container py-5">
   <div class="row justify-content-center">
     <div class="col-lg-10 col-xl-9">
-      <div class="d-flex flex-wrap gap-2 mb-4"><a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#auditorias"> Auditorías </a><a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#sitios"> Listado de Sitios </a></div>
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#auditorias">
+          {{ 'audits.compare.buttons.audits' | translate }}
+        </a>
+        <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" href="#sitios">
+          {{ 'audits.compare.buttons.sites' | translate }}
+        </a>
+      </div>
       <div class="card rounded-3 border-0 shadow-sm">
         <div class="card-body p-4 p-md-5">
           <div class="text-center mb-4">
-            <h2 class="fw-bold text-primary mb-2">Comparativa de Páginas Web</h2>
-            <p class="text-muted">Seleccione una página web base y las páginas con las que desea compararla</p>
+            <h2 class="fw-bold text-primary mb-2">{{ 'audits.compare.title' | translate }}</h2>
+            <p class="text-muted">{{ 'audits.compare.subtitle' | translate }}</p>
           </div>
           <form id="compareForm" class="needs-validation" [formGroup]="form" (ngSubmit)="onSubmit()">
             <div class="mb-4">
               <label class="form-label fw-semibold" for="baseWebPage">
-                Página Web Base <span class="text-danger">*</span>
+                {{ 'audits.compare.basePage.label' | translate }} <span class="text-danger">*</span>
             </label>
               <select
                 class="border-2 form-select form-select-lg form-select"
@@ -20,7 +27,7 @@
                 aria-describedby="validationBaseWebPage"
                 [ngClass]="{'is-invalid': messages('web_page_id').length > 0}"
               >
-              <option value="" disabled>Seleccione una página web...</option>
+              <option value="" disabled>{{ 'audits.compare.basePage.placeholder' | translate }}</option>
               @for (audit of targetSearchList(); track audit.id){
                 <option [value]="audit.id">{{audit.name}} ({{audit.url}})</option>
               }
@@ -32,19 +39,19 @@
                   </div>
                 }
               } @else {
-                <div class="form-text"><span>Seleccione la página web que será la base de la comparación</span></div>
+                <div class="form-text"><span>{{ 'audits.compare.basePage.help' | translate }}</span></div>
               }
 
             </div>
-            <div class="mb-4"><label class="form-label fw-semibold">Páginas Web para Comparar <span class="text-danger">*</span></label>
+            <div class="mb-4"><label class="form-label fw-semibold">{{ 'audits.compare.comparePages.label' | translate }} <span class="text-danger">*</span></label>
 
               <!-- Filtros -->
               <div class="row g-2 mb-3">
                 <div class="col-md-6">
-                  <label class="form-label small">Buscar página</label>
+                  <label class="form-label small">{{ 'audits.compare.filters.searchPage' | translate }}</label>
                   <input type="text"
                          class="form-control form-control-sm"
-                         placeholder="Buscar por nombre o URL..."
+                         [placeholder]="'audits.compare.filters.searchPlaceholder' | translate"
                          [ngModel]="formTargetSearchListToCompare().query"
                          (ngModelChange)="updateQuery($event)"
                          [ngModelOptions]="{standalone: true}">
@@ -52,22 +59,22 @@
               </div>
 
               <div class="bg-light border rounded-3 p-3">
-                <div class="mb-3 form-text"><span>Seleccione una o más páginas web para comparar con la base</span></div>
+                <div class="mb-3 form-text"><span>{{ 'audits.compare.comparePages.help' | translate }}</span></div>
 
                 @if (loadingCompareList()) {
                   <div class="text-center py-4">
                     <div class="spinner-border text-primary" role="status">
-                      <span class="visually-hidden">Cargando...</span>
+                      <span class="visually-hidden">{{ 'general.messages.loading' | translate }}</span>
                     </div>
-                    <p class="text-muted mt-2 mb-0">Buscando páginas...</p>
+                    <p class="text-muted mt-2 mb-0">{{ 'audits.compare.loading.searching' | translate }}</p>
                   </div>
                 } @else if (targetSearchListToCompare().length === 0) {
                   <div class="text-center py-4">
                     <svg class="bi bi-inbox mb-3 text-muted" fill="currentColor" height="48" viewBox="0 0 16 16" width="48" xmlns="http://www.w3.org/2000/svg">
                       <path d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.981 3h6.038a1.5 1.5 0 0 1 1.172.563l3.7 4.625a.5.5 0 0 1 .105.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z"/>
                     </svg>
-                    <p class="text-muted mb-0">No se encontraron páginas para comparar</p>
-                    <small class="text-muted">Intenta ajustar los filtros de búsqueda</small>
+                    <p class="text-muted mb-0">{{ 'audits.compare.noResults.title' | translate }}</p>
+                    <small class="text-muted">{{ 'audits.compare.noResults.subtitle' | translate }}</small>
                   </div>
                 } @else {
                   @for (audit of targetSearchListToCompare(); track audit.id){
@@ -86,9 +93,9 @@
                   }
                 }
               </div>
-              @if (submitted() && form.get('web_page_id_compare')?.invalid) {
+              @if (submitted() && form.get('web_page_id_to_compare')?.invalid) {
                 <div class="d-block invalid-feedback">
-                  <span>Por favor seleccione al menos una página para comparar.</span>
+                  <span>{{ 'audits.compare.comparePages.required' | translate }}</span>
                 </div>
               }
             </div>
@@ -99,12 +106,19 @@
                        id="includeAiAnalysis"
                        formControlName="include_ai_analysis">
                 <label class="fw-semibold form-check-label" for="includeAiAnalysis">
-                  Incluir Análisis con IA
+                  {{ 'audits.compare.includeAI.label' | translate }}
                 </label>
               </div>
-              <div class="form-text"><span>Active esta opción para obtener recomendaciones generadas por inteligencia artificial</span></div>
+              <div class="form-text"><span>{{ 'audits.compare.includeAI.help' | translate }}</span></div>
             </div>
-            <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5"><button class="btn btn-outline-secondary btn-lg px-4" type="reset"> Limpiar </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"> Generar Comparativa </button></div>
+            <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5">
+              <button class="btn btn-outline-secondary btn-lg px-4" type="reset">
+                {{ 'general.actions.clear' | translate }}
+              </button>
+              <button class="btn btn-primary btn-lg shadow-sm px-5" type="submit">
+                {{ 'audits.compare.buttons.compare' | translate }}
+              </button>
+            </div>
           </form>
         </div>
       </div>
@@ -112,16 +126,16 @@
   </div>
 </div>
 
-<app-default-modal classModalDialog="modal-xl" [expanded]="true">
+<app-default-modal classModalDialog="modal-xl" [expanded]="showMessageConfirmation()">
   <app-header-modal classModal=" text-white bg-primary">
     <h5 class="fw-bold modal-title" id="resultsModalLabel">
-      Resultados de la Comparativa
+      {{ 'audits.compare.confirmModal.resultsTitle' | translate }}
     </h5>
     <button class="btn-close btn-close-white" aria-label="Close" (click)="showMessageConfirmation.set(false)" type="button"></button>
   </app-header-modal>
   <app-body-modal>
     <div class="mb-4">
-      <h6 class="fw-bold text-primary">Página Web Base</h6>
+      <h6 class="fw-bold text-primary">{{ 'audits.compare.confirmModal.basePageLabel' | translate }}</h6>
       <p class="mb-0">
         <a class="text-decoration-none" href="https://example.com" target="_blank">
           {{ responseCompareAudit()?.base_url }}
@@ -131,7 +145,7 @@
     <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
       <h6 class="fw-bold mb-2">
         <svg class="bi bi-robot me-2" fill="currentColor" height="20" viewbox="0 0 16 16" width="20" xmlns="http://www.w3.org/2000/svg"><path d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135"></path><path d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5"></path></svg>
-        Análisis con IA
+        {{ 'audits.compare.confirmModal.aiAnalysisTitle' | translate }}
       </h6>
       <p class="mb-0">
         {{ responseCompareAudit()?.ai_schema_comparison }}
@@ -139,13 +153,13 @@
     </div>
     <div class="card border-0 shadow-sm mb-4">
       <div class="card-header bg-white border-0 pt-3">
-        <h6 class="fw-bold text-primary mb-0">Resumen General</h6>
+        <h6 class="fw-bold text-primary mb-0">{{ 'audits.compare.confirmModal.overallSummary' | translate }}</h6>
       </div>
       <div class="card-body">
         <div class="row g-3">
           <div class="col-md-4">
             <div class="bg-light rounded-3 p-3"><small class="text-muted d-block mb-1">
-              Mejor en Rendimiento</small>
+              {{ 'audits.compare.confirmModal.bestPerformance' | translate }}</small>
               <span class="badge bg-success">
                 {{responseCompareAudit()?.overall_summary?.best_in_performance}}
               </span>
@@ -154,7 +168,7 @@
           <div class="col-md-4">
             <div class="bg-light rounded-3 p-3">
               <small class="text-muted d-block mb-1">
-                Mejor en SEO
+                {{ 'audits.compare.confirmModal.bestSEO' | translate }}
               </small>
               <span class="badge bg-warning text-dark">
                 {{responseCompareAudit()?.overall_summary?.best_in_seo}}
@@ -164,7 +178,7 @@
           <div class="col-md-4">
             <div class="bg-light rounded-3 p-3">
               <small class="text-muted d-block mb-1">
-              Áreas a Mejorar
+              {{ 'audits.compare.confirmModal.areasToImprove' | translate }}
               </small>
               @for (area_to_improve of responseCompareAudit().overall_summary?.areas_to_improve; track area_to_improve){
                 <span class="badge bg-danger me-1">
@@ -176,7 +190,7 @@
         </div>
       </div>
     </div>
-    <h6 class="fw-bold text-primary mb-3">Comparaciones Detalladas</h6>
+    <h6 class="fw-bold text-primary mb-3">{{ 'audits.compare.confirmModal.detailedComparisons' | translate }}</h6>
     <div class="accordion" role="tablist" id="comparisonsAccordion">
       @for (comparison of responseCompareAudit().comparisons; track comparison.compare_url){
         <div class="accordion-item border-0 shadow-sm mb-3">
@@ -187,14 +201,14 @@
                   {{comparison.compare_url}}
                 </span>
                 <span class="badge bg-success">
-                  Ganador: {{comparison.summary.overall_winner}}
+                  {{ 'audits.compare.confirmModal.winner' | translate }}: {{comparison.summary.overall_winner}}
                 </span>
               </div>
             </button>
           </h2>
           <div class="accordion-collapse collapse show item-1 show" role="tabpanel" data-bs-parent="#comparisonsAccordion" aria-labelledby="heading1" id="collapse1">
             <div class="accordion-body">
-              <h6 class="fw-bold mb-3">Recomendaciones</h6>
+              <h6 class="fw-bold mb-3">{{ 'audits.compare.confirmModal.recommendations' | translate }}</h6>
               <div class="list-group">
                 @for (recommendation of comparison.recommendations; track recommendation){
                   <div class="list-group-item">
@@ -207,7 +221,7 @@
                       </span>
                     </div>
                     <small class="text-muted">
-                      Categoría: {{recommendation.category}}
+                      {{ 'audits.compare.confirmModal.category' | translate }}: {{recommendation.category}}
                     </small>
                   </div>
                 }
@@ -221,8 +235,10 @@
   </app-body-modal>
   <app-footer-modal>
     <button class="btn btn-secondary" type="button" (click)="showMessageConfirmation.set(false)">
-      Cerrar
+      {{ 'audits.compare.confirmModal.closeButton' | translate }}
     </button>
-    <button class="btn btn-primary" type="button">Exportar Reporte</button>
+    <button class="btn btn-primary" type="button">
+      {{ 'audits.compare.confirmModal.exportButton' | translate }}
+    </button>
   </app-footer-modal>
 </app-default-modal>
