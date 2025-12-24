@@ -126,5 +126,35 @@
   </div>
 </div>
 
+<app-default-modal [expanded]="showMessageConfirmation()">
+  <app-header-modal>
+    <h5 class="text-primary modal-title" id="responseModalLabel">
+      <i class="me-2 bi bi-check-circle-fill"></i>
+      {{ 'audits.form.confirmModal.title' | translate }}
+    </h5>
+    <button class="btn-close" aria-label="Close" (click)="showMessageConfirmation.set(false)" type="button"></button>
+  </app-header-modal>
 
+  <app-body-modal>
+    <div class="alert alert-info mb-3" role="alert">
+      <strong>{{ 'audits.form.confirmModal.message' | translate }} </strong>
+      <span id="modalMessage"> {{responseCompareAudit().message}}</span>
+    </div>
+    <div class="mb-2">
+      <strong>{{ 'audits.form.confirmModal.status' | translate }} </strong>
+      <span class="badge bg-warning text-dark" id="modalStatus"> {{statusAuditUtil.getStatusText(responseCompareAudit().status)}}</span>
+    </div>
+    <div class="mb-2">
+      <strong>{{ 'audits.form.confirmModal.taskId' | translate }} </strong>
+      <code id="modalTaskId"> {{responseCompareAudit().task_id}}</code>
+    </div>
+  </app-body-modal>
+  <app-footer-modal>
+    <button class="btn btn-secondary" (click)="showMessageConfirmation.set(false)" type="button">{{ 'audits.form.confirmModal.acceptButton' | translate }}</button>
+    <a class="btn btn-primary" id="viewAuditsBtn" routerLink="/admin/audit">
+      <i class="me-1 bi bi-list-check"></i>{{ 'audits.form.confirmModal.viewListButton' | translate }}
+    </a>
+  </app-footer-modal>
+
+</app-default-modal>
 

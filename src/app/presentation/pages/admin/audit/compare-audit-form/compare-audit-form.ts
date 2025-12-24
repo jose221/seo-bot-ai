@@ -24,10 +24,11 @@ import {
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 import {TranslateModule} from '@ngx-translate/core';
 import {CreateCompareAuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
+import {RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-compare-audit-form',
-  imports: [FormsModule, ReactiveFormsModule, NgClass, TranslateModule],
+  imports: [FormsModule, ReactiveFormsModule, NgClass, TranslateModule, BodyModalComponent, DefaultModal, FooterModalComponent, HeaderModalComponent, RouterLink],
   templateUrl: './compare-audit-form.html',
   styleUrl: './compare-audit-form.scss',
 })
