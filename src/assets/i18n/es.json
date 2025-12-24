@@ -255,25 +255,37 @@
         "help": "Active esta opción para obtener recomendaciones generadas por inteligencia artificial"
       },
       "confirmModal": {
-        "title": "Audit Comparison Completed",
+        "title": "Comparación de Auditorías Completada",
         "resultsTitle": "Resultados de la Comparativa",
-        "baseUrl": "Base URL:",
+        "baseUrl": "URL Base:",
         "basePageLabel": "Página Web Base",
         "aiAnalysisTitle": "Análisis con IA",
-        "comparisons": "Comparisons:",
+        "aiSchemaAnalysis": "Análisis de Esquemas con IA",
+        "comparisons": "Comparaciones:",
         "overallSummary": "Resumen General",
+        "totalCompetitors": "Total Competidores",
+        "performanceRank": "Ranking Performance",
+        "seoRank": "Ranking SEO",
         "bestPerformance": "Mejor en Rendimiento",
         "bestSEO": "Mejor en SEO",
         "areasToImprove": "Áreas a Mejorar",
-        "aiAnalysis": "AI Analysis - Schema Comparison",
+        "noAreasToImprove": "Ninguna área a mejorar",
+        "competitiveAdvantage": "Ventaja Competitiva",
+        "performanceAboveAverage": "Performance sobre el promedio",
+        "seoAboveAverage": "SEO sobre el promedio",
+        "topRecommendations": "Recomendaciones Principales",
+        "aiAnalysis": "Análisis de IA - Comparación de Esquemas",
         "detailedComparisons": "Comparaciones Detalladas",
+        "comparisonDate": "Fecha de comparación",
+        "performanceScores": "Puntuaciones de Rendimiento",
+        "better": "Mejor",
         "winner": "Ganador",
         "recommendations": "Recomendaciones",
         "category": "Categoría",
-        "acceptButton": "Accept",
+        "acceptButton": "Aceptar",
         "closeButton": "Cerrar",
         "exportButton": "Exportar Reporte",
-        "viewListButton": "View Audit List"
+        "viewListButton": "Ver Lista de Auditorías"
       }
     }
   }
