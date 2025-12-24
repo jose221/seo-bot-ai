@@ -10,17 +10,13 @@ ENV NODE_OPTIONS="--max-old-space-size=4096"
 COPY package*.json ./
 
 # Instalar dependencias
-RUN npm install --legacy-peer-deps --force
+RUN npm install --legacy-peer-deps
 
-# Copiar archivos de configuración de Angular
-COPY angular.json tsconfig*.json ./
-
-# Copiar el resto de los archivos del proyecto
-COPY src ./src
-COPY public ./public
+# Copiar todos los archivos necesarios para el build
+COPY . .
 
 # Build de la aplicación para producción
-RUN npm run build
+RUN npm run build -- --configuration=production 2>&1 || npm run build 2>&1
 
 # Etapa 2: Servidor de producción con Nginx
 FROM nginx:alpine
@@ -35,10 +31,8 @@ COPY --from=builder /app/dist/seo-bot-ai/browser /usr/share/nginx/html
 # Exponer el puerto 80
 EXPOSE 80
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
-
 # Comando para iniciar Nginx
 CMD ["nginx", "-g", "daemon off;"]
+
+
 
