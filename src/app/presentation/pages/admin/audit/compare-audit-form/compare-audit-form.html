@@ -17,12 +17,12 @@
             </select>
               <div class="form-text"><span>Seleccione la página web que será la base de la comparación</span></div>
               <div class="invalid-feedback"><span>Por favor seleccione una página web base.</span></div>
-              
+
             </div>
             <div class="mb-4"><label class="form-label fw-semibold">Páginas Web para Comparar <span class="text-danger">*</span></label>
               <div class="bg-light border rounded-3 p-3">
                 <div class="mb-3 form-text"><span>Seleccione una o más páginas web para comparar con la base</span></div>
-                @for (audit of auditSearchList(); track audit.id){
+                @for (audit of auditSearchListToCompare(); track audit.id){
                   <div class="mb-3 form-check">
                     <input type="checkbox" class="form-check-input" id="compare1" name="comparePages" [value]="audit.id">
                     <label class="form-check-label" for="compare1"> {{audit.web_page_name}} ({{audit.web_page_url}}) </label>
