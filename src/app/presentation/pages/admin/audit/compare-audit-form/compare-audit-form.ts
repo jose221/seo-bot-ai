@@ -22,10 +22,11 @@ import {
 import {
   FooterModalComponent
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
+import {TranslateModule} from '@ngx-translate/core';
 
 @Component({
   selector: 'app-compare-audit-form',
-  imports: [FormsModule, ReactiveFormsModule, NgClass, DefaultModal, HeaderModalComponent, BodyModalComponent, FooterModalComponent],
+  imports: [FormsModule, ReactiveFormsModule, NgClass, DefaultModal, HeaderModalComponent, BodyModalComponent, FooterModalComponent, TranslateModule],
   templateUrl: './compare-audit-form.html',
   styleUrl: './compare-audit-form.scss',
 })
@@ -34,7 +35,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   showMessageConfirmation = signal<boolean>(false);
   responseCompareAudit = signal<CompareAuditResponseModel>({} as CompareAuditResponseModel);
   protected readonly form = inject(FormBuilder).group({
-    web_page_id_compare: new FormControl<string[]>([], Validators.required),
+    web_page_id_to_compare: new FormControl<string[]>([], Validators.required),
     web_page_id: ['', Validators.required],
     include_ai_analysis: [true]
   });
@@ -143,26 +144,26 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   // Método para manejar el cambio de checkboxes de páginas web a comparar
   onComparePageChange(auditId: string, event: Event) {
     const checkbox = event.target as HTMLInputElement;
-    const currentValues = this.form.get('web_page_id_compare')?.value || [];
+    const currentValues = this.form.get('web_page_id_to_compare')?.value || [];
 
     if (checkbox.checked) {
       // Agregar el ID si no existe
       if (!currentValues.includes(auditId)) {
         this.form.patchValue({
-          web_page_id_compare: [...currentValues, auditId]
+          web_page_id_to_compare: [...currentValues, auditId]
         });
       }
     } else {
       // Remover el ID
       this.form.patchValue({
-        web_page_id_compare: currentValues.filter((id: string) => id !== auditId)
+        web_page_id_to_compare: currentValues.filter((id: string) => id !== auditId)
       });
     }
   }
 
   // Método para verificar si una página está seleccionada
   isPageSelected(auditId: string): boolean {
-    const currentValues = this.form.get('web_page_id_compare')?.value || [];
+    const currentValues = this.form.get('web_page_id_to_compare')?.value || [];
     return currentValues.includes(auditId);
   }
 }

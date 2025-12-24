@@ -212,6 +212,69 @@
         "close": "Cerrar",
         "download": "Descargar Reporte"
       }
+    },
+    "compare": {
+      "title": "Comparar Auditorías",
+      "subtitle": "Selecciona y compara múltiples auditorías de páginas web",
+      "buttons": {
+        "audits": "Auditorías",
+        "sites": "Listado de Sitios",
+        "compare": "Comparar Auditorías"
+      },
+      "basePage": {
+        "label": "Página Web Base",
+        "placeholder": "Seleccione una página web...",
+        "help": "Seleccione la página web que será la base de la comparación"
+      },
+      "comparePages": {
+        "label": "Páginas Web para Comparar",
+        "help": "Seleccione una o más páginas web para comparar con la base",
+        "required": "Por favor seleccione al menos una página para comparar."
+      },
+      "filters": {
+        "searchPage": "Buscar página",
+        "searchPlaceholder": "Buscar por nombre o URL...",
+        "status": "Estado",
+        "statusAll": "Todos",
+        "statusCompleted": "Completadas",
+        "statusPending": "Pendientes",
+        "statusFailed": "Fallidas",
+        "uniquePages": "Solo páginas únicas",
+        "activate": "Activar"
+      },
+      "loading": {
+        "searching": "Buscando páginas...",
+        "comparing": "Comparando auditorías..."
+      },
+      "noResults": {
+        "title": "No se encontraron páginas para comparar",
+        "subtitle": "Intenta ajustar los filtros de búsqueda"
+      },
+      "includeAI": {
+        "label": "Incluir Análisis con IA",
+        "help": "Active esta opción para obtener recomendaciones generadas por inteligencia artificial"
+      },
+      "confirmModal": {
+        "title": "Audit Comparison Completed",
+        "resultsTitle": "Resultados de la Comparativa",
+        "baseUrl": "Base URL:",
+        "basePageLabel": "Página Web Base",
+        "aiAnalysisTitle": "Análisis con IA",
+        "comparisons": "Comparisons:",
+        "overallSummary": "Resumen General",
+        "bestPerformance": "Mejor en Rendimiento",
+        "bestSEO": "Mejor en SEO",
+        "areasToImprove": "Áreas a Mejorar",
+        "aiAnalysis": "AI Analysis - Schema Comparison",
+        "detailedComparisons": "Comparaciones Detalladas",
+        "winner": "Ganador",
+        "recommendations": "Recomendaciones",
+        "category": "Categoría",
+        "acceptButton": "Accept",
+        "closeButton": "Cerrar",
+        "exportButton": "Exportar Reporte",
+        "viewListButton": "View Audit List"
+      }
     }
   }
 }
