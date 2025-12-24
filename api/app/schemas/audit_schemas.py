@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any, List
 from uuid import UUID
 from datetime import datetime
 
-from app.models import WebPage
+from app.models import WebPage, ComparisonStatus
 from app.models.audit import AuditStatus
 
 
@@ -196,3 +196,58 @@ class AuditSearchResponse(BaseModel):
     total: int
     page: int
     page_size: Optional[int] = None
+
+
+class ComparisonTaskResponse(BaseModel):
+    """Respuesta inmediata al iniciar comparación"""
+    task_id: UUID
+    status: ComparisonStatus
+    message: str = "Comparación iniciada en segundo plano"
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "task_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "status": "pending",
+                "message": "Comparación iniciada en segundo plano"
+            }
+        }
+
+
+class ComparisonListItem(BaseModel):
+    """Item simplificado de comparación para listados"""
+    id: UUID
+    base_web_page_id: UUID
+    status: ComparisonStatus
+    created_at: datetime
+    completed_at: Optional[datetime]
+    # Datos del resultado si está completado
+    base_url: Optional[str] = None
+    total_competitors: Optional[int] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class ComparisonListResponse(BaseModel):
+    """Respuesta de listado de comparaciones con paginación"""
+    items: List[ComparisonListItem]
+    total: int
+    page: int
+    page_size: Optional[int] = None
+
+
+class ComparisonDetailResponse(BaseModel):
+    """Respuesta detallada de una comparación específica"""
+    id: UUID
+    base_web_page_id: UUID
+    status: ComparisonStatus
+    created_at: datetime
+    completed_at: Optional[datetime]
+    comparison_result: Optional[AuditComparisonResponse] = None
+    error_message: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
