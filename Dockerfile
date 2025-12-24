@@ -15,8 +15,11 @@ RUN npm install --legacy-peer-deps
 # Copiar todos los archivos necesarios para el build
 COPY . .
 
-# Build de la aplicación para producción
-RUN npm run build -- --configuration=production 2>&1 || npm run build 2>&1
+# Desactivar SSR/Prerender para simplificar el build
+ENV NG_BUILD_CACHE=false
+
+# Build de la aplicación para producción (solo client-side)
+RUN npm run build 2>&1 | tee build.log || (cat build.log && exit 1)
 
 # Etapa 2: Servidor de producción con Nginx
 FROM nginx:alpine
