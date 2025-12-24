@@ -85,7 +85,8 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
     unique_web_page: true,
     web_page_id: null,
     status_filter: 'completed',
-    exclude_web_page_id: this.form.value.web_page_id
+    exclude_web_page_id: this.form.value.web_page_id,
+    query: ''
 
   } as SearchAuditRequestModel)
   async auditSearchToCompare(){
@@ -109,6 +110,15 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
     this.formAuditSearchListToCompare.update(current => ({
       ...current,
       unique_web_page: value
+    }));
+    // Actualizar la lista después de cambiar el filtro
+    setTimeout(() => this.auditSearchToCompare());
+  }
+
+  updateQuery(value: string) {
+    this.formAuditSearchListToCompare.update(current => ({
+      ...current,
+      query: value
     }));
     // Actualizar la lista después de cambiar el filtro
     setTimeout(() => this.auditSearchToCompare());
