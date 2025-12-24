@@ -144,6 +144,16 @@ class ReportGenerator:
             leading=11
         ))
 
+        # Estilo para valores de scores (números grandes)
+        self.styles.add(ParagraphStyle(
+            name='ScoreVal',
+            fontSize=14,
+            fontName='Helvetica-Bold',
+            textColor=colors.black,
+            alignment=TA_CENTER,
+            leading=16
+        ))
+
     def _get_score_color(self, score: Union[float, None]):
         if score is None: return colors.grey
         if score >= 90: return colors.HexColor("#27ae60")
