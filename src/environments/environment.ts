@@ -1,6 +1,8 @@
 export const environment = {
   production: false,
   apiUrl: 'http://localhost:8000/api/v1',
+  prometheusUrl: 'http://84.247.137.97:9090',
+  metricsUrl: 'http://localhost:8000/metrics',
   timeout: 360000,
   endpoints: {
     auth:{

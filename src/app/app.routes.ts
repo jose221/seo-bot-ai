@@ -9,6 +9,7 @@ import {AuditForm} from '@/app/presentation/pages/admin/audit/audit-form/audit-f
 import {CompareAuditForm} from '@/app/presentation/pages/admin/audit/compare-audit-form/compare-audit-form';
 import {CompareAuditList} from '@/app/presentation/pages/admin/audit/compare-audit-list/compare-audit-list';
 import {loginGuard} from '@/app/presentation/guards/login.guard';
+import {MetricsDashboardComponent} from '@/app/presentation/components/metrics-dashboard/metrics-dashboard.component';
 
 export const routes: Routes = [
   { path: '', component: Login, canActivate: [loginGuard] },
@@ -24,6 +25,7 @@ export const routes: Routes = [
       {path: 'audit/create', component: AuditForm},
       {path: 'audit/comparisons', component: CompareAuditList},
       {path: 'audit/compare', component: CompareAuditForm},
+      {path: 'metrics', component: MetricsDashboardComponent},
     ]
   },
   { path: '**', redirectTo: '/admin' }

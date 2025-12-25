@@ -53,5 +53,23 @@ services:
           memory: 2G
     restart: unless-stopped
 
+  # Servicio de Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "3102:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    restart: unless-stopped
+    depends_on:
+      - api
+
+volumes:
+  prometheus_data:
+
 
 

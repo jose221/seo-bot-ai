@@ -5,6 +5,7 @@ Inicialización de la aplicación, configuración de CORS y routers.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import settings
 from app.core.database import init_db
@@ -52,6 +53,9 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(api_router, prefix="/api/v1")
+
+# Configurar Prometheus
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
 # Endpoint raíz

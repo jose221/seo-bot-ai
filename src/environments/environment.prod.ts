@@ -1,6 +1,8 @@
 export const environment = {
   production: true,
   apiUrl: 'http://84.247.137.97:3101/api/v1',
+  prometheusUrl: 'http://84.247.137.97:3102',
+  metricsUrl: 'http://84.247.137.97:3101/metrics',
   timeout: 360000,
   endpoints: {
     auth:{
