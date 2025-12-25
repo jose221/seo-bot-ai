@@ -40,6 +40,9 @@
     "pattern": "El formato no es válido"
   },
   "general": {
+    "loading": {
+      "message": "Obteniendo información..."
+    },
     "actions": {
       "edit": "Editar",
       "delete": "Eliminar",

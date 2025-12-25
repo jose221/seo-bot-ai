@@ -40,6 +40,9 @@
     "pattern": "Invalid format"
   },
   "general": {
+    "loading": {
+      "message": "Getting information..."
+    },
     "actions": {
       "edit": "Edit",
       "delete": "Delete",
