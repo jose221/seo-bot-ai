@@ -38,741 +38,764 @@
   </div>
 </div>
 
-<app-default-modal classModalDialog="modal-xl" [expanded]="showMessageComparison()">
-  <app-header-modal classModal="text-white bg-primary">
-    <h5 class="fw-bold modal-title" id="resultsModalLabel">
-      {{ 'audits.compare.confirmModal.resultsTitle' | translate }}
-    </h5>
-    <button class="btn-close btn-close-white" aria-label="Close" (click)="showMessageComparison.set(false)" type="button"></button>
-  </app-header-modal>
+@if(responseCompareAudit().id){
+  <app-default-modal classModalDialog="modal-xl" [expanded]="showMessageComparison()">
+    <app-header-modal classModal="text-white bg-primary">
+      <h5 class="fw-bold modal-title" id="resultsModalLabel">
+        {{ 'audits.compare.confirmModal.resultsTitle' | translate }}
+      </h5>
+      <button class="btn-close btn-close-white" aria-label="Close" (click)="showMessageComparison.set(false)" type="button"></button>
+    </app-header-modal>
 
-  <app-body-modal>
-    <!-- Status & Dates Info -->
-    <div class="d-flex flex-wrap gap-3 mb-4 text-muted small">
-      <div>
-        <i class="bi bi-hash me-1"></i>
-        <strong>ID:</strong> {{ responseCompareAudit()?.id }}
-      </div>
-      <div>
+    <app-body-modal>
+      <!-- Status & Dates Info -->
+      <div class="d-flex flex-wrap gap-3 mb-4 text-muted small">
+        <div>
+          <i class="bi bi-hash me-1"></i>
+          <strong>ID:</strong> {{ responseCompareAudit().id }}
+        </div>
+        <div>
         <span class="badge rounded-pill" [ngClass]="{
-          'bg-success': responseCompareAudit()?.status === 'completed',
-          'bg-warning text-dark': responseCompareAudit()?.status === 'pending',
-          'bg-danger': responseCompareAudit()?.status === 'failed'
+          'bg-success': responseCompareAudit().status === 'completed',
+          'bg-warning text-dark': responseCompareAudit().status === 'pending',
+          'bg-danger': responseCompareAudit().status === 'failed'
         }">
-          {{ responseCompareAudit()?.status }}
+          {{ responseCompareAudit().status }}
         </span>
+        </div>
+        <div>
+          <i class="bi bi-calendar-plus me-1"></i>
+          {{ responseCompareAudit().created_at | date:'short' }}
+        </div>
+        <div>
+          <i class="bi bi-calendar-check me-1"></i>
+          {{ responseCompareAudit().completed_at | date:'short' }}
+        </div>
       </div>
-      <div>
-        <i class="bi bi-calendar-plus me-1"></i>
-        {{ responseCompareAudit()?.created_at | date:'short' }}
-      </div>
-      <div>
-        <i class="bi bi-calendar-check me-1"></i>
-        {{ responseCompareAudit()?.completed_at | date:'short' }}
-      </div>
-    </div>
 
-    <!-- URL Base -->
-    <div class="mb-4">
-      <h6 class="fw-bold text-primary">
-        <i class="bi bi-globe me-2"></i>{{ 'audits.compare.confirmModal.basePageLabel' | translate }}
-      </h6>
-      <p class="mb-0">
-        <a class="text-decoration-none text-truncate d-inline-block"
-           style="max-width: 100%;"
-           [href]="responseCompareAudit()?.comparison_result?.base_url"
-           target="_blank"
-           [title]="responseCompareAudit()?.comparison_result?.base_url">
-          <i class="bi bi-box-arrow-up-right me-1 small"></i>{{ responseCompareAudit()?.comparison_result?.base_url }}
-        </a>
-      </p>
-    </div>
-
-    <!-- AI Schema Comparison -->
-    @if (responseCompareAudit()?.comparison_result?.ai_schema_comparison) {
-      <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
-        <h6 class="fw-bold mb-2">
-          <i class="bi bi-robot me-2"></i>{{ 'audits.compare.confirmModal.aiSchemaAnalysis' | translate }}
+      <!-- URL Base -->
+      <div class="mb-4">
+        <h6 class="fw-bold text-primary">
+          <i class="bi bi-globe me-2"></i>{{ 'audits.compare.confirmModal.basePageLabel' | translate }}
         </h6>
-        <div class="ai-content" style="max-height: 800px; overflow-y: auto;">
-          <div class="small" style="white-space: pre-line;">
-            <markdown [data]="responseCompareAudit()?.comparison_result?.ai_schema_comparison"></markdown>
-          </div>
-        </div>
+        <p class="mb-0">
+          <a class="text-decoration-none text-truncate d-inline-block"
+             style="max-width: 100%;"
+             [href]="responseCompareAudit().comparison_result.base_url"
+             target="_blank"
+             [title]="responseCompareAudit().comparison_result.base_url">
+            <i class="bi bi-box-arrow-up-right me-1 small"></i>{{ responseCompareAudit().comparison_result.base_url }}
+          </a>
+        </p>
       </div>
-    }
 
-
-    <!-- Overall Summary -->
-    <div class="card border-0 shadow-sm mb-4">
-      <div class="card-header bg-white border-0 pt-3">
-        <h6 class="fw-bold text-primary mb-0">
-          <i class="bi bi-bar-chart me-2"></i>{{ 'audits.compare.confirmModal.overallSummary' | translate }}
-        </h6>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <!-- Total Competitors -->
-          <div class="col-6 col-md-3">
-            <div class="bg-light rounded-3 p-3 h-100 text-center">
-              <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.totalCompetitors' | translate }}</small>
-              <span class="fs-3 fw-bold text-primary">{{ responseCompareAudit()?.comparison_result?.overall_summary?.total_competitors }}</span>
-            </div>
-          </div>
-
-          <!-- Performance Rank -->
-          <div class="col-6 col-md-3">
-            <div class="bg-light rounded-3 p-3 h-100 text-center">
-              <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.performanceRank' | translate }}</small>
-              <div class="d-flex align-items-center justify-content-center gap-1">
-                <span class="badge fs-6" [ngClass]="responseCompareAudit()?.comparison_result?.overall_summary?.is_best_performance ? 'bg-success' : 'bg-secondary'">
-                  {{ responseCompareAudit()?.comparison_result?.overall_summary?.performance_rank }}
-                </span>
-                @if (responseCompareAudit()?.comparison_result?.overall_summary?.is_best_performance) {
-                  <i class="bi bi-trophy-fill text-warning"></i>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- SEO Rank -->
-          <div class="col-6 col-md-3">
-            <div class="bg-light rounded-3 p-3 h-100 text-center">
-              <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.seoRank' | translate }}</small>
-              <div class="d-flex align-items-center justify-content-center gap-1">
-                <span class="badge fs-6" [ngClass]="responseCompareAudit()?.comparison_result?.overall_summary?.is_best_seo ? 'bg-success' : 'bg-secondary'">
-                  {{ responseCompareAudit()?.comparison_result?.overall_summary?.seo_rank }}
-                </span>
-                @if (responseCompareAudit()?.comparison_result?.overall_summary?.is_best_seo) {
-                  <i class="bi bi-trophy-fill text-warning"></i>
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- Areas to Improve -->
-          <div class="col-6 col-md-3">
-            <div class="bg-light rounded-3 p-3 h-100">
-              <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.areasToImprove' | translate }}</small>
-              @if (responseCompareAudit()?.comparison_result?.overall_summary?.areas_to_improve?.length) {
-                <div class="d-flex flex-wrap gap-1">
-                  @for (area of responseCompareAudit()?.comparison_result?.overall_summary?.areas_to_improve; track area) {
-                    <span class="badge bg-danger">{{ area }}</span>
-                  }
-                </div>
-              } @else {
-                <span class="badge bg-success">
-                  <i class="bi bi-check-circle me-1"></i>{{ 'audits.compare.confirmModal.noAreasToImprove' | translate }}
-                </span>
-              }
+      <!-- AI Schema Comparison -->
+      @if (responseCompareAudit().comparison_result.ai_schema_comparison) {
+        <div class="alert alert-info border-0 shadow-sm mb-4" role="alert">
+          <h6 class="fw-bold mb-2">
+            <i class="bi bi-robot me-2"></i>{{ 'audits.compare.confirmModal.aiSchemaAnalysis' | translate }}
+          </h6>
+          <div class="ai-content" style="max-height: 800px; overflow-y: auto;">
+            <div class="small" style="white-space: pre-line;">
+              <markdown [data]="responseCompareAudit().comparison_result.ai_schema_comparison"></markdown>
             </div>
           </div>
         </div>
+      }
 
-        <!-- Competitive Advantage -->
-        <div class="row g-3 mt-2">
-          <div class="col-12">
-            <div class="bg-gradient rounded-3 p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-              <small class="text-muted d-block mb-2 fw-semibold">
-                <i class="bi bi-graph-up-arrow me-1"></i>{{ 'audits.compare.confirmModal.competitiveAdvantage' | translate }}
-              </small>
-              <div class="d-flex gap-3 flex-wrap">
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge rounded-pill" [ngClass]="responseCompareAudit()?.comparison_result?.overall_summary?.competitive_advantage?.performance_above_average ? 'bg-success' : 'bg-secondary'">
-                    <i class="bi me-1" [ngClass]="responseCompareAudit()?.comparison_result?.overall_summary?.competitive_advantage?.performance_above_average ? 'bi-check-lg' : 'bi-x-lg'"></i>
-                    {{ 'audits.compare.confirmModal.performanceAboveAverage' | translate }}
-                  </span>
-                </div>
-                <div class="d-flex align-items-center gap-2">
-                  <span class="badge rounded-pill" [ngClass]="responseCompareAudit()?.comparison_result?.overall_summary?.competitive_advantage?.seo_above_average ? 'bg-success' : 'bg-secondary'">
-                    <i class="bi me-1" [ngClass]="responseCompareAudit()?.comparison_result?.overall_summary?.competitive_advantage?.seo_above_average ? 'bi-check-lg' : 'bi-x-lg'"></i>
-                    {{ 'audits.compare.confirmModal.seoAboveAverage' | translate }}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Top Recommendations -->
-    @if (responseCompareAudit()?.comparison_result?.overall_summary?.top_recommendations?.length) {
+      <!-- Overall Summary -->
       <div class="card border-0 shadow-sm mb-4">
         <div class="card-header bg-white border-0 pt-3">
           <h6 class="fw-bold text-primary mb-0">
-            <i class="bi bi-star me-2"></i>{{ 'audits.compare.confirmModal.topRecommendations' | translate }}
+            <i class="bi bi-bar-chart me-2"></i>{{ 'audits.compare.confirmModal.overallSummary' | translate }}
           </h6>
         </div>
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush">
-            @for (rec of responseCompareAudit()?.comparison_result?.overall_summary?.top_recommendations; track rec.title) {
-              <div class="list-group-item border-0 border-bottom">
-                <div class="d-flex w-100 justify-content-between align-items-start">
-                  <div class="flex-grow-1">
-                    <h6 class="mb-1 fw-semibold">{{ rec.title }}</h6>
-                    @if (rec.description) {
-                      <p class="mb-1 text-muted small">{{ rec.description }}</p>
-                    }
-                    @if (rec.action) {
-                      <small class="text-info">
-                        <i class="bi bi-lightbulb me-1"></i>{{ rec.action }}
-                      </small>
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Total Competitors -->
+            <div class="col-6 col-md-3">
+              <div class="bg-light rounded-3 p-3 h-100 text-center">
+                <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.totalCompetitors' | translate }}</small>
+                <span class="fs-3 fw-bold text-primary">{{ responseCompareAudit().comparison_result.overall_summary.total_competitors }}</span>
+              </div>
+            </div>
+
+            <!-- Performance Rank -->
+            <div class="col-6 col-md-3">
+              <div class="bg-light rounded-3 p-3 h-100 text-center">
+                <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.performanceRank' | translate }}</small>
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                <span class="badge fs-6" [ngClass]="responseCompareAudit().comparison_result.overall_summary.is_best_performance ? 'bg-success' : 'bg-secondary'">
+                  {{ responseCompareAudit().comparison_result.overall_summary.performance_rank }}
+                </span>
+                  @if (responseCompareAudit().comparison_result.overall_summary.is_best_performance) {
+                    <i class="bi bi-trophy-fill text-warning"></i>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- SEO Rank -->
+            <div class="col-6 col-md-3">
+              <div class="bg-light rounded-3 p-3 h-100 text-center">
+                <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.seoRank' | translate }}</small>
+                <div class="d-flex align-items-center justify-content-center gap-1">
+                <span class="badge fs-6" [ngClass]="responseCompareAudit().comparison_result.overall_summary.is_best_seo ? 'bg-success' : 'bg-secondary'">
+                  {{ responseCompareAudit().comparison_result.overall_summary.seo_rank }}
+                </span>
+                  @if (responseCompareAudit().comparison_result.overall_summary.is_best_seo) {
+                    <i class="bi bi-trophy-fill text-warning"></i>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Areas to Improve -->
+            <div class="col-6 col-md-3">
+              <div class="bg-light rounded-3 p-3 h-100">
+                <small class="text-muted d-block mb-1">{{ 'audits.compare.confirmModal.areasToImprove' | translate }}</small>
+                @if (responseCompareAudit().comparison_result.overall_summary.areas_to_improve.length) {
+                  <div class="d-flex flex-wrap gap-1">
+                    @for (area of responseCompareAudit().comparison_result.overall_summary.areas_to_improve; track area) {
+                      <span class="badge bg-danger">{{ area }}</span>
                     }
                   </div>
-                  <span class="badge rounded-pill ms-2 flex-shrink-0" [ngClass]="{
+                } @else {
+                  <span class="badge bg-success">
+                  <i class="bi bi-check-circle me-1"></i>{{ 'audits.compare.confirmModal.noAreasToImprove' | translate }}
+                </span>
+                }
+              </div>
+            </div>
+          </div>
+
+          <!-- Competitive Advantage -->
+          <div class="row g-3 mt-2">
+            <div class="col-12">
+              <div class="bg-gradient rounded-3 p-3" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <small class="text-muted d-block mb-2 fw-semibold">
+                  <i class="bi bi-graph-up-arrow me-1"></i>{{ 'audits.compare.confirmModal.competitiveAdvantage' | translate }}
+                </small>
+                <div class="d-flex gap-3 flex-wrap">
+                  <div class="d-flex align-items-center gap-2">
+                  <span class="badge rounded-pill" [ngClass]="responseCompareAudit().comparison_result.overall_summary.competitive_advantage.performance_above_average ? 'bg-success' : 'bg-secondary'">
+                    <i class="bi me-1" [ngClass]="responseCompareAudit().comparison_result.overall_summary.competitive_advantage.performance_above_average ? 'bi-check-lg' : 'bi-x-lg'"></i>
+                    {{ 'audits.compare.confirmModal.performanceAboveAverage' | translate }}
+                  </span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                  <span class="badge rounded-pill" [ngClass]="responseCompareAudit().comparison_result.overall_summary.competitive_advantage.seo_above_average ? 'bg-success' : 'bg-secondary'">
+                    <i class="bi me-1" [ngClass]="responseCompareAudit().comparison_result.overall_summary.competitive_advantage.seo_above_average ? 'bi-check-lg' : 'bi-x-lg'"></i>
+                    {{ 'audits.compare.confirmModal.seoAboveAverage' | translate }}
+                  </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Recommendations -->
+      @if (responseCompareAudit().comparison_result.overall_summary.top_recommendations.length) {
+        <div class="card border-0 shadow-sm mb-4">
+          <div class="card-header bg-white border-0 pt-3">
+            <h6 class="fw-bold text-primary mb-0">
+              <i class="bi bi-star me-2"></i>{{ 'audits.compare.confirmModal.topRecommendations' | translate }}
+            </h6>
+          </div>
+          <div class="card-body p-0">
+            <div class="list-group list-group-flush">
+              @for (rec of responseCompareAudit().comparison_result.overall_summary.top_recommendations; track rec.title) {
+                <div class="list-group-item border-0 border-bottom">
+                  <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                      <h6 class="mb-1 fw-semibold">{{ rec.title }}</h6>
+                      @if (rec.description) {
+                        <p class="mb-1 text-muted small">{{ rec.description }}</p>
+                      }
+                      @if (rec.action) {
+                        <small class="text-info">
+                          <i class="bi bi-lightbulb me-1"></i>{{ rec.action }}
+                        </small>
+                      }
+                    </div>
+                    <span class="badge rounded-pill ms-2 flex-shrink-0" [ngClass]="{
                     'bg-danger': rec.priority === 'high',
                     'bg-warning text-dark': rec.priority === 'medium',
                     'bg-info': rec.priority === 'low'
                   }">
                     {{ rec.priority }}
                   </span>
-                </div>
-                <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                  <small class="text-muted">
-                    <i class="bi bi-tag me-1"></i>{{ rec.category }}
-                  </small>
-                  @if (rec.current_value !== undefined && rec.target_value !== undefined) {
+                  </div>
+                  <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
                     <small class="text-muted">
-                      <i class="bi bi-arrow-right me-1"></i>
-                      <span class="text-danger">{{ rec.current_value | number:'1.0-1' }}</span>
-                      →
-                      <span class="text-success">{{ rec.target_value | number:'1.0-1' }}</span>
+                      <i class="bi bi-tag me-1"></i>{{ rec.category }}
                     </small>
-                  }
-                  @if (rec.missing_schemas?.length) {
-                    <div class="d-flex flex-wrap gap-1">
-                      @for (schema of rec.missing_schemas; track schema) {
-                        @if (schema) {
-                          <span class="badge bg-outline-secondary border small">{{ schema }}</span>
+                    @if (rec.current_value !== undefined && rec.target_value !== undefined) {
+                      <small class="text-muted">
+                        <i class="bi bi-arrow-right me-1"></i>
+                        <span class="text-danger">{{ rec.current_value | number:'1.0-1' }}</span>
+                        →
+                        <span class="text-success">{{ rec.target_value | number:'1.0-1' }}</span>
+                      </small>
+                    }
+                    @if (rec.missing_schemas?.length) {
+                      <div class="d-flex flex-wrap gap-1">
+                        @for (schema of rec.missing_schemas; track schema) {
+                          @if (schema) {
+                            <span class="badge bg-outline-secondary border small">{{ schema }}</span>
+                          }
                         }
-                      }
-                    </div>
-                  }
+                      </div>
+                    }
+                  </div>
                 </div>
-              </div>
-            }
+              }
+            </div>
           </div>
         </div>
-      </div>
-    }
+      }
 
 
-    <!-- Detailed Comparisons -->
-    <h6 class="fw-bold text-primary mb-3">
-      <i class="bi bi-list-columns-reverse me-2"></i>{{ 'audits.compare.confirmModal.detailedComparisons' | translate }}
-    </h6>
+      <!-- Detailed Comparisons -->
+      <h6 class="fw-bold text-primary mb-3">
+        <i class="bi bi-list-columns-reverse me-2"></i>{{ 'audits.compare.confirmModal.detailedComparisons' | translate }}
+      </h6>
 
-    <div class="accordion" role="tablist" id="comparisonsAccordion">
-      @for (comparison of responseCompareAudit()?.comparison_result?.comparisons; track comparison.compare_url; let i = $index) {
-        <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
-          <h2 class="accordion-header" role="tab" [id]="'heading' + i">
-            <button class="accordion-button" [class.collapsed]="i !== 0" type="button"
-                    data-bs-toggle="collapse" [attr.data-bs-target]="'#collapse' + i"
-                    [attr.aria-expanded]="i === 0" [attr.aria-controls]="'collapse' + i">
-              <div class="d-flex align-items-center justify-content-between w-100 pe-3">
+      <div class="accordion" role="tablist" id="comparisonsAccordion">
+        @for (comparison of responseCompareAudit().comparison_result.comparisons; track comparison.compare_url; let i = $index) {
+          <div class="accordion-item border-0 shadow-sm mb-3 rounded-3 overflow-hidden">
+            <h2 class="accordion-header" role="tab" [id]="'heading' + i">
+              <button class="accordion-button" [class.collapsed]="i !== 0" type="button"
+                      data-bs-toggle="collapse" [attr.data-bs-target]="'#collapse' + i"
+                      [attr.aria-expanded]="i === 0" [attr.aria-controls]="'collapse' + i">
+                <div class="d-flex align-items-center justify-content-between w-100 pe-3">
                 <span class="fw-semibold text-truncate" style="max-width: 55%;" [title]="comparison.compare_url">
                   <i class="bi bi-link-45deg me-1"></i>{{ comparison.compare_url }}
                 </span>
-                <span class="badge rounded-pill flex-shrink-0" [ngClass]="{
+                  <span class="badge rounded-pill flex-shrink-0" [ngClass]="{
                   'bg-success': comparison.summary.overall_winner === 'base',
                   'bg-warning text-dark': comparison.summary.overall_winner === 'tie',
                   'bg-danger': comparison.summary.overall_winner === 'compare'
                 }">
                   <i class="bi bi-trophy me-1"></i>{{ 'audits.compare.confirmModal.winner' | translate }}: {{ comparison.summary.overall_winner }}
                 </span>
-              </div>
-            </button>
-          </h2>
-
-          <div [id]="'collapse' + i" class="accordion-collapse collapse" [class.show]="i === 0"
-               role="tabpanel" data-bs-parent="#comparisonsAccordion" [attr.aria-labelledby]="'heading' + i">
-            <div class="accordion-body">
-
-              <!-- Comparison Date -->
-              <div class="mb-3 text-muted small d-flex align-items-center">
-                <i class="bi bi-calendar3 me-2"></i>
-                {{ 'audits.compare.confirmModal.comparisonDate' | translate }}:
-                <strong class="ms-1">{{ comparison.comparison_date | date:'medium' }}</strong>
-              </div>
-
-              <!-- AI Analysis for this comparison -->
-              @if (comparison.ai_analysis) {
-                <div class="alert alert-light border mb-4" role="alert">
-                  <h6 class="fw-bold mb-2">
-                    <i class="bi bi-robot me-2 text-primary"></i>{{ 'audits.compare.confirmModal.aiAnalysis' | translate }}
-                  </h6>
-                  <div class="ai-content small" style="max-height: 700px; overflow-y: auto; white-space: pre-line;">
-                    <markdown [data]="comparison.ai_analysis"></markdown>
-                  </div>
                 </div>
-              }
+              </button>
+            </h2>
 
-              <!-- Performance Scores Card -->
-              <div class="card border mb-4">
-                <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                  <h6 class="mb-0 fw-semibold">
-                    <i class="bi bi-speedometer2 me-2 text-primary"></i>{{ 'audits.compare.confirmModal.performanceScores' | translate }}
-                  </h6>
-                  <span class="badge rounded-pill" [ngClass]="comparison.performance.overall_better === 'base' ? 'bg-success' : 'bg-warning text-dark'">
+            <div [id]="'collapse' + i" class="accordion-collapse collapse" [class.show]="i === 0"
+                 role="tabpanel" data-bs-parent="#comparisonsAccordion" [attr.aria-labelledby]="'heading' + i">
+              <div class="accordion-body">
+
+                <!-- Comparison Date -->
+                <div class="mb-3 text-muted small d-flex align-items-center">
+                  <i class="bi bi-calendar3 me-2"></i>
+                  {{ 'audits.compare.confirmModal.comparisonDate' | translate }}:
+                  <strong class="ms-1">{{ comparison.comparison_date | date:'medium' }}</strong>
+                </div>
+
+                <!-- AI Analysis for this comparison -->
+                @if (comparison.ai_analysis) {
+                  <div class="alert alert-light border mb-4" role="alert">
+                    <h6 class="fw-bold mb-2">
+                      <i class="bi bi-robot me-2 text-primary"></i>{{ 'audits.compare.confirmModal.aiAnalysis' | translate }}
+                    </h6>
+                    <div class="ai-content small" style="max-height: 700px; overflow-y: auto; white-space: pre-line;">
+                      <markdown [data]="comparison.ai_analysis"></markdown>
+                    </div>
+                  </div>
+                }
+
+                <!-- Performance Scores Card -->
+                <div class="card border mb-4">
+                  <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 fw-semibold">
+                      <i class="bi bi-speedometer2 me-2 text-primary"></i>{{ 'audits.compare.confirmModal.performanceScores' | translate }}
+                    </h6>
+                    <span class="badge rounded-pill" [ngClass]="comparison.performance.overall_better === 'base' ? 'bg-success' : 'bg-warning text-dark'">
                     {{ 'audits.compare.confirmModal.better' | translate }}: {{ comparison.performance.overall_better }}
                   </span>
-                </div>
-                <div class="card-body">
-                  <div class="row g-3">
-                    <!-- Performance Score -->
-                    <div class="col-6 col-lg-3">
-                      <div class="border rounded-3 p-3 h-100 text-center">
-                        <small class="text-muted d-block mb-2 fw-semibold">Performance</small>
-                        <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
-                          <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.performance_score.base }}</span>
-                          <small class="text-muted">vs</small>
-                          <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.performance_score.compare }}</span>
-                        </div>
-                        <span class="badge rounded-pill" [ngClass]="{
-                          'bg-success': comparison.performance.scores.performance_score.is_better,
-                          'bg-danger': !comparison.performance.scores.performance_score.is_better && comparison.performance.scores.performance_score.status !== 'similar',
-                          'bg-secondary': comparison.performance.scores.performance_score.status === 'similar'
-                        }">
-                          {{ comparison.performance.scores.performance_score.status }}
-                        </span>
-                        <div class="mt-1">
-                          <small class="text-muted">{{ comparison.performance.scores.performance_score.percentage_diff | number:'1.0-1' }}%</small>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- SEO Score -->
-                    <div class="col-6 col-lg-3">
-                      <div class="border rounded-3 p-3 h-100 text-center">
-                        <small class="text-muted d-block mb-2 fw-semibold">SEO</small>
-                        <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
-                          <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.seo_score.base }}</span>
-                          <small class="text-muted">vs</small>
-                          <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.seo_score.compare }}</span>
-                        </div>
-                        <span class="badge rounded-pill" [ngClass]="{
-                          'bg-success': comparison.performance.scores.seo_score.is_better,
-                          'bg-danger': !comparison.performance.scores.seo_score.is_better && comparison.performance.scores.seo_score.status !== 'similar',
-                          'bg-secondary': comparison.performance.scores.seo_score.status === 'similar'
-                        }">
-                          {{ comparison.performance.scores.seo_score.status }}
-                        </span>
-                        <div class="mt-1">
-                          <small class="text-muted">{{ comparison.performance.scores.seo_score.percentage_diff | number:'1.0-1' }}%</small>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Accessibility Score -->
-                    <div class="col-6 col-lg-3">
-                      <div class="border rounded-3 p-3 h-100 text-center">
-                        <small class="text-muted d-block mb-2 fw-semibold">Accessibility</small>
-                        <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
-                          <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.accessibility_score.base | number:'1.0-0' }}</span>
-                          <small class="text-muted">vs</small>
-                          <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.accessibility_score.compare | number:'1.0-0' }}</span>
-                        </div>
-                        <span class="badge rounded-pill" [ngClass]="{
-                          'bg-success': comparison.performance.scores.accessibility_score.is_better,
-                          'bg-danger': !comparison.performance.scores.accessibility_score.is_better && comparison.performance.scores.accessibility_score.status !== 'similar',
-                          'bg-secondary': comparison.performance.scores.accessibility_score.status === 'similar'
-                        }">
-                          {{ comparison.performance.scores.accessibility_score.status }}
-                        </span>
-                        <div class="mt-1">
-                          <small class="text-muted">{{ comparison.performance.scores.accessibility_score.percentage_diff | number:'1.0-1' }}%</small>
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Best Practices Score -->
-                    <div class="col-6 col-lg-3">
-                      <div class="border rounded-3 p-3 h-100 text-center">
-                        <small class="text-muted d-block mb-2 fw-semibold">Best Practices</small>
-                        <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
-                          <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.best_practices_score.base }}</span>
-                          <small class="text-muted">vs</small>
-                          <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.best_practices_score.compare }}</span>
-                        </div>
-                        <span class="badge rounded-pill" [ngClass]="{
-                          'bg-success': comparison.performance.scores.best_practices_score.is_better,
-                          'bg-danger': !comparison.performance.scores.best_practices_score.is_better && comparison.performance.scores.best_practices_score.status !== 'similar',
-                          'bg-secondary': comparison.performance.scores.best_practices_score.status === 'similar'
-                        }">
-                          {{ comparison.performance.scores.best_practices_score.status }}
-                        </span>
-                        <div class="mt-1">
-                          <small class="text-muted">{{ comparison.performance.scores.best_practices_score.percentage_diff | number:'1.0-1' }}%</small>
-                        </div>
-                      </div>
-                    </div>
                   </div>
-                </div>
-              </div>
-
-              <!-- Schemas Card -->
-              <div class="card border mb-4">
-                <div class="card-header bg-light">
-                  <h6 class="mb-0 fw-semibold">
-                    <i class="bi bi-code-slash me-2 text-primary"></i>Schema.org Analysis
-                    <span class="badge bg-primary ms-2">{{ comparison.schemas.base_count }}</span>
-                    <small class="text-muted mx-1">vs</small>
-                    <span class="badge bg-secondary">{{ comparison.schemas.compare_count }}</span>
-                    <span class="badge bg-info ms-2">Score: {{ comparison.schemas.completeness_score }}%</span>
-                  </h6>
-                </div>
-                <div class="card-body">
-                  <div class="row g-3">
-                    <!-- Base Schemas -->
-                    <div class="col-md-6">
-                      <div class="border rounded-3 p-3 h-100">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-check-circle text-primary me-1"></i>Base Schemas
-                        </small>
-                        <div class="d-flex flex-wrap gap-1">
-                          @for (schema of comparison.schemas.base_schemas; track schema) {
-                            @if (schema) {
-                              <span class="badge bg-primary">{{ schema }}</span>
-                            }
-                          }
-                          @if (!comparison.schemas.base_schemas?.length) {
-                            <span class="text-muted fst-italic">No schemas</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Compare Schemas -->
-                    <div class="col-md-6">
-                      <div class="border rounded-3 p-3 h-100">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-circle text-secondary me-1"></i>Competitor Schemas
-                        </small>
-                        <div class="d-flex flex-wrap gap-1">
-                          @for (schema of comparison.schemas.compare_schemas; track schema) {
-                            @if (schema) {
-                              <span class="badge bg-secondary">{{ schema }}</span>
-                            }
-                          }
-                          @if (!comparison.schemas.compare_schemas?.length) {
-                            <span class="text-muted fst-italic">No schemas</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Common Schemas -->
-                    <div class="col-md-6">
-                      <div class="border border-info rounded-3 p-3 h-100 bg-info bg-opacity-10">
-                        <small class="text-info d-block mb-2 fw-semibold">
-                          <i class="bi bi-intersect me-1"></i>Common Schemas
-                        </small>
-                        <div class="d-flex flex-wrap gap-1">
-                          @for (schema of comparison.schemas.common_schemas; track schema) {
-                            @if (schema) {
-                              <span class="badge bg-info">{{ schema }}</span>
-                            }
-                          }
-                          @if (!comparison.schemas.common_schemas?.length) {
-                            <span class="text-muted fst-italic">None</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Unique to Base -->
-                    <div class="col-md-6">
-                      <div class="border border-success rounded-3 p-3 h-100 bg-success bg-opacity-10">
-                        <small class="text-success d-block mb-2 fw-semibold">
-                          <i class="bi bi-plus-circle me-1"></i>Unique to Base
-                        </small>
-                        <div class="d-flex flex-wrap gap-1">
-                          @for (schema of comparison.schemas.unique_to_base; track schema) {
-                            @if (schema) {
-                              <span class="badge bg-success">{{ schema }}</span>
-                            }
-                          }
-                          @if (!comparison.schemas.unique_to_base?.length) {
-                            <span class="text-muted fst-italic">None</span>
-                          }
-                        </div>
-                      </div>
-                    </div>
-
-                    <!-- Missing in Base -->
-                    @if (comparison.schemas.missing_in_base.length) {
-                      <div class="col-12">
-                        <div class="border border-warning rounded-3 p-3 bg-warning bg-opacity-10">
-                          <small class="text-warning d-block mb-2 fw-semibold">
-                            <i class="bi bi-exclamation-triangle me-1"></i>Missing in Base (Opportunity)
-                          </small>
-                          <div class="d-flex flex-wrap gap-1">
-                            @for (schema of comparison.schemas.missing_in_base; track schema) {
-                              @if (schema) {
-                                <span class="badge bg-warning text-dark">{{ schema }}</span>
-                              }
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <!-- Performance Score -->
+                      <div class="col-6 col-lg-3">
+                        <div class="border rounded-3 p-3 h-100 text-center">
+                          <small class="text-muted d-block mb-2 fw-semibold">Performance</small>
+                          <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                            <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.performance_score?.base || 'NA' }}</span>
+                            <small class="text-muted">vs</small>
+                            <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.performance_score?.compare || 'NA' }}</span>
+                          </div>
+                          <span class="badge rounded-pill" [ngClass]="{
+                          'bg-success': comparison.performance.scores.performance_score?.is_better,
+                          'bg-danger': !comparison.performance.scores.performance_score?.is_better && comparison.performance.scores.performance_score?.status !== 'similar',
+                          'bg-secondary': comparison.performance.scores.performance_score?.status === 'similar'
+                        }">
+                          {{ comparison.performance.scores.performance_score?.status || 'N/A' }}
+                        </span>
+                          <div class="mt-1">
+                            @if (comparison.performance.scores.performance_score?.percentage_diff !== undefined && comparison.performance.scores.performance_score?.percentage_diff !== null) {
+                              <small class="text-muted">{{ comparison.performance.scores.performance_score!.percentage_diff | number:'1.0-1' }}%</small>
                             }
                           </div>
                         </div>
                       </div>
-                    }
-                  </div>
-                </div>
-              </div>
 
-              <!-- SEO Analysis Card -->
-              <div class="card border mb-4">
-                <div class="card-header bg-light">
-                  <h6 class="mb-0 fw-semibold">
-                    <i class="bi bi-search me-2 text-primary"></i>SEO Analysis
-                  </h6>
-                </div>
-                <div class="card-body">
-                  <!-- Title & Meta Description -->
-                  <div class="row g-3 mb-3">
-                    <div class="col-md-6">
-                      <div class="border rounded-3 p-3">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-type me-1"></i>Title Tag
-                        </small>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                          <span class="badge bg-primary">Base: {{ comparison.seo_analysis.onpage.title_comparison.base_length }} chars</span>
-                          <span class="badge bg-secondary">Compare: {{ comparison.seo_analysis.onpage.title_comparison.compare_length }} chars</span>
+                      <!-- SEO Score -->
+                      <div class="col-6 col-lg-3">
+                        <div class="border rounded-3 p-3 h-100 text-center">
+                          <small class="text-muted d-block mb-2 fw-semibold">SEO</small>
+                          <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                            <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.seo_score?.base || 'NA' }}</span>
+                            <small class="text-muted">vs</small>
+                            <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.seo_score?.compare || 'NA' }}</span>
+                          </div>
+                          <span class="badge rounded-pill" [ngClass]="{
+                          'bg-success': comparison.performance.scores.seo_score?.is_better,
+                          'bg-danger': !comparison.performance.scores.seo_score?.is_better && comparison.performance.scores.seo_score?.status !== 'similar',
+                          'bg-secondary': comparison.performance.scores.seo_score?.status === 'similar'
+                        }">
+                          {{ comparison.performance.scores.seo_score?.status || 'N/A' }}
+                        </span>
+                          <div class="mt-1">
+                            @if (comparison.performance.scores.seo_score?.percentage_diff !== undefined && comparison.performance.scores.seo_score?.percentage_diff !== null) {
+                              <small class="text-muted">{{ comparison.performance.scores.seo_score!.percentage_diff | number:'1.0-1' }}%</small>
+                            }
+                          </div>
                         </div>
-                        <div class="d-flex gap-2">
-                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.title_comparison.base_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
-                            Base: {{ comparison.seo_analysis.onpage.title_comparison.base_status }}
-                          </span>
-                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.title_comparison.compare_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
-                            Compare: {{ comparison.seo_analysis.onpage.title_comparison.compare_status }}
-                          </span>
-                        </div>
-                        <small class="text-muted d-block mt-2">
-                          <i class="bi bi-lightbulb me-1"></i>{{ comparison.seo_analysis.onpage.title_comparison.recommendation }}
-                        </small>
                       </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="border rounded-3 p-3">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-card-text me-1"></i>Meta Description
-                        </small>
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                          <span class="badge bg-primary">Base: {{ comparison.seo_analysis.onpage.meta_description_comparison.base_length }} chars</span>
-                          <span class="badge bg-secondary">Compare: {{ comparison.seo_analysis.onpage.meta_description_comparison.compare_length }} chars</span>
-                        </div>
-                        <div class="d-flex gap-2">
-                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.meta_description_comparison.base_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
-                            Base: {{ comparison.seo_analysis.onpage.meta_description_comparison.base_status }}
-                          </span>
-                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.meta_description_comparison.compare_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
-                            Compare: {{ comparison.seo_analysis.onpage.meta_description_comparison.compare_status }}
-                          </span>
-                        </div>
-                        <small class="text-muted d-block mt-2">
-                          <i class="bi bi-lightbulb me-1"></i>{{ comparison.seo_analysis.onpage.meta_description_comparison.recommendation }}
-                        </small>
-                      </div>
-                    </div>
-                  </div>
 
-                  <!-- Headers & Links Tables -->
-                  <div class="row g-3">
-                    <div class="col-md-6">
-                      <div class="border rounded-3 p-3">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-list-ol me-1"></i>Headers Structure
-                        </small>
-                        <div class="table-responsive">
-                          <table class="table table-sm table-borderless mb-0 text-center">
-                            <thead class="table-light">
-                            <tr>
-                              <th></th>
-                              <th>H1</th>
-                              <th>H2</th>
-                              <th>H3</th>
-                              @if (comparison.seo_analysis.onpage.headers_comparison.base_structure.h4 !== undefined) {
-                                <th>H4</th>
+                      <!-- Accessibility Score -->
+                      <div class="col-6 col-lg-3">
+                        <div class="border rounded-3 p-3 h-100 text-center">
+                          <small class="text-muted d-block mb-2 fw-semibold">Accessibility</small>
+                          <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                            <span class="fs-4 fw-bold text-primary">
+                              @if (comparison.performance.scores.accessibility_score?.base !== undefined && comparison.performance.scores.accessibility_score?.base !== null) {
+                                {{ comparison.performance.scores.accessibility_score!.base | number:'1.0-0' }}
+                              } @else {
+                                NA
                               }
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr>
-                              <td class="text-start"><span class="badge bg-primary">Base</span></td>
-                              <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h1 }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h2 }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h3 }}</td>
-                              @if (comparison.seo_analysis.onpage.headers_comparison.base_structure.h4 !== undefined) {
-                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h4 }}</td>
-                              }
-                            </tr>
-                            <tr>
-                              <td class="text-start"><span class="badge bg-secondary">Compare</span></td>
-                              <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h1 }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h2 }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h3 }}</td>
-                              @if (comparison.seo_analysis.onpage.headers_comparison.compare_structure.h4 !== undefined) {
-                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h4 }}</td>
-                              }
-                            </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                        <div class="mt-2 d-flex gap-2">
-                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.headers_comparison.base_h1_status === 'good' ? 'bg-success' : 'bg-warning text-dark'">
-                            Base H1: {{ comparison.seo_analysis.onpage.headers_comparison.base_h1_status }}
-                          </span>
-                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.headers_comparison.compare_h1_status === 'good' ? 'bg-success' : 'bg-warning text-dark'">
-                            Compare H1: {{ comparison.seo_analysis.onpage.headers_comparison.compare_h1_status }}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="col-md-6">
-                      <div class="border rounded-3 p-3">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-link-45deg me-1"></i>Links Analysis
-                        </small>
-                        <div class="table-responsive">
-                          <table class="table table-sm table-borderless mb-0 text-center">
-                            <thead class="table-light">
-                            <tr>
-                              <th></th>
-                              <th>Total</th>
-                              <th>Internal</th>
-                              <th>External</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            <tr>
-                              <td class="text-start"><span class="badge bg-primary">Base</span></td>
-                              <td>{{ comparison.seo_analysis.onpage.links_comparison.base_total }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.links_comparison.base_internal }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.links_comparison.base_external }}</td>
-                            </tr>
-                            <tr>
-                              <td class="text-start"><span class="badge bg-secondary">Compare</span></td>
-                              <td>{{ comparison.seo_analysis.onpage.links_comparison.compare_total }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.links_comparison.compare_internal }}</td>
-                              <td>{{ comparison.seo_analysis.onpage.links_comparison.compare_external }}</td>
-                            </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <!-- Technical SEO -->
-                  <div class="row g-3 mt-2">
-                    <div class="col-12">
-                      <div class="border rounded-3 p-3">
-                        <small class="text-muted d-block mb-2 fw-semibold">
-                          <i class="bi bi-file-earmark-code me-1"></i>Technical SEO
-                        </small>
-                        <div class="d-flex gap-4 flex-wrap align-items-center">
-                          <div class="d-flex align-items-center gap-3">
-                            <span class="badge" [ngClass]="comparison.seo_analysis.technical.robots_txt.base_exists ? 'bg-success' : 'bg-danger'">
-                              <i class="bi me-1" [ngClass]="comparison.seo_analysis.technical.robots_txt.base_exists ? 'bi-check-lg' : 'bi-x-lg'"></i>
-                              Base Robots.txt
                             </span>
-                            <span class="badge" [ngClass]="comparison.seo_analysis.technical.robots_txt.compare_exists ? 'bg-success' : 'bg-danger'">
-                              <i class="bi me-1" [ngClass]="comparison.seo_analysis.technical.robots_txt.compare_exists ? 'bi-check-lg' : 'bi-x-lg'"></i>
-                              Compare Robots.txt
+                            <small class="text-muted">vs</small>
+                            <span class="fs-5 fw-bold text-secondary">
+                              @if (comparison.performance.scores.accessibility_score?.compare !== undefined && comparison.performance.scores.accessibility_score?.compare !== null) {
+                                {{ comparison.performance.scores.accessibility_score!.compare | number:'1.0-0' }}
+                              } @else {
+                                NA
+                              }
                             </span>
                           </div>
-                          <div>
-                            <small class="text-muted">
-                              <i class="bi bi-diagram-3 me-1"></i>
-                              Sitemaps:
-                              <span class="badge bg-primary">Base: {{ comparison.seo_analysis.technical.robots_txt.base_sitemaps }}</span>
-                              <span class="badge bg-secondary ms-1">Compare: {{ comparison.seo_analysis.technical.robots_txt.compare_sitemaps }}</span>
-                            </small>
+                          <span class="badge rounded-pill" [ngClass]="{
+                          'bg-success': comparison.performance.scores.accessibility_score?.is_better,
+                          'bg-danger': !comparison.performance.scores.accessibility_score?.is_better && comparison.performance.scores.accessibility_score?.status !== 'similar',
+                          'bg-secondary': comparison.performance.scores.accessibility_score?.status === 'similar'
+                        }">
+                          {{ comparison.performance.scores.accessibility_score?.status || 'N/A' }}
+                        </span>
+                          <div class="mt-1">
+                            @if (comparison.performance.scores.accessibility_score?.percentage_diff !== undefined && comparison.performance.scores.accessibility_score?.percentage_diff !== null) {
+                              <small class="text-muted">{{ comparison.performance.scores.accessibility_score!.percentage_diff | number:'1.0-1' }}%</small>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Best Practices Score -->
+                      <div class="col-6 col-lg-3">
+                        <div class="border rounded-3 p-3 h-100 text-center">
+                          <small class="text-muted d-block mb-2 fw-semibold">Best Practices</small>
+                          <div class="d-flex justify-content-center align-items-center gap-2 mb-2">
+                            <span class="fs-4 fw-bold text-primary">{{ comparison.performance.scores.best_practices_score?.base || 'NA' }}</span>
+                            <small class="text-muted">vs</small>
+                            <span class="fs-5 fw-bold text-secondary">{{ comparison.performance.scores.best_practices_score?.compare || 'NA' }}</span>
+                          </div>
+                          <span class="badge rounded-pill" [ngClass]="{
+                          'bg-success': comparison.performance.scores.best_practices_score?.is_better,
+                          'bg-danger': !comparison.performance.scores.best_practices_score?.is_better && comparison.performance.scores.best_practices_score?.status !== 'similar',
+                          'bg-secondary': comparison.performance.scores.best_practices_score?.status === 'similar'
+                        }">
+                          {{ comparison.performance.scores.best_practices_score?.status || 'N/A' }}
+                        </span>
+                          <div class="mt-1">
+                            @if (comparison.performance.scores.best_practices_score?.percentage_diff !== undefined && comparison.performance.scores.best_practices_score?.percentage_diff !== null) {
+                              <small class="text-muted">{{ comparison.performance.scores.best_practices_score!.percentage_diff | number:'1.0-1' }}%</small>
+                            }
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Recommendations Card -->
-              @if (comparison.recommendations.length) {
-                <div class="card border">
+                <!-- Schemas Card -->
+                <div class="card border mb-4">
                   <div class="card-header bg-light">
                     <h6 class="mb-0 fw-semibold">
-                      <i class="bi bi-lightbulb me-2 text-warning"></i>{{ 'audits.compare.confirmModal.recommendations' | translate }}
-                      <span class="badge bg-secondary ms-2">{{ comparison.recommendations.length }}</span>
+                      <i class="bi bi-code-slash me-2 text-primary"></i>Schema.org Analysis
+                      <span class="badge bg-primary ms-2">{{ comparison.schemas.base_count }}</span>
+                      <small class="text-muted mx-1">vs</small>
+                      <span class="badge bg-secondary">{{ comparison.schemas.compare_count }}</span>
+                      <span class="badge bg-info ms-2">Score: {{ comparison.schemas.completeness_score }}%</span>
                     </h6>
                   </div>
-                  <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                      @for (rec of comparison.recommendations; track rec.title) {
-                        <div class="list-group-item">
-                          <div class="d-flex w-100 justify-content-between align-items-start">
-                            <div class="flex-grow-1">
-                              <h6 class="mb-1 fw-semibold">{{ rec.title }}</h6>
-                              @if (rec.description) {
-                                <p class="mb-1 text-muted small">{{ rec.description }}</p>
+                  <div class="card-body">
+                    <div class="row g-3">
+                      <!-- Base Schemas -->
+                      <div class="col-md-6">
+                        <div class="border rounded-3 p-3 h-100">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-check-circle text-primary me-1"></i>Base Schemas
+                          </small>
+                          <div class="d-flex flex-wrap gap-1">
+                            @for (schema of comparison.schemas.base_schemas; track schema) {
+                              @if (schema) {
+                                <span class="badge bg-primary">{{ schema }}</span>
                               }
-                              @if (rec.action) {
-                                <small class="text-info">
-                                  <i class="bi bi-arrow-right-circle me-1"></i>{{ rec.action }}
-                                </small>
+                            }
+                            @if (!comparison.schemas.base_schemas.length) {
+                              <span class="text-muted fst-italic">No schemas</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Compare Schemas -->
+                      <div class="col-md-6">
+                        <div class="border rounded-3 p-3 h-100">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-circle text-secondary me-1"></i>Competitor Schemas
+                          </small>
+                          <div class="d-flex flex-wrap gap-1">
+                            @for (schema of comparison.schemas.compare_schemas; track schema) {
+                              @if (schema) {
+                                <span class="badge bg-secondary">{{ schema }}</span>
+                              }
+                            }
+                            @if (!comparison.schemas.compare_schemas.length) {
+                              <span class="text-muted fst-italic">No schemas</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Common Schemas -->
+                      <div class="col-md-6">
+                        <div class="border border-info rounded-3 p-3 h-100 bg-info bg-opacity-10">
+                          <small class="text-info d-block mb-2 fw-semibold">
+                            <i class="bi bi-intersect me-1"></i>Common Schemas
+                          </small>
+                          <div class="d-flex flex-wrap gap-1">
+                            @for (schema of comparison.schemas.common_schemas; track schema) {
+                              @if (schema) {
+                                <span class="badge bg-info">{{ schema }}</span>
+                              }
+                            }
+                            @if (!comparison.schemas.common_schemas.length) {
+                              <span class="text-muted fst-italic">None</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Unique to Base -->
+                      <div class="col-md-6">
+                        <div class="border border-success rounded-3 p-3 h-100 bg-success bg-opacity-10">
+                          <small class="text-success d-block mb-2 fw-semibold">
+                            <i class="bi bi-plus-circle me-1"></i>Unique to Base
+                          </small>
+                          <div class="d-flex flex-wrap gap-1">
+                            @for (schema of comparison.schemas.unique_to_base; track schema) {
+                              @if (schema) {
+                                <span class="badge bg-success">{{ schema }}</span>
+                              }
+                            }
+                            @if (!comparison.schemas.unique_to_base.length) {
+                              <span class="text-muted fst-italic">None</span>
+                            }
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Missing in Base -->
+                      @if (comparison.schemas.missing_in_base.length) {
+                        <div class="col-12">
+                          <div class="border border-warning rounded-3 p-3 bg-warning bg-opacity-10">
+                            <small class="text-warning d-block mb-2 fw-semibold">
+                              <i class="bi bi-exclamation-triangle me-1"></i>Missing in Base (Opportunity)
+                            </small>
+                            <div class="d-flex flex-wrap gap-1">
+                              @for (schema of comparison.schemas.missing_in_base; track schema) {
+                                @if (schema) {
+                                  <span class="badge bg-warning text-dark">{{ schema }}</span>
+                                }
                               }
                             </div>
-                            <span class="badge rounded-pill ms-2 flex-shrink-0" [ngClass]="{
-                              'bg-danger': rec.priority === 'high',
-                              'bg-warning text-dark': rec.priority === 'medium',
-                              'bg-info': rec.priority === 'low'
-                            }">
-                              {{ rec.priority }}
-                            </span>
-                          </div>
-                          <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                            <small class="text-muted">
-                              <i class="bi bi-tag me-1"></i>{{ rec.category }}
-                            </small>
-                            @if (rec.current_value !== undefined && rec.target_value !== undefined) {
-                              <small class="text-muted">
-                                <span class="text-danger">{{ rec.current_value | number:'1.0-1' }}</span>
-                                <i class="bi bi-arrow-right mx-1"></i>
-                                <span class="text-success">{{ rec.target_value | number:'1.0-1' }}</span>
-                              </small>
-                            }
-                            @if (rec.missing_schemas?.length) {
-                              <div class="d-flex flex-wrap gap-1">
-                                @for (schema of rec.missing_schemas; track schema) {
-                                  @if (schema) {
-                                    <span class="badge bg-outline-secondary border small">{{ schema }}</span>
-                                  }
-                                }
-                              </div>
-                            }
                           </div>
                         </div>
                       }
                     </div>
                   </div>
                 </div>
-              }
 
+                <!-- SEO Analysis Card -->
+                <div class="card border mb-4">
+                  <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-semibold">
+                      <i class="bi bi-search me-2 text-primary"></i>SEO Analysis
+                    </h6>
+                  </div>
+                  <div class="card-body">
+                    <!-- Title & Meta Description -->
+                    <div class="row g-3 mb-3">
+                      <div class="col-md-6">
+                        <div class="border rounded-3 p-3">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-type me-1"></i>Title Tag
+                          </small>
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary">Base: {{ comparison.seo_analysis.onpage.title_comparison.base_length }} chars</span>
+                            <span class="badge bg-secondary">Compare: {{ comparison.seo_analysis.onpage.title_comparison.compare_length }} chars</span>
+                          </div>
+                          <div class="d-flex gap-2">
+                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.title_comparison.base_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
+                            Base: {{ comparison.seo_analysis.onpage.title_comparison.base_status }}
+                          </span>
+                            <span class="badge" [ngClass]="comparison.seo_analysis.onpage.title_comparison.compare_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
+                            Compare: {{ comparison.seo_analysis.onpage.title_comparison.compare_status }}
+                          </span>
+                          </div>
+                          <small class="text-muted d-block mt-2">
+                            <i class="bi bi-lightbulb me-1"></i>{{ comparison.seo_analysis.onpage.title_comparison.recommendation }}
+                          </small>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="border rounded-3 p-3">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-card-text me-1"></i>Meta Description
+                          </small>
+                          <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge bg-primary">Base: {{ comparison.seo_analysis.onpage.meta_description_comparison.base_length }} chars</span>
+                            <span class="badge bg-secondary">Compare: {{ comparison.seo_analysis.onpage.meta_description_comparison.compare_length }} chars</span>
+                          </div>
+                          <div class="d-flex gap-2">
+                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.meta_description_comparison.base_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
+                            Base: {{ comparison.seo_analysis.onpage.meta_description_comparison.base_status }}
+                          </span>
+                            <span class="badge" [ngClass]="comparison.seo_analysis.onpage.meta_description_comparison.compare_status === 'Good' ? 'bg-success' : 'bg-warning text-dark'">
+                            Compare: {{ comparison.seo_analysis.onpage.meta_description_comparison.compare_status }}
+                          </span>
+                          </div>
+                          <small class="text-muted d-block mt-2">
+                            <i class="bi bi-lightbulb me-1"></i>{{ comparison.seo_analysis.onpage.meta_description_comparison.recommendation }}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Headers & Links Tables -->
+                    <div class="row g-3">
+                      <div class="col-md-6">
+                        <div class="border rounded-3 p-3">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-list-ol me-1"></i>Headers Structure
+                          </small>
+                          <div class="table-responsive">
+                            <table class="table table-sm table-borderless mb-0 text-center">
+                              <thead class="table-light">
+                              <tr>
+                                <th></th>
+                                <th>H1</th>
+                                <th>H2</th>
+                                <th>H3</th>
+                                @if (comparison.seo_analysis.onpage.headers_comparison.base_structure.h4 !== undefined) {
+                                  <th>H4</th>
+                                }
+                              </tr>
+                              </thead>
+                              <tbody>
+                              <tr>
+                                <td class="text-start"><span class="badge bg-primary">Base</span></td>
+                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h1 }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h2 }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h3 }}</td>
+                                @if (comparison.seo_analysis.onpage.headers_comparison.base_structure.h4 !== undefined) {
+                                  <td>{{ comparison.seo_analysis.onpage.headers_comparison.base_structure.h4 }}</td>
+                                }
+                              </tr>
+                              <tr>
+                                <td class="text-start"><span class="badge bg-secondary">Compare</span></td>
+                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h1 }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h2 }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h3 }}</td>
+                                @if (comparison.seo_analysis.onpage.headers_comparison.compare_structure.h4 !== undefined) {
+                                  <td>{{ comparison.seo_analysis.onpage.headers_comparison.compare_structure.h4 }}</td>
+                                }
+                              </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                          <div class="mt-2 d-flex gap-2">
+                          <span class="badge" [ngClass]="comparison.seo_analysis.onpage.headers_comparison.base_h1_status === 'good' ? 'bg-success' : 'bg-warning text-dark'">
+                            Base H1: {{ comparison.seo_analysis.onpage.headers_comparison.base_h1_status }}
+                          </span>
+                            <span class="badge" [ngClass]="comparison.seo_analysis.onpage.headers_comparison.compare_h1_status === 'good' ? 'bg-success' : 'bg-warning text-dark'">
+                            Compare H1: {{ comparison.seo_analysis.onpage.headers_comparison.compare_h1_status }}
+                          </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="border rounded-3 p-3">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-link-45deg me-1"></i>Links Analysis
+                          </small>
+                          <div class="table-responsive">
+                            <table class="table table-sm table-borderless mb-0 text-center">
+                              <thead class="table-light">
+                              <tr>
+                                <th></th>
+                                <th>Total</th>
+                                <th>Internal</th>
+                                <th>External</th>
+                              </tr>
+                              </thead>
+                              <tbody>
+                              <tr>
+                                <td class="text-start"><span class="badge bg-primary">Base</span></td>
+                                <td>{{ comparison.seo_analysis.onpage.links_comparison.base_total }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.links_comparison.base_internal }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.links_comparison.base_external }}</td>
+                              </tr>
+                              <tr>
+                                <td class="text-start"><span class="badge bg-secondary">Compare</span></td>
+                                <td>{{ comparison.seo_analysis.onpage.links_comparison.compare_total }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.links_comparison.compare_internal }}</td>
+                                <td>{{ comparison.seo_analysis.onpage.links_comparison.compare_external }}</td>
+                              </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Technical SEO -->
+                    <div class="row g-3 mt-2">
+                      <div class="col-12">
+                        <div class="border rounded-3 p-3">
+                          <small class="text-muted d-block mb-2 fw-semibold">
+                            <i class="bi bi-file-earmark-code me-1"></i>Technical SEO
+                          </small>
+                          <div class="d-flex gap-4 flex-wrap align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                            <span class="badge" [ngClass]="comparison.seo_analysis.technical.robots_txt.base_exists ? 'bg-success' : 'bg-danger'">
+                              <i class="bi me-1" [ngClass]="comparison.seo_analysis.technical.robots_txt.base_exists ? 'bi-check-lg' : 'bi-x-lg'"></i>
+                              Base Robots.txt
+                            </span>
+                              <span class="badge" [ngClass]="comparison.seo_analysis.technical.robots_txt.compare_exists ? 'bg-success' : 'bg-danger'">
+                              <i class="bi me-1" [ngClass]="comparison.seo_analysis.technical.robots_txt.compare_exists ? 'bi-check-lg' : 'bi-x-lg'"></i>
+                              Compare Robots.txt
+                            </span>
+                            </div>
+                            <div>
+                              <small class="text-muted">
+                                <i class="bi bi-diagram-3 me-1"></i>
+                                Sitemaps:
+                                <span class="badge bg-primary">Base: {{ comparison.seo_analysis.technical.robots_txt.base_sitemaps }}</span>
+                                <span class="badge bg-secondary ms-1">Compare: {{ comparison.seo_analysis.technical.robots_txt.compare_sitemaps }}</span>
+                              </small>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Recommendations Card -->
+                @if (comparison.recommendations.length) {
+                  <div class="card border">
+                    <div class="card-header bg-light">
+                      <h6 class="mb-0 fw-semibold">
+                        <i class="bi bi-lightbulb me-2 text-warning"></i>{{ 'audits.compare.confirmModal.recommendations' | translate }}
+                        <span class="badge bg-secondary ms-2">{{ comparison.recommendations.length }}</span>
+                      </h6>
+                    </div>
+                    <div class="card-body p-0">
+                      <div class="list-group list-group-flush">
+                        @for (rec of comparison.recommendations; track rec.title) {
+                          <div class="list-group-item">
+                            <div class="d-flex w-100 justify-content-between align-items-start">
+                              <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ rec.title }}</h6>
+                                @if (rec.description) {
+                                  <p class="mb-1 text-muted small">{{ rec.description }}</p>
+                                }
+                                @if (rec.action) {
+                                  <small class="text-info">
+                                    <i class="bi bi-arrow-right-circle me-1"></i>{{ rec.action }}
+                                  </small>
+                                }
+                              </div>
+                              <span class="badge rounded-pill ms-2 flex-shrink-0" [ngClass]="{
+                              'bg-danger': rec.priority === 'high',
+                              'bg-warning text-dark': rec.priority === 'medium',
+                              'bg-info': rec.priority === 'low'
+                            }">
+                              {{ rec.priority }}
+                            </span>
+                            </div>
+                            <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                              <small class="text-muted">
+                                <i class="bi bi-tag me-1"></i>{{ rec.category }}
+                              </small>
+                              @if (rec.current_value !== undefined && rec.target_value !== undefined) {
+                                <small class="text-muted">
+                                  <span class="text-danger">{{ rec.current_value | number:'1.0-1' }}</span>
+                                  <i class="bi bi-arrow-right mx-1"></i>
+                                  <span class="text-success">{{ rec.target_value | number:'1.0-1' }}</span>
+                                </small>
+                              }
+                              @if (rec.missing_schemas?.length) {
+                                <div class="d-flex flex-wrap gap-1">
+                                  @for (schema of rec.missing_schemas; track schema) {
+                                    @if (schema) {
+                                      <span class="badge bg-outline-secondary border small">{{ schema }}</span>
+                                    }
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+
+              </div>
             </div>
           </div>
-        </div>
-      }
-    </div>
+        }
+      </div>
 
-  </app-body-modal>
+    </app-body-modal>
 
-  <app-footer-modal>
-    <button class="btn btn-outline-secondary" type="button" (click)="showMessageComparison.set(false)">
-      <i class="bi bi-x-lg me-1"></i>{{ 'audits.compare.confirmModal.closeButton' | translate }}
-    </button>
-    <button class="btn btn-primary" type="button">
-      <i class="bi bi-download me-1"></i>{{ 'audits.compare.confirmModal.exportButton' | translate }}
-    </button>
-  </app-footer-modal>
-</app-default-modal>
+    <app-footer-modal>
+      <button class="btn btn-outline-secondary" type="button" (click)="showMessageComparison.set(false)">
+        <i class="bi bi-x-lg me-1"></i>{{ 'audits.compare.confirmModal.closeButton' | translate }}
+      </button>
+      <button class="btn btn-primary" type="button">
+        <i class="bi bi-download me-1"></i>{{ 'audits.compare.confirmModal.exportButton' | translate }}
+      </button>
+    </app-footer-modal>
+  </app-default-modal>
+}
+
 
