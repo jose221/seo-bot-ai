@@ -1,10 +1,40 @@
 export const environment = {
   production: true,
-  apiUrl: 'https://herandro-services-api.herandro.com.mx',
+  apiUrl: 'http://84.247.137.97:3101/api/v1',
+  timeout: 360000,
   endpoints: {
-    login: '/auth/platform-admin/login',
-    users: '/api/users',
-    dashboard: '/api/dashboard'
+    auth:{
+      login: '/auth/login',
+      register: '/auth/register'
+    },
+    translate:{
+      translate: `/translate`,
+      loadTranslations: `/translate`,
+      loadTranslationsAsync: `/translate`,
+      createOrUpdate: `/translate`,
+      delete: `/translate`,
+    },
+    target:{
+      path: '/targets',
+      search: '/targets/search'
+    },
+    audit:{
+      path: '/audits',
+      compare: '/audits/compare',
+      comparisons: '/audits/comparisons',
+      search: '/audits/search'
+    }
+  },
+  settings:{
+    auth:{
+      expires_in_days: 30,
+      token_name: 'seoBotAi',
+    },
+    translate:{
+      default_language: 'es',
+      expires_in_days: 30,
+      cookie_name: 'lang'
+    }
   }
 };
 

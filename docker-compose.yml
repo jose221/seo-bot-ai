@@ -55,6 +55,3 @@ services:
 
 
 
-networks:
-  default:
-    name: seo_bot_network
