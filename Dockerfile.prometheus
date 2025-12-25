@@ -1,0 +1,11 @@
+FROM prom/prometheus:latest
+
+# Copiar archivo de configuración dentro de la imagen
+COPY prometheus.yml /etc/prometheus/prometheus.yml
+
+# Exponer puerto
+EXPOSE 9090
+
+# Comando por defecto
+CMD ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.path=/prometheus"]
+
