@@ -13,6 +13,8 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - app-network
 
   # Servicio de Backend API
   api:
@@ -35,4 +37,9 @@ services:
         reservations:
           memory: 2G
     restart: unless-stopped
+    networks:
+      - app-network
 
+networks:
+  app-network:
+    driver: bridge
