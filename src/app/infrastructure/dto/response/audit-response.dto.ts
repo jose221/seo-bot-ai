@@ -128,19 +128,19 @@ export interface PerformanceDto {
 }
 
 export interface ScoresDto {
-  performance_score: ScoreItemDto
-  seo_score: ScoreItemDto
-  accessibility_score: ScoreItemDto
-  best_practices_score: ScoreItemDto
+  performance_score?: ScoreItemDto
+  seo_score?: ScoreItemDto
+  accessibility_score?: ScoreItemDto
+  best_practices_score?: ScoreItemDto
 }
 
 export interface ScoreItemDto {
-  base: number
-  compare: number
-  difference: number
-  percentage_diff: number
-  is_better: boolean
-  status: string
+  base?: number
+  compare?: number
+  difference?: number
+  percentage_diff?: number
+  is_better?: boolean
+  status?: string
 }
 
 export interface SchemasDto {

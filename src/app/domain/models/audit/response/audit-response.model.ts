@@ -161,21 +161,21 @@ export class PerformanceModel {
 
 export class ScoresModel {
   constructor(
-    public performance_score: ScoreItemModel,
-    public seo_score: ScoreItemModel,
-    public accessibility_score: ScoreItemModel,
-    public best_practices_score: ScoreItemModel
+    public performance_score?: ScoreItemModel,
+    public seo_score?: ScoreItemModel,
+    public accessibility_score?: ScoreItemModel,
+    public best_practices_score?: ScoreItemModel
   ) {}
 }
 
 export class ScoreItemModel {
   constructor(
-    public base: number,
-    public compare: number,
-    public difference: number,
-    public percentage_diff: number,
-    public is_better: boolean,
-    public status: string
+    public base?: number,
+    public compare?: number,
+    public difference?: number,
+    public percentage_diff?: number,
+    public is_better?: boolean,
+    public status?: string
   ) {}
 }
 
