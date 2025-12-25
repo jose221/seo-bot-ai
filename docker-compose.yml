@@ -22,23 +22,6 @@ services:
     ports:
       - "3101:8000"
     environment:
-      # Database Configuration
-      DB_DRIVER: postgresql
-      DB_ASYNC_DRIVER: asyncpg
-      DB_SYNC_DRIVER: psycopg2
-      DB_HOST: 84.247.137.97
-      DB_PORT: 5432
-      DB_NAME: seo_bot_db
-      DB_USER: herandro
-      DB_PASSWORD: Gonzales220
-      DATABASE_URL: postgresql+asyncpg://herandro:Gonzales220@84.247.137.97:5432/seo_bot_db
-
-      # API Externa
-      HERANDRO_API_URL: https://herandro-services-api.herandro.com.mx
-
-      # Security
-      SECRET_KEY: dev-secret-key-change-in-production
-
       # App Configuration
       DEBUG: "True"
       ENVIRONMENT: production
