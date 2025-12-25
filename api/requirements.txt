@@ -35,3 +35,8 @@ nodriver
 pyvirtualdisplay
 
 sqlalchemy
+
+# Monitoring
+prometheus-client
+prometheus-fastapi-instrumentator
+
