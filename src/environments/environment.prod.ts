@@ -1,8 +1,9 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://84.247.137.97:3101/api/v1',
+  //apiUrl: 'http://84.247.137.97:3101/api/v1',
+  apiUrl: 'https://api.seo-bot-ai.herandro.com.mx/api/v1',
   prometheusUrl: 'http://84.247.137.97:9090',
-  metricsUrl: 'http://84.247.137.97:3101/metrics',
+  metricsUrl: 'https://api.seo-bot-ai.herandro.com.mx/metrics',
   timeout: 360000,
   endpoints: {
     auth:{
