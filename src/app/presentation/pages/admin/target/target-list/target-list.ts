@@ -45,10 +45,8 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
     try {
       this.isLoading.set(true);
       const data = await this._targetRepository.get();
-      console.log('data:', data);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
-      console.log('items:', this.items());
       this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar items:', error);
@@ -67,7 +65,6 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
   }
 
   navigateToAudit(itemId: string) {
-    console.log('itemId:', itemId);
     this._router.navigate(['/admin/audit/create'], {
       queryParams: { web_page_id: itemId }
     });
