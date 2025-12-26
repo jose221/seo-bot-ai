@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="DataSourcePerFileMappings">
-    <file url="file://$PROJECT_DIR$/api/query.sql" value="8d46e523-5666-48ae-a1f4-3326fe938af9" />
     <file url="file://$PROJECT_DIR$/api/role_db.sql" value="8d46e523-5666-48ae-a1f4-3326fe938af9" />
   </component>
 </project>

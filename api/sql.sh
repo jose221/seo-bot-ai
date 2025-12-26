@@ -17,14 +17,22 @@ set -euo pipefail
 # Revisa si el primer argumento es --prod
 if [ "${1:-}" == "--prod" ]; then
     # --- CONFIGURACIÓN DE PRODUCCIÓN ---
-    echo "Estas en producción"
+    echo "Cargando configuración de producción desde .env"
     IS_PROD=true
-    DB_HOST="84.247.137.97"
-    # ¡IMPORTANTE! Rellena las demás credenciales de producción aquí
-    DB_PORT="5432"
-    DB_USER="herandro"
-    DB_PASSWORD="Gonzales220"
-    DB_NAME="seo_bot_db"
+
+    # Cargar variables desde .env
+    if [ -f ".env" ]; then
+        export $(grep -v '^#' .env | xargs)
+
+        DB_HOST="${DB_HOST}"
+        DB_PORT="${DB_PORT}"
+        DB_USER="${DB_USER}"
+        DB_PASSWORD="${DB_PASSWORD}"
+        DB_NAME="${DB_NAME}"
+    else
+        echo "Error: No se encontró el archivo api/.env"
+        exit 1
+    fi
 else
     # --- CONFIGURACIÓN LOCAL (por defecto) ---
     IS_PROD=false
