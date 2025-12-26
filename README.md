@@ -1,59 +1,161 @@
-# SeoBotAi
+# SEO Bot AI
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.3.
+Platform for automated SEO analysis and web page auditing with artificial intelligence integration.
 
-## Development server
+## Overview
 
-To start a local development server, run:
+SEO Bot AI is a full-stack application built with Angular 21 and Python FastAPI that provides comprehensive SEO analysis, web page auditing, and performance monitoring capabilities.
 
-```bash
-ng serve
-```
+### Technology Stack
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+**Frontend:**
+- Angular 21.0.0
+- TypeScript 5.7
+- Bootstrap 5.3
+- Chart.js 4.5
+- ngx-translate (i18n support)
+- Server-Side Rendering (SSR)
 
-## Code scaffolding
+**Backend:**
+- Python 3.13
+- FastAPI
+- PostgreSQL
+- Selenium (web scraping)
+- OpenAI GPT integration
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+## Architecture
 
-```bash
-ng generate component component-name
-```
+The project follows Clean Architecture principles with three main layers:
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+- **Domain Layer**: Business logic and entity definitions
+- **Application Layer**: Use cases and application-specific logic  
+- **Infrastructure Layer**: External services, repositories, and framework implementations
+- **Presentation Layer**: UI components and pages
 
-```bash
-ng generate --help
-```
+## Getting Started
 
-## Building
+### Prerequisites
 
-To build the project run:
+- Node.js 20+ and npm 11.6.2+
+- Docker and Docker Compose
+- PostgreSQL (if running locally without Docker)
 
-```bash
-ng build
-```
+### Development Environment
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
+Start the development server:
 
 ```bash
-ng e2e
+npm install
+npm start
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+The application will be available at `http://localhost:4200/`.
 
-## Additional Resources
+### Production Build
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Build the application for production:
+
+```bash
+npm run build
+```
+
+Build artifacts will be stored in the `dist/` directory.
+
+### Docker Deployment
+
+Run the complete stack with Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+Services:
+- Frontend: Port 3100
+- API: Port 3101
+
+## Project Structure
+
+```
+seo-bot-ai/
+├── src/
+│   ├── app/
+│   │   ├── domain/          # Business entities and repository interfaces
+│   │   ├── infrastructure/  # External services and implementations
+│   │   ├── application/     # Use cases
+│   │   └── presentation/    # UI components and pages
+│   └── assets/
+├── api/                     # Python FastAPI backend
+├── commands/                # Development automation scripts
+└── docker-compose.yml
+```
+
+## Development Tools
+
+The project includes automated code generation tools. See [DEV-GUIDE.md](DEV-GUIDE.md) for detailed information on:
+
+- Module generation
+- Repository scaffolding
+- Service creation
+- Use case templates
+
+Run the development menu:
+
+```bash
+./dev.sh
+```
+
+## Internationalization
+
+The application supports multiple languages using ngx-translate. Language files are located in `src/assets/i18n/`.
+
+Default language: Spanish (es)
+
+## Testing
+
+Execute unit tests:
+
+```bash
+npm test
+```
+
+## Configuration
+
+### Environment Files
+
+The application uses environment-specific configuration files located in `src/environments/`:
+
+- `environment.example.ts` - Template file with default values (committed to repository)
+- `environment.ts` - Development configuration (excluded from repository)
+- `environment.prod.ts` - Production configuration (excluded from repository)
+
+**Initial Setup:**
+
+Before running the application, configure your environment files. You can use the automated setup script:
+
+```bash
+./setup-env.sh
+```
+
+Or manually copy the example file:
+
+```bash
+cp src/environments/environment.example.ts src/environments/environment.ts
+cp src/environments/environment.example.ts src/environments/environment.prod.ts
+```
+
+Edit the files with your specific configuration values:
+- API URLs
+- Prometheus endpoints
+- Timeout settings
+- Authentication parameters
+
+**Security Note:** The actual environment files (`environment.ts` and `environment.prod.ts`) are excluded from version control to protect sensitive configuration. Only the example template is committed to the repository.
+
+## Additional Documentation
+
+- [Development Guide](DEV-GUIDE.md) - Module generation and development workflows
+- [Quick Start](QUICK-START.txt) - Quick reference guide
+
+## License
+
+Private - Internal use only
