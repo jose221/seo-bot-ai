@@ -69,7 +69,7 @@
                   ><i class="me-1 bi bi-trash"></i>
                     {{ 'general.actions.delete' | translate }}
                   </button>
-                  <button class="btn btn-outline-info btn-sm flex-fill" title="{{ 'general.actions.audit' | translate }}">
+                  <button (click)="navigateToAudit(item.id)" class="btn btn-outline-info btn-sm flex-fill">
                     <i class="me-1 bi bi-shield-check"></i>{{ 'general.actions.audit' | translate }}
                   </button>
                 </div>
