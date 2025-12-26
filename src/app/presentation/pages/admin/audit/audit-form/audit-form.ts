@@ -18,7 +18,7 @@ import {
 import {
   FooterModalComponent
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
-import {RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 import {CreateAuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
 import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
 
@@ -39,6 +39,7 @@ import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
 })
 export class AuditForm extends ValidationFormBase implements OnInit {
   public statusAuditUtil = inject(StatusAuditUtil)
+  private readonly route = inject(ActivatedRoute);
   showMessageConfirmation = signal<boolean>(false);
   responseCreateAudit = signal<CreateAuditResponseModel>({} as CreateAuditResponseModel);
   protected readonly form = inject(FormBuilder).group({
@@ -53,6 +54,10 @@ export class AuditForm extends ValidationFormBase implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    const webPageId = this.route.snapshot.queryParamMap.get('web_page_id');
+    if (webPageId) {
+      this.form.patchValue({ web_page_id: webPageId });
+    }
     await this.targetSearch()
   }
   messages(name: string){

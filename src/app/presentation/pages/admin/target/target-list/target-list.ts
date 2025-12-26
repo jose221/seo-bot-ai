@@ -66,6 +66,11 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
     await this._router.navigate(['/admin/modules', item?.id])
   }
 
-
+  navigateToAudit(itemId: string) {
+    console.log('itemId:', itemId);
+    this._router.navigate(['/admin/audit/create'], {
+      queryParams: { web_page_id: itemId }
+    });
+  }
 
 }
