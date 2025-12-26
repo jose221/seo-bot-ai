@@ -28,8 +28,8 @@ seo-bot-ai/
 │   │           ├── targets.py # CRUD de páginas web.
 │   │           └── audits.py  # Trigger de auditorías.
 │   ├── services/            # Lógica de Negocio y Clientes Externos.
-│   │   ├── auth_provider.py # Cliente HTTP para herandro-services-api (Auth).
-│   │   ├── ai_client.py     # Cliente HTTP para herandro-services-api (IA).
+│   │   ├── auth_provider.py # Cliente HTTP para API externa (Auth).
+│   │   ├── ai_client.py     # Cliente HTTP para API externa (IA).
 │   │   └── audit_engine.py  # Lógica Core: Playwright + Lighthouse Wrapper.
 ├── tests/                   # Tests unitarios.
 ├── docker-compose.yml       # Orquestación (App + DB Postgres).
@@ -40,7 +40,7 @@ seo-bot-ai/
 
 2.1 API de Autenticación (Identity Provider)
 
-Base URL: https://herandro-services-api.herandro.com.mx
+Base URL: https://your-external-api-url.com
 
 A. Endpoint: LOGIN
 
@@ -113,7 +113,7 @@ JSON
 }
 2.2 API de Inteligencia Artificial
 
-Base URL: https://herandro-services-api.herandro.com.mx
+Base URL: https://your-external-api-url.com
 
 A. Endpoint: CHAT COMPLETIONS
 

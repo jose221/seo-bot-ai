@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
     <url>
-        <loc>https://seo-analysis.herandro.com.mx/audit_form.html</loc>
+        <loc>https://seo-analysis.example.com/audit_form.html</loc>
     </url>
     <url>
-        <loc>https://seo-analysis.herandro.com.mx/compare_audits_form.html</loc>
+        <loc>https://seo-analysis.example.com/compare_audits_form.html</loc>
     </url>
     <url>
-        <loc>https://seo-analysis.herandro.com.mx/</loc>
+        <loc>https://seo-analysis.example.com/</loc>
     </url>
     <url>
-        <loc>https://seo-analysis.herandro.com.mx/list_audits.html</loc>
+        <loc>https://seo-analysis.example.com/list_audits.html</loc>
     </url>
     <url>
-        <loc>https://seo-analysis.herandro.com.mx/list_web_pages.html</loc>
+        <loc>https://seo-analysis.example.com/list_web_pages.html</loc>
     </url>
     <url>
-        <loc>https://seo-analysis.herandro.com.mx/web_page_form.html</loc>
+        <loc>https://seo-analysis.example.com/web_page_form.html</loc>
     </url>
 </urlset>
