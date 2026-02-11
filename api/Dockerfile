@@ -77,7 +77,14 @@ COPY . .
 RUN ls -la /app && \
     if [ -d "/app/app" ]; then echo "✓ Módulo app encontrado"; else echo "✗ ERROR: Módulo app no encontrado"; exit 1; fi
 
+# Crear directorio de storage en la raíz y asignar permisos
+RUN mkdir -p /storage/reports && \
+    chmod -R 777 /storage
+
 ENV PYTHONPATH=/app
+
+# Volumen para persistencia
+VOLUME /storage
 
 # Exponer puerto
 EXPOSE 8000

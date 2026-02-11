@@ -58,12 +58,20 @@ app.include_router(api_router, prefix="/api/v1")
 
 # Montar directorio de storage para servir archivos estáticos (screenshots, reportes, etc.)
 storage_path = settings.STORAGE_PATH
+if not os.path.exists(storage_path):
+    # Intentar crear directorio si no existe (útil para dev local o si el volumen está vacío)
+    try:
+        os.makedirs(storage_path, exist_ok=True)
+        print(f"📁 Directorio creado: {storage_path}")
+    except OSError as e:
+        print(f"⚠️ No se pudo crear {storage_path}: {e}")
+
+# Montar storage solo si existe y es accesible
 if os.path.exists(storage_path):
     app.mount(settings.STORAGE_URL_PREFIX, StaticFiles(directory=storage_path), name="storage")
+    print(f"✅ Storage montado en {settings.STORAGE_URL_PREFIX} -> {storage_path}")
 else:
-    # Crear directorio si no existe
-    os.makedirs(storage_path, exist_ok=True)
-    app.mount(settings.STORAGE_URL_PREFIX, StaticFiles(directory=storage_path), name="storage")
+    print(f"❌ Storage NO disponible en {storage_path}")
 
 # Configurar Prometheus
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
