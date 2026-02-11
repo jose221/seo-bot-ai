@@ -27,6 +27,7 @@ import {
   FindCompareAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
 import {MarkdownModule} from 'ngx-markdown';
+import {environment} from '@/environments/environment';
 
 @Component({
   selector: 'app-compare-audit-list',
@@ -150,6 +151,28 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
   async toDelete(item: CompareAuditResponseModel){
     if(item.id) await this._auditRepository.delete(item.id)
     this.init()
+  }
+
+  downloadReport(type: 'pdf' | 'excel') {
+    const baseUrl = environment.apiUrl.replace('/api/v1', '');
+    let reportPath: string | null | undefined;
+
+    if (type === 'pdf') {
+      reportPath = this.responseCompareAudit().report_pdf_path;
+    } else {
+      reportPath = this.responseCompareAudit().report_excel_path;
+    }
+
+    if (!reportPath) {
+      this._sweetAlertUtil.error(
+        'general.messages.error',
+        `El reporte ${type.toUpperCase()} no está disponible`
+      );
+      return;
+    }
+
+    const fullUrl = `${baseUrl}/${reportPath}`;
+    window.open(fullUrl, '_blank');
   }
 
 }

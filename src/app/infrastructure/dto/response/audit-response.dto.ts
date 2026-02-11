@@ -68,6 +68,8 @@ export interface FindCompareAuditResponseDto {
   completed_at: string
   comparison_result: ComparisonResultDto
   error_message: string | null
+  report_pdf_path?: string | null
+  report_excel_path?: string | null
 }
 
 export interface ComparisonResultDto {

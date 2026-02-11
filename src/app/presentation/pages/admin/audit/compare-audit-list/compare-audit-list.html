@@ -791,9 +791,37 @@
       <button class="btn btn-outline-secondary" type="button" (click)="showMessageComparison.set(false)">
         <i class="bi bi-x-lg me-1"></i>{{ 'audits.compare.confirmModal.closeButton' | translate }}
       </button>
-      <button class="btn btn-primary" type="button">
-        <i class="bi bi-download me-1"></i>{{ 'audits.compare.confirmModal.exportButton' | translate }}
-      </button>
+      <div class="btn-group" role="group">
+        <button
+          type="button"
+          class="btn btn-primary dropdown-toggle"
+          data-bs-toggle="dropdown"
+          aria-expanded="false"
+          [disabled]="!responseCompareAudit().report_pdf_path && !responseCompareAudit().report_excel_path">
+          <i class="bi bi-download me-1"></i>{{ 'audits.compare.confirmModal.exportButton' | translate }}
+        </button>
+        <ul class="dropdown-menu">
+          @if (responseCompareAudit().report_pdf_path) {
+            <li>
+              <a class="dropdown-item" (click)="downloadReport('pdf')" style="cursor: pointer;">
+                <i class="bi bi-file-pdf me-2"></i>Descargar PDF
+              </a>
+            </li>
+          }
+          @if (responseCompareAudit().report_excel_path) {
+            <li>
+              <a class="dropdown-item" (click)="downloadReport('excel')" style="cursor: pointer;">
+                <i class="bi bi-file-excel me-2"></i>Descargar Excel
+              </a>
+            </li>
+          }
+          @if (!responseCompareAudit().report_pdf_path && !responseCompareAudit().report_excel_path) {
+            <li>
+              <span class="dropdown-item text-muted">No hay reportes disponibles</span>
+            </li>
+          }
+        </ul>
+      </div>
     </app-footer-modal>
   </app-default-modal>
 }
