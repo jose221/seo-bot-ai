@@ -162,12 +162,12 @@ class AuditEngine:
             # ============================================================
             # ANTI-DETECT BROWSER ARGUMENTS (Aggressive Mode for DataDome)
             # ============================================================
-            # Random user agent from a pool of real browsers
+            # User Agents actualizados (2024-2025)
             user_agents = [
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
             ]
             selected_ua = random.choice(user_agents)
             logger.info(f"🎭 Selected User-Agent: {selected_ua[:50]}...")
@@ -176,17 +176,15 @@ class AuditEngine:
                 "--window-size=1920,1080",
                 "--start-maximized",
                 "--no-first-run",
-                "--no-sandbox",
+                "--no-sandbox", # Necesario para Docker/Root, aunque riesgoso para detección
                 "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-blink-features=AutomationControlled",
+                "--disable-blink-features=AutomationControlled", # Crítico
                 "--disable-infobars",
-                "--disable-extensions",
-                "--disable-popup-blocking",
-                "--disable-notifications",
                 "--ignore-certificate-errors",
                 "--lang=es-MX,es",
                 f"--user-agent={selected_ua}",
+                # Flags experimentales para ocultar headless/automation
+                "--enable-features=NetworkService,NetworkServiceInProcess",
             ]
 
             logger.info("🚀 Starting nodriver browser (headless=False for DataDome bypass)...")
@@ -195,6 +193,23 @@ class AuditEngine:
                 browser_args=browser_args
             )
             logger.info("✅ Nodriver browser started successfully")
+
+            # --- ESTRATEGIA DE "WARM-UP" (Calentamiento) ---
+            # Navegar primero a un sitio confiable para establecer cookies base y referer natural
+            try:
+                logger.info("🔥 Warming up browser reputation (visiting Google)...")
+                warmup_tab = await browser.get("https://www.google.com")
+                await asyncio.sleep(random.uniform(1.5, 2.5))
+                # Simular movimiento real de mouse en Google
+                for _ in range(3):
+                    await warmup_tab.send("Input.dispatchMouseEvent", {
+                        "type": "mouseMoved",
+                        "x": random.randint(100, 800),
+                        "y": random.randint(100, 600)
+                    })
+                    await asyncio.sleep(0.2)
+            except Exception as e:
+                logger.warning(f"⚠️ Warm-up failed, continuing: {e}")
 
             # Random delay before navigation (human-like)
             pre_nav_delay = random.uniform(1.0, 3.0)
@@ -216,26 +231,35 @@ class AuditEngine:
             logger.info(f"⏳ Post-load delay (simulating reading): {post_load_delay:.2f}s")
             await asyncio.sleep(post_load_delay)
 
-            # Simulate mouse movement (if supported)
+            # --- SIMULACIÓN AVANZADA DE INTERACCIÓN HUMANA (CDP NATIVE) ---
             try:
-                await page.evaluate("""
-                    // Simulate mouse movement event
-                    document.dispatchEvent(new MouseEvent('mousemove', {
-                        clientX: Math.random() * 500 + 100,
-                        clientY: Math.random() * 300 + 100
-                    }));
-                """)
-                logger.info("🖱️  Mouse movement simulated")
-            except Exception:
-                pass
+                # 1. Movimientos de mouse curvos/aleatorios usando protocolo nativo CDP
+                # Esto genera eventos 'trusted' que JS sintético no puede replicar
+                logger.info("🖱️  Simulating REAL human mouse movements via CDP...")
 
-            # Small scroll to simulate user interaction
-            try:
-                await page.evaluate("window.scrollTo(0, Math.random() * 300);")
-                await asyncio.sleep(random.uniform(0.5, 1.5))
-                logger.info("📜 Page scroll simulated")
-            except Exception:
-                pass
+                # Mover mouse aleatoriamente
+                for _ in range(random.randint(5, 10)):
+                    x = random.randint(100, 1500)
+                    y = random.randint(100, 900)
+                    await page.send("Input.dispatchMouseEvent", {
+                        "type": "mouseMoved",
+                        "x": x,
+                        "y": y
+                    })
+                    await asyncio.sleep(random.uniform(0.1, 0.4))
+
+                # 2. Scroll suave y aleatorio
+                logger.info("📜 Simulating scroll behavior...")
+                await page.evaluate("""
+                    window.scrollBy({
+                        top: Math.random() * 500,
+                        behavior: 'smooth'
+                    });
+                """)
+                await asyncio.sleep(random.uniform(0.8, 1.5))
+
+            except Exception as interaction_err:
+                logger.warning(f"⚠️ Interaction simulation warning: {interaction_err}")
 
             # Get page content
             content = await page.get_content()
@@ -250,7 +274,9 @@ class AuditEngine:
                 "dd_cf_output",
                 "geo.captcha-delivery.com",
                 "challenge-platform",
-                "cf-browser-verification"
+                "cf-browser-verification",
+                "Verification Required",
+                "Slide right to secure your access"
             ]
 
             detected_blocks = [ind for ind in block_indicators if ind.lower() in content.lower()]
