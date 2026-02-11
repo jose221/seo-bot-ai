@@ -52,7 +52,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
       label: "Buscar",
       value: "",
       placeholder: "Buscar",
-      attributes: ['web_page_id', 'user_id', 'id'],
+      attributes: ['web_page_id', 'user_id', 'id', 'web_page.name', 'web_page.tech_stack', 'web_page.url'],
       key: "web_page_id",
       defaultValue: "",
       type: "text"
