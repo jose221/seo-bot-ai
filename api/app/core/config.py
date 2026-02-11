@@ -36,7 +36,8 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list = ["*"]
 
     # Storage
-    STORAGE_PATH: str = "/storage"
+    # Ruta relativa al directorio de ejecución (ej: /app/storage en Docker, ./storage en local)
+    STORAGE_PATH: str = "storage"
     STORAGE_URL_PREFIX: str = "/storage"
 
     class Config:
