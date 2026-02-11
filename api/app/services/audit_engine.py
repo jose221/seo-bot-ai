@@ -241,11 +241,11 @@ class AuditEngine:
                 for _ in range(random.randint(5, 10)):
                     x = random.randint(100, 1500)
                     y = random.randint(100, 900)
-                    await page.send("Input.dispatchMouseEvent", {
-                        "type": "mouseMoved",
-                        "x": x,
-                        "y": y
-                    })
+                    await page.send(uc.cdp.input_.dispatch_mouse_event(
+                        type_="mouseMoved",
+                        x=x,
+                        y=y
+                    ))
                     await asyncio.sleep(random.uniform(0.1, 0.4))
 
                 # 2. Scroll suave y aleatorio
