@@ -8,7 +8,6 @@ import {FilterList} from '@/app/presentation/components/general/filter-list/filt
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
 import {TranslatePipe} from '@ngx-translate/core';
 import {RouterLink} from '@angular/router';
-import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
 
 @Component({
   selector: 'app-target-list',
@@ -36,7 +35,6 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
     }
   })
   _targetRepository = inject(TargetRepository)
-  _sweetAlertUtil = inject(SweetAlertUtil)
   constructor() {
     super();
   }
