@@ -91,7 +91,9 @@ class ReportGenerator:
             parent=self.styles['Title'],
             fontSize=24,
             fontName='Helvetica-Bold',
-            spaceAfter=20,
+            spaceBefore=30,
+            spaceAfter=30,
+            leading=32,
             textColor=self.color_primary,
             alignment=TA_CENTER
         ))
@@ -102,6 +104,7 @@ class ReportGenerator:
             fontName='Helvetica-Bold',
             spaceBefore=15,
             spaceAfter=10,
+            leading=20,
             textColor=self.color_primary,
             borderPadding=5,
             borderWidth=0,
@@ -114,6 +117,7 @@ class ReportGenerator:
             fontName='Helvetica-Bold',
             spaceBefore=12,
             spaceAfter=6,
+            leading=18,
             textColor=self.color_secondary
         ))
 
@@ -123,6 +127,7 @@ class ReportGenerator:
             fontName='Helvetica-Bold',
             spaceBefore=10,
             spaceAfter=5,
+            leading=14,
             textColor=colors.HexColor("#555555")
         ))
 
@@ -477,9 +482,20 @@ class ReportGenerator:
 
         # Titulo
         story.append(Paragraph("Reporte de Benchmarking SEO", self.styles["ReportTitle"]))
+
+        # Meta Info
         story.append(Paragraph(f"<b>Base:</b> <font color='#2980b9'>{base_url}</font>", self.styles["Justify"]))
         story.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y')}", self.styles["Justify"]))
-        story.append(Spacer(1, 20))
+
+        # Separator Line
+        line_data = [[" "]]
+        t_line = Table(line_data, colWidths=[6.5*inch], rowHeights=[5])
+        t_line.setStyle(TableStyle([
+            ('LINEBELOW', (0,0), (-1,-1), 2, self.color_secondary),
+        ]))
+        story.append(t_line)
+
+        story.append(Spacer(1, 25))
 
         # Overall Summary
         overall = data.get('overall_summary', {})
