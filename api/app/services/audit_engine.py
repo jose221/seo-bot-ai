@@ -261,22 +261,28 @@ class AuditEngine:
 
                 # Save debug evidence
                 try:
-                    debug_dir = "/app/storage/reports"
+                    storage_path = self.settings.STORAGE_PATH
+                    storage_url_prefix = self.settings.STORAGE_URL_PREFIX
+                    debug_dir = f"{storage_path}/reports"
                     if not os.path.exists(debug_dir):
                         os.makedirs(debug_dir, exist_ok=True)
 
                     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
 
                     # Save screenshot
-                    screenshot_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.png"
+                    screenshot_filename = f"BLOCK_DEBUG_{timestamp}.png"
+                    screenshot_path = f"{debug_dir}/{screenshot_filename}"
+                    screenshot_url = f"{storage_url_prefix}/reports/{screenshot_filename}"
                     await page.save_screenshot(screenshot_path)
-                    logger.error(f"📸 Screenshot saved: {screenshot_path}")
+                    logger.error(f"📸 Screenshot saved: {screenshot_url}")
 
                     # Save HTML content for analysis
-                    html_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.html"
+                    html_filename = f"BLOCK_DEBUG_{timestamp}.html"
+                    html_path = f"{debug_dir}/{html_filename}"
+                    html_url = f"{storage_url_prefix}/reports/{html_filename}"
                     with open(html_path, 'w', encoding='utf-8') as f:
                         f.write(content[:50000])  # First 50KB
-                    logger.error(f"📄 HTML saved: {html_path}")
+                    logger.error(f"📄 HTML saved: {html_url}")
 
                 except Exception as dbg_err:
                     logger.error(f"❌ Could not save debug evidence: {dbg_err}")

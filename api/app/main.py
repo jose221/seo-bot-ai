@@ -2,8 +2,10 @@
 Aplicación principal de FastAPI - SEO Bot AI
 Inicialización de la aplicación, configuración de CORS y routers.
 """
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
 
@@ -53,6 +55,15 @@ app.add_middleware(
 
 # Incluir routers
 app.include_router(api_router, prefix="/api/v1")
+
+# Montar directorio de storage para servir archivos estáticos (screenshots, reportes, etc.)
+storage_path = settings.STORAGE_PATH
+if os.path.exists(storage_path):
+    app.mount(settings.STORAGE_URL_PREFIX, StaticFiles(directory=storage_path), name="storage")
+else:
+    # Crear directorio si no existe
+    os.makedirs(storage_path, exist_ok=True)
+    app.mount(settings.STORAGE_URL_PREFIX, StaticFiles(directory=storage_path), name="storage")
 
 # Configurar Prometheus
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")

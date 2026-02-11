@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
 
+    # Storage
+    STORAGE_PATH: str = "/storage"
+    STORAGE_URL_PREFIX: str = "/storage"
+
     class Config:
         env_file = ".env"
         case_sensitive = True
