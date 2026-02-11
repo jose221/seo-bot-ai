@@ -1,9 +1,11 @@
 import asyncio
 import sys
 import os
+import random
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 import logging
+import traceback
 
 # Playwright Imports
 from playwright.async_api import async_playwright, Page, Browser
@@ -141,62 +143,147 @@ class AuditEngine:
 
         try:
             # --- Virtual Display Logic for Ubuntu Server ---
-            # Detect if running on Linux without a physical display
             if sys.platform.startswith('linux'):
-                # Check if DISPLAY is already set (optimized for Docker CMD)
                 if os.environ.get('DISPLAY'):
                     logger.info(f"🖥️  Using existing DISPLAY environment: {os.environ['DISPLAY']}")
                 else:
                     try:
                         from pyvirtualdisplay import Display
                         logger.info("🖥️  Starting Xvfb (Virtual Display) for nodriver evasion...")
-                        display = Display(visible=0, size=(1920, 1080))
+                        display = Display(visible=False, size=(1920, 1080))
                         display.start()
+                        os.environ['DISPLAY'] = display.new_display_var
+                        logger.info(f"🖥️  Xvfb started on DISPLAY={display.new_display_var}")
                     except ImportError:
-                        logger.warning("⚠️  Warning: pyvirtualdisplay not installed. Nodriver might fail on headless server.")
-                        logger.info("ℹ️  Fix: pip install pyvirtualdisplay && sudo apt-get install xvfb")
+                        logger.warning("⚠️  pyvirtualdisplay not installed. Nodriver might fail.")
+                    except Exception as xvfb_err:
+                        logger.error(f"❌ Xvfb failed to start: {xvfb_err}")
 
-            # Start real Chrome instance (High evasion success rate)
-            # headless=False is CRITICAL for DataDome bypass.
-            # On Ubuntu Server, Xvfb handles the GUI requirement.
+            # ============================================================
+            # ANTI-DETECT BROWSER ARGUMENTS (Aggressive Mode for DataDome)
+            # ============================================================
+            # Random user agent from a pool of real browsers
+            user_agents = [
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            ]
+            selected_ua = random.choice(user_agents)
+            logger.info(f"🎭 Selected User-Agent: {selected_ua[:50]}...")
 
-            # Common Anti-Detect Args for Docker/Linux
             browser_args = [
                 "--window-size=1920,1080",
+                "--start-maximized",
                 "--no-first-run",
                 "--no-sandbox",
                 "--disable-dev-shm-usage",
                 "--disable-gpu",
-                "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--disable-extensions",
+                "--disable-popup-blocking",
+                "--disable-notifications",
+                "--ignore-certificate-errors",
+                "--lang=es-MX,es",
+                f"--user-agent={selected_ua}",
             ]
 
+            logger.info("🚀 Starting nodriver browser (headless=False for DataDome bypass)...")
             browser = await uc.start(
                 headless=False,
                 browser_args=browser_args
             )
+            logger.info("✅ Nodriver browser started successfully")
 
+            # Random delay before navigation (human-like)
+            pre_nav_delay = random.uniform(1.0, 3.0)
+            logger.info(f"⏳ Pre-navigation delay: {pre_nav_delay:.2f}s")
+            await asyncio.sleep(pre_nav_delay)
+
+            logger.info(f"🌐 [Nodriver] Navigating to: {url}")
             page = await browser.get(url)
 
-            # Smart wait for body instead of fixed sleep
-            await page.wait_for("body", timeout=60)
+            # Wait for body with extended timeout
+            logger.info("⏳ Waiting for page body...")
+            try:
+                await page.wait_for("body", timeout=90)
+            except Exception as wait_err:
+                logger.warning(f"⚠️ Body wait timeout: {wait_err}")
 
-            # Double check if even nodriver was blocked
+            # Human-like delay after page load
+            post_load_delay = random.uniform(3.0, 6.0)
+            logger.info(f"⏳ Post-load delay (simulating reading): {post_load_delay:.2f}s")
+            await asyncio.sleep(post_load_delay)
+
+            # Simulate mouse movement (if supported)
+            try:
+                await page.evaluate("""
+                    // Simulate mouse movement event
+                    document.dispatchEvent(new MouseEvent('mousemove', {
+                        clientX: Math.random() * 500 + 100,
+                        clientY: Math.random() * 300 + 100
+                    }));
+                """)
+                logger.info("🖱️  Mouse movement simulated")
+            except Exception:
+                pass
+
+            # Small scroll to simulate user interaction
+            try:
+                await page.evaluate("window.scrollTo(0, Math.random() * 300);")
+                await asyncio.sleep(random.uniform(0.5, 1.5))
+                logger.info("📜 Page scroll simulated")
+            except Exception:
+                pass
+
+            # Get page content
             content = await page.get_content()
-            if "captcha-delivery" in content or "DataDome" in content:
-                # Intento de debug: Guardar screenshot y HTML parcial
+            page_title = await page.evaluate("document.title") or "Unknown"
+            logger.info(f"📄 Page loaded. Title: {page_title[:50]}...")
+            logger.info(f"📄 Content length: {len(content)} chars")
+
+            # Enhanced block detection with detailed logging
+            block_indicators = [
+                "captcha-delivery",
+                "DataDome",
+                "dd_cf_output",
+                "geo.captcha-delivery.com",
+                "challenge-platform",
+                "cf-browser-verification"
+            ]
+
+            detected_blocks = [ind for ind in block_indicators if ind.lower() in content.lower()]
+
+            if detected_blocks:
+                logger.error(f"🚨 BLOCK DETECTED! Indicators found: {detected_blocks}")
+                logger.error(f"🚨 Page title was: {page_title}")
+
+                # Save debug evidence
                 try:
                     debug_dir = "/app/storage/reports"
                     if not os.path.exists(debug_dir):
                         os.makedirs(debug_dir, exist_ok=True)
 
                     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-                    screenshot_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.jpg"
-                    await page.save_screenshot(screenshot_path)
-                    logger.error(f"📸 Screenshot de bloqueo guardado en: {screenshot_path}")
-                except Exception as dbg_err:
-                    logger.error(f"No se pudo guardar evidencias del bloqueo: {dbg_err}")
 
-                raise Exception("Nodriver also blocked by DataDome.")
+                    # Save screenshot
+                    screenshot_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.png"
+                    await page.save_screenshot(screenshot_path)
+                    logger.error(f"📸 Screenshot saved: {screenshot_path}")
+
+                    # Save HTML content for analysis
+                    html_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.html"
+                    with open(html_path, 'w', encoding='utf-8') as f:
+                        f.write(content[:50000])  # First 50KB
+                    logger.error(f"📄 HTML saved: {html_path}")
+
+                except Exception as dbg_err:
+                    logger.error(f"❌ Could not save debug evidence: {dbg_err}")
+
+                raise Exception(f"Nodriver blocked by DataDome. Indicators: {detected_blocks}")
+
+            logger.info("✅ No block detected! Proceeding with data extraction...")
 
             # Extract metrics using JS evaluation via nodriver
             metrics_data_raw = await page.evaluate("""
@@ -257,10 +344,12 @@ class AuditEngine:
             }
 
         except Exception as e:
-            logger.error(f"❌ Fallback (nodriver) failed: {e}")
+            error_msg = str(e)
+            logger.error(f"❌ Fallback (nodriver) failed: {error_msg}")
+            logger.error(f"❌ Full traceback:\n{traceback.format_exc()}")
             return {
                 "error": True,
-                "message": f"Bloqueo Anti-Bot Persistente (DataDome). Falló Playwright y Nodriver. Error: {str(e)}",
+                "message": f"Bloqueo Anti-Bot Persistente (DataDome). Falló Playwright y Nodriver. Error: {error_msg}",
                 "url": url
             }
         finally:

@@ -15,6 +15,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     ca-certificates \
     fonts-liberation \
+    fonts-noto-color-emoji \
+    fonts-dejavu-core \
     libasound2 \
     libatk-bridge2.0-0 \
     libatk1.0-0 \
@@ -30,9 +32,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxfixes3 \
     libxkbcommon0 \
     libxrandr2 \
+    libxshmfence1 \
+    libxss1 \
     xdg-utils \
     xvfb \
     libxi6 \
+    dbus \
+    procps \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar Google Chrome
@@ -76,6 +82,6 @@ ENV PYTHONPATH=/app
 # Exponer puerto
 EXPOSE 8000
 
-# Iniciar Xvfb y luego uvicorn (sin --reload en producción)
-CMD ["/bin/sh", "-c", "Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset & sleep 2 && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Iniciar dbus, Xvfb y luego uvicorn (sin --reload en producción)
+CMD ["/bin/sh", "-c", "dbus-daemon --system --fork || true && Xvfb :99 -screen 0 1920x1080x24 -ac +extension GLX +render -noreset & sleep 3 && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
 
