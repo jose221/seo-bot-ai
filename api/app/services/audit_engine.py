@@ -231,32 +231,40 @@ class AuditEngine:
             logger.info(f"⏳ Post-load delay (simulating reading): {post_load_delay:.2f}s")
             await asyncio.sleep(post_load_delay)
 
-            # --- SIMULACIÓN AVANZADA DE INTERACCIÓN HUMANA (CDP NATIVE) ---
+            # --- SIMULACIÓN AVANZADA DE INTERACCIÓN HUMANA (JS FALLBACK) ---
             try:
-                # 1. Movimientos de mouse curvos/aleatorios usando protocolo nativo CDP
-                # Esto genera eventos 'trusted' que JS sintético no puede replicar
-                logger.info("🖱️  Simulating REAL human mouse movements via CDP...")
+                logger.info("🖱️  Simulating human mouse movements via JS...")
 
-                # Mover mouse aleatoriamente
-                for _ in range(random.randint(5, 10)):
-                    x = random.randint(100, 1500)
-                    y = random.randint(100, 900)
-                    await page.send(uc.cdp.input_.dispatch_mouse_event(
-                        type_="mouseMoved",
-                        x=x,
-                        y=y
-                    ))
-                    await asyncio.sleep(random.uniform(0.1, 0.4))
-
-                # 2. Scroll suave y aleatorio
-                logger.info("📜 Simulating scroll behavior...")
+                # Mover mouse y hacer scroll aleatorio
                 await page.evaluate("""
-                    window.scrollBy({
-                        top: Math.random() * 500,
-                        behavior: 'smooth'
-                    });
+                    (async () => {
+                        const moves = Math.floor(Math.random() * 5) + 5;
+                        for (let i = 0; i < moves; i++) {
+                            const x = Math.floor(Math.random() * window.innerWidth);
+                            const y = Math.floor(Math.random() * window.innerHeight);
+
+                            document.dispatchEvent(new MouseEvent('mousemove', {
+                                bubbles: true,
+                                clientX: x,
+                                clientY: y
+                            }));
+
+                            if (Math.random() > 0.5) {
+                                window.scrollBy({
+                                    top: (Math.random() - 0.2) * 300,
+                                    behavior: 'smooth'
+                                });
+                            }
+
+                            await new Promise(r => setTimeout(r, 200 + Math.random() * 300));
+                        }
+                    })();
                 """)
-                await asyncio.sleep(random.uniform(0.8, 1.5))
+                # Esperar a que la simulación JS termine
+                await asyncio.sleep(random.uniform(2.0, 4.0))
+
+            except Exception as interaction_err:
+                logger.warning(f"⚠️ Interaction simulation warning: {interaction_err}")
 
             except Exception as interaction_err:
                 logger.warning(f"⚠️ Interaction simulation warning: {interaction_err}")
