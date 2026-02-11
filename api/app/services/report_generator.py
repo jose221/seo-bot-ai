@@ -344,7 +344,14 @@ class ReportGenerator:
     def generate_pdf(self) -> str:
         """Genera el reporte individual de Auditoría."""
         filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.pdf"
-        doc = SimpleDocTemplate(str(filename), pagesize=LETTER, topMargin=40, bottomMargin=40)
+        doc = SimpleDocTemplate(
+            str(filename),
+            pagesize=LETTER,
+            topMargin=40,
+            bottomMargin=40,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
+        )
         story = []
 
         # --- Encabezado ---
@@ -475,7 +482,14 @@ class ReportGenerator:
         return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path)}
 
     def _create_comparison_pdf(self, data: dict, filename: Path):
-        doc = SimpleDocTemplate(str(filename), pagesize=LETTER, topMargin=40, bottomMargin=40)
+        doc = SimpleDocTemplate(
+            str(filename),
+            pagesize=LETTER,
+            topMargin=40,
+            bottomMargin=40,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
+        )
         story = []
 
         base_url = data.get('base_url', 'Unknown URL')
@@ -489,7 +503,7 @@ class ReportGenerator:
 
         # Separator Line
         line_data = [[" "]]
-        t_line = Table(line_data, colWidths=[6.5*inch], rowHeights=[5])
+        t_line = Table(line_data, colWidths=[7.5*inch], rowHeights=[5])
         t_line.setStyle(TableStyle([
             ('LINEBELOW', (0,0), (-1,-1), 2, self.color_secondary),
         ]))
