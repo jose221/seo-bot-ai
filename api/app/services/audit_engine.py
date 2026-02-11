@@ -5,14 +5,21 @@ import sys
 import os
 from typing import Dict, Any, Optional
 from datetime import datetime
+import logging
 
 # Playwright Imports
 from playwright.async_api import async_playwright, Page, Browser
+# Importar stealth de la librería instalada
+from playwright_stealth import stealth_async
 
 # Nodriver Import (Fallback)
 import nodriver as uc
 
 from app.core.config import get_settings
+
+# Configurar Logger
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class AuditEngine:
     """
@@ -54,6 +61,13 @@ class AuditEngine:
 
     async def _apply_playwright_stealth(self, page: Page):
         """Manual stealth injection for Playwright."""
+        # Aplicar stealth de la librería (más robusto)
+        try:
+            await stealth_async(page)
+        except Exception as e:
+            logger.warning(f"⚠️ Error aplicando playwright-stealth: {e}")
+
+        # Refuerzos manuales adicionales
         await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
         await page.add_init_script("Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]})")
         await page.add_init_script("""
@@ -107,7 +121,7 @@ class AuditEngine:
         Fallback Method: Executes audit using 'nodriver' (Chrome CDP).
         Used when Playwright is detected by DataDome.
         """
-        print(f"🛡️ Activating Fallback Protocol (nodriver) for: {url}")
+        logger.info(f"🛡️ Activating Fallback Protocol (nodriver) for: {url}")
         browser = None
         display = None
 
@@ -115,21 +129,36 @@ class AuditEngine:
             # --- Virtual Display Logic for Ubuntu Server ---
             # Detect if running on Linux without a physical display
             if sys.platform.startswith('linux'):
-                try:
-                    from pyvirtualdisplay import Display
-                    print("🖥️  Starting Xvfb (Virtual Display) for nodriver evasion...")
-                    display = Display(visible=0, size=(1920, 1080))
-                    display.start()
-                except ImportError:
-                    print("⚠️  Warning: pyvirtualdisplay not installed. Nodriver might fail on headless server.")
-                    print("ℹ️  Fix: pip install pyvirtualdisplay && sudo apt-get install xvfb")
+                # Check if DISPLAY is already set (optimized for Docker CMD)
+                if os.environ.get('DISPLAY'):
+                    logger.info(f"🖥️  Using existing DISPLAY environment: {os.environ['DISPLAY']}")
+                else:
+                    try:
+                        from pyvirtualdisplay import Display
+                        logger.info("🖥️  Starting Xvfb (Virtual Display) for nodriver evasion...")
+                        display = Display(visible=0, size=(1920, 1080))
+                        display.start()
+                    except ImportError:
+                        logger.warning("⚠️  Warning: pyvirtualdisplay not installed. Nodriver might fail on headless server.")
+                        logger.info("ℹ️  Fix: pip install pyvirtualdisplay && sudo apt-get install xvfb")
 
             # Start real Chrome instance (High evasion success rate)
             # headless=False is CRITICAL for DataDome bypass.
             # On Ubuntu Server, Xvfb handles the GUI requirement.
+
+            # Common Anti-Detect Args for Docker/Linux
+            browser_args = [
+                "--window-size=1920,1080",
+                "--no-first-run",
+                "--no-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            ]
+
             browser = await uc.start(
                 headless=False,
-                browser_args=["--window-size=1920,1080", "--no-first-run"]
+                browser_args=browser_args
             )
 
             page = await browser.get(url)
@@ -140,6 +169,19 @@ class AuditEngine:
             # Double check if even nodriver was blocked
             content = await page.get_content()
             if "captcha-delivery" in content or "DataDome" in content:
+                # Intento de debug: Guardar screenshot y HTML parcial
+                try:
+                    debug_dir = "/app/storage/reports"
+                    if not os.path.exists(debug_dir):
+                        os.makedirs(debug_dir, exist_ok=True)
+
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    screenshot_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.jpg"
+                    await page.save_screenshot(screenshot_path)
+                    logger.error(f"📸 Screenshot de bloqueo guardado en: {screenshot_path}")
+                except Exception as dbg_err:
+                    logger.error(f"No se pudo guardar evidencias del bloqueo: {dbg_err}")
+
                 raise Exception("Nodriver also blocked by DataDome.")
 
             # Extract metrics using JS evaluation via nodriver
@@ -173,7 +215,7 @@ class AuditEngine:
 
             # Asegurar que sea un dict (fallback por seguridad)
             if not isinstance(metrics_data, dict):
-                print(f"⚠️ Warning: metrics_data structure unexpected: {type(metrics_data)}")
+                logger.warning(f"⚠️ Warning: metrics_data structure unexpected: {type(metrics_data)}")
                 metrics_data = {'seo': {}, 'web_vitals': {}, 'loadDuration': 0, 'timing': {}}
 
             # Construct the result dictionary matching Playwright's output structure
@@ -201,7 +243,7 @@ class AuditEngine:
             }
 
         except Exception as e:
-            print(f"❌ Fallback (nodriver) failed: {e}")
+            logger.error(f"❌ Fallback (nodriver) failed: {e}")
             return {
                 "error": True,
                 "message": f"Bloqueo Anti-Bot Persistente (DataDome). Falló Playwright y Nodriver. Error: {str(e)}",
@@ -244,7 +286,7 @@ class AuditEngine:
             page = await context.new_page()
             await self._apply_playwright_stealth(page)
 
-            print(f"🌐 [Playwright] Navigating to: {url}")
+            logger.info(f"🌐 [Playwright] Navigating to: {url}")
 
             try:
                 response = await page.goto(url, wait_until='networkidle', timeout=450000)
@@ -256,7 +298,7 @@ class AuditEngine:
             content_check = await page.content()
 
             if "captcha-delivery" in content_check or "DataDome" in content_check:
-                print("🚨 DataDome Block detected in Playwright.")
+                logger.warning("🚨 DataDome Block detected in Playwright.")
 
                 # Cleanup Playwright context before switching
                 await context.close()
@@ -318,7 +360,7 @@ class AuditEngine:
             }
 
         except Exception as e:
-            print(f"❌ Critical Error in Playwright Audit: {str(e)}")
+            logger.error(f"❌ Critical Error in Playwright Audit: {str(e)}")
             # Try fallback one last time if it was a generic error that looks like a timeout/block
             if "Timeout" in str(e) or "Target closed" in str(e):
                 return await self._execute_nodriver_audit(url)

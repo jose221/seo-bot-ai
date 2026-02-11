@@ -31,7 +31,7 @@ export class TargetService extends BaseService{
   }
 
   async delete(id: number): Promise<any> {
-    return await this.httpService.delete<any>(`${environment.endpoints.target.path}${id}`, {}, this.getToken);
+    return await this.httpService.delete<any>(`${environment.endpoints.target.path}/${id}`, {}, this.getToken);
   }
 
   async get(params?: FilterTargetRequestModel): Promise<TargetResponseModel[]> {
