@@ -16,6 +16,7 @@ class WebPageCreate(BaseModel):
   name: Optional[str] = Field(None, max_length=200, description="Nombre descriptivo")
   instructions: Optional[str] = Field(None, description="Instrucciones de navegación")
   tech_stack: Optional[str] = Field(None, max_length=500, description="Stack tecnológico")
+  manual_html_content: Optional[str] = Field(None, description="Contenido HTML manual de la página")
 
   @validator('url')
   def validate_url(cls, v):
@@ -30,7 +31,8 @@ class WebPageCreate(BaseModel):
         "url": "https://example.com",
         "name": "Mi Sitio Principal",
         "instructions": "Esperar 2 segundos después de cargar",
-        "tech_stack": "React + Next.js"
+        "tech_stack": "React + Next.js",
+        "manual_html_content": "<html>...</html>"
       }
     }
 

@@ -5,6 +5,7 @@ export interface TargetRequestDto {
   name: string
   tech_stack: string
   url: string
+  manual_html_content?: string
 }
 
 export interface CreateTargetRequestDto {
@@ -12,6 +13,7 @@ export interface CreateTargetRequestDto {
   name: string
   tech_stack: string
   url: string
+  manual_html_content?: string
 }
 
 export interface FilterTargetRequestDto {

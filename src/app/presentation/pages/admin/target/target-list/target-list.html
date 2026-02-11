@@ -54,7 +54,7 @@
                       <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>{{ 'general.actions.edit' | translate }}</a></li>
                       <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>{{ 'general.actions.view' | translate }}</a></li>
                       <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" href="#"><i class="me-2 bi bi-trash"></i>{{ 'general.actions.delete' | translate }}</a></li>
+                      <li><a class="dropdown-item text-danger" (click)="toDelete(item)" style="cursor: pointer;"><i class="me-2 bi bi-trash"></i>{{ 'general.actions.delete' | translate }}</a></li>
                     </ul>
                   </div>
                 </div>
@@ -65,7 +65,7 @@
               </div>
               <div  class="card-footer bg-transparent border-0 pb-4">
                 <div class="d-flex gap-2 mt-auto">
-                  <button class="btn btn-outline-danger btn-sm flex-fill" title="{{ 'general.actions.delete' | translate }}"
+                  <button (click)="toDelete(item)" class="btn btn-outline-danger btn-sm flex-fill" title="{{ 'general.actions.delete' | translate }}"
                   ><i class="me-1 bi bi-trash"></i>
                     {{ 'general.actions.delete' | translate }}
                   </button>

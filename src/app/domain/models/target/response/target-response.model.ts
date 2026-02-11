@@ -6,7 +6,8 @@ export class TargetResponseModel {
     public name: string,
     public tech_stack: string,
     public url: string,
-    public is_active: boolean
+    public is_active: boolean,
+    public manual_html_content?: string
   ) {}
 }
 

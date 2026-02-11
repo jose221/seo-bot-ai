@@ -3,7 +3,8 @@ export class CreateTargetRequestModel {
   public instructions: string,
   public name: string,
   public tech_stack: string,
-  public url: string
+  public url: string,
+  public manual_html_content?: string
   ) {
   }
 }

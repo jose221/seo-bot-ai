@@ -51,7 +51,8 @@ async def create_target(
         url=target.url,
         name=target.name or target.url,
         instructions=target.instructions,
-        tech_stack=target.tech_stack
+        tech_stack=target.tech_stack,
+        manual_html_content=target.manual_html_content
     )
 
     session.add(db_target)

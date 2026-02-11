@@ -129,6 +129,11 @@
         "placeholder": "Ej: Esperar 2 segundos después de cargar",
         "help": "Proporcione instrucciones especiales o notas adicionales"
       },
+      "manualHtmlContent": {
+        "label": "Contenido HTML Manual",
+        "placeholder": "Pegue aquí el código HTML completo de la página (opcional)...",
+        "help": "Opcionalmente, puede proporcionar el contenido HTML completo de la página para análisis sin necesidad de hacer scraping"
+      },
       "saveButton": "Guardar Configuración",
       "successMessage": "La configuración se ha guardado correctamente."
     }

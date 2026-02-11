@@ -10,7 +10,7 @@ import {
 
 export abstract class TargetRepository {
   abstract create(params: CreateTargetRequestModel): Promise<any>;
-  abstract delete(id: number): Promise<any>;
+  abstract delete(id: string): Promise<any>;
   abstract get(params?: FilterTargetRequestModel): Promise<TargetResponseModel[]>;
   abstract find(id: number): Promise<TargetResponseModel>;
   abstract search(params?: SearchTargetRequestModel): Promise<SearchTargetResponseModel[]>;

@@ -23,7 +23,8 @@ export class TargetForm extends ValidationFormBase{
     instructions: ['', [Validators.required]],
     name: ['', Validators.required],
     tech_stack: ['', Validators.required],
-    url: ['', Validators.required, Validators.pattern('https?://.+')]
+    url: ['', Validators.required, Validators.pattern('https?://.+')],
+    manual_html_content: ['']
   });
   private readonly formRepository = inject(TargetRepository);
 

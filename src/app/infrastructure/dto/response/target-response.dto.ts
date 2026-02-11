@@ -6,6 +6,7 @@ export interface TargetResponseDto {
   tech_stack: string
   url: string,
   is_active: boolean
+  manual_html_content?: string
 }
 
 export interface SearchTargetResponseDto {

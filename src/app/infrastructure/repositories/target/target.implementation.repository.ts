@@ -21,7 +21,7 @@ export class TargetImplementationRepository implements TargetRepository {
   async create(params: CreateTargetRequestModel): Promise<any> {
     return await this.primaryService.create(params);
   }
-  async delete(id: number): Promise<any> {
+  async delete(id: string): Promise<any> {
     return await this.primaryService.delete(id);
   }
   async get(params?: FilterTargetRequestModel): Promise<TargetResponseModel[]> {

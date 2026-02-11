@@ -2,14 +2,13 @@ import {Component, inject, signal} from '@angular/core';
 import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
-import {TableColumn} from '@/app/domain/models/general/table-column.model';
 import {FilterListConfig} from '@/app/domain/models/general/filter-list.model';
-import {ListTableDefaultBase} from '@/app/presentation/shared/list-table-default.base';
 import {ListDefaultBase} from '@/app/presentation/shared/list-default.base';
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
 import {TranslatePipe} from '@ngx-translate/core';
 import {RouterLink} from '@angular/router';
+import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
 
 @Component({
   selector: 'app-target-list',
@@ -37,6 +36,7 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
     }
   })
   _targetRepository = inject(TargetRepository)
+  _sweetAlertUtil = inject(SweetAlertUtil)
   constructor() {
     super();
   }
@@ -61,7 +61,36 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
     await this._router.navigate(['/admin/modules', item?.id])
   }
   async toDelete(item: TargetResponseModel){
-    await this._router.navigate(['/admin/modules', item?.id])
+    const result = await this._sweetAlertUtil.fire({
+      title: 'general.messages.confirmDelete',
+      text: `¿Estás seguro de eliminar "${item.name}"? Esta acción marcará el target como inactivo.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'general.actions.delete',
+      cancelButtonText: 'general.actions.cancel'
+    }, ['title', 'confirmButtonText', 'cancelButtonText']);
+
+    if (result.isConfirmed) {
+      try {
+        this.isLoading.set(true);
+        await this._targetRepository.delete(item.id as any);
+        await this._sweetAlertUtil.success(
+          'general.messages.success',
+          'El target ha sido eliminado correctamente'
+        );
+        // Recargar la lista después de eliminar
+        await this.init();
+      } catch (error) {
+        console.error('Error al eliminar target:', error);
+        await this._sweetAlertUtil.error(
+          'general.messages.error',
+          'Ocurrió un error al eliminar el target. Por favor, inténtalo de nuevo.'
+        );
+        this.isLoading.set(false);
+      }
+    }
   }
 
   navigateToAudit(itemId: string) {

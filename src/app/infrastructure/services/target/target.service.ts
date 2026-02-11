@@ -30,7 +30,7 @@ export class TargetService extends BaseService{
     return await this.httpService.post<any>(`${environment.endpoints.target.path}`, this.itemMapper.mapCreate(params), {}, this.getToken);
   }
 
-  async delete(id: number): Promise<any> {
+  async delete(id: string): Promise<any> {
     return await this.httpService.delete<any>(`${environment.endpoints.target.path}/${id}`, {}, this.getToken);
   }
 

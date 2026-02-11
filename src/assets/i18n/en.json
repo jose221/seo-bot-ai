@@ -129,6 +129,11 @@
         "placeholder": "Ex: Wait 2 seconds after loading",
         "help": "Provide special instructions or additional notes"
       },
+      "manualHtmlContent": {
+        "label": "Manual HTML Content",
+        "placeholder": "Paste the complete HTML code of the page here (optional)...",
+        "help": "Optionally, you can provide the complete HTML content of the page for analysis without scraping"
+      },
       "saveButton": "Save Configuration",
       "successMessage": "The configuration has been saved successfully."
     }
