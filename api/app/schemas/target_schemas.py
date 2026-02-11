@@ -62,9 +62,24 @@ class WebPageResponse(BaseModel):
     from_attributes = True
 
 
+class WebPageListItem(BaseModel):
+  """Schema para items de lista de targets (sin contenido pesado)"""
+  id: UUID
+  user_id: UUID
+  url: str
+  name: Optional[str]
+  instructions: Optional[str]
+  tech_stack: Optional[str]
+  is_active: bool
+  audit_reports: Optional[List[AuditReport]] = None
+
+  class Config:
+    from_attributes = True
+
+
 class WebPageListResponse(BaseModel):
   """Respuesta paginada de targets"""
-  items: list[WebPageResponse]
+  items: list[WebPageListItem]
   total: int
   page: int
   page_size: Optional[int] = None
