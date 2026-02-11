@@ -3,6 +3,7 @@ Modelo de Página Web - Targets para auditoría.
 Representa sitios web que serán analizados por el bot.
 """
 from sqlmodel import SQLModel, Field, Relationship
+from sqlalchemy import Column, Text
 from typing import Optional, List
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
@@ -23,6 +24,13 @@ class WebPage(SQLModel, table=True):
     # Datos del target
     url: str = Field(index=True, description="URL completa del sitio a auditar")
     name: Optional[str] = Field(default=None, description="Nombre descriptivo del sitio")
+
+    # HTML manual para auditoría (bypass antibot)
+    manual_html_content: Optional[str] = Field(
+        default=None,
+        sa_column=Column(Text),
+        description="HTML completo ingresado manualmente por el usuario para auditoría offline/bypass"
+    )
 
     # Instrucciones de navegación (opcional)
     instructions: Optional[str] = Field(

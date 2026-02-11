@@ -266,9 +266,6 @@ class AuditEngine:
             except Exception as interaction_err:
                 logger.warning(f"⚠️ Interaction simulation warning: {interaction_err}")
 
-            except Exception as interaction_err:
-                logger.warning(f"⚠️ Interaction simulation warning: {interaction_err}")
-
             # Get page content
             content = await page.get_content()
             page_title = await page.evaluate("document.title") or "Unknown"
@@ -408,16 +405,74 @@ class AuditEngine:
     async def run_lighthouse_audit(
             self,
             url: str,
-            instructions: Optional[str] = None
+            instructions: Optional[str] = None,
+            manual_html_content: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Main entry point for auditing.
         Tries Playwright first, switches to Nodriver if blocked.
+        If manual_html_content is provided, it uses it directly.
         """
         await self._init_browser()
         context = None
 
         try:
+            # 0. Manual HTML Strategy (Bypass Network)
+            if manual_html_content:
+                logger.info("📄 Using provided Manual HTML content (network bypass)...")
+                context = await self.browser.new_context()
+                page = await context.new_page()
+
+                # Load content directly into page
+                await page.set_content(manual_html_content, wait_until='domcontentloaded')
+
+                # Verify basic content
+                page_title = await page.title()
+                logger.info(f"📄 Manual content loaded. Title: {page_title}")
+
+                # Continue with extraction logic (reuse existing logic below)
+                # We skip navigation but run the same JS evaluation scripts
+                html_content = manual_html_content
+
+                # JS Injection for metrics (modified for static content)
+                performance_metrics = {
+                    'timing': {}, 'loadDuration': 0 # No network timing available
+                }
+
+                web_vitals = {'lcp': None, 'cls': None} # No real Web Vitals on static load
+
+                seo_analysis = await page.evaluate("""() => ({
+                    title: document.title,
+                    metaDescription: document.querySelector('meta[name="description"]')?.content || null,
+                    h1Count: document.querySelectorAll('h1').length,
+                    imageCount: document.querySelectorAll('img').length,
+                    imagesWithoutAlt: document.querySelectorAll('img:not([alt])').length,
+                    hasViewport: !!document.querySelector('meta[name="viewport"]')
+                })""")
+
+                lighthouse_scores = self._estimate_lighthouse_scores(
+                    seo_analysis,
+                    performance_metrics,
+                    html_content
+                )
+
+                return {
+                    'url': url,
+                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'status_code': 200,
+                    'html_content': html_content[:15000],
+                    'html_content_raw': html_content,
+                    'performance_score': lighthouse_scores['performance'],
+                    'seo_score': lighthouse_scores['seo'],
+                    'accessibility_score': lighthouse_scores['accessibility'],
+                    'best_practices_score': lighthouse_scores['best_practices'],
+                    'lcp': None,
+                    'cls': None,
+                    'seo_analysis': seo_analysis,
+                    'performance_metrics': performance_metrics,
+                    'method': 'manual_html_injection'
+                }
+
             # 1. Playwright Execution Strategy
             context = await self.browser.new_context(
                 viewport={'width': 1920, 'height': 1080},
@@ -506,7 +561,14 @@ class AuditEngine:
             logger.error(f"❌ Critical Error in Playwright Audit: {str(e)}")
             # Try fallback one last time if it was a generic error that looks like a timeout/block
             if "Timeout" in str(e) or "Target closed" in str(e):
-                return await self._execute_nodriver_audit(url)
+                logger.info(f"🔄 Retrying with Nodriver due to timeout/error: {e}")
+                nodriver_result = await self._execute_nodriver_audit(url)
+
+                if nodriver_result.get("error") and manual_html_content:
+                    logger.warning("⚠️ Nodriver failed after timeout. Switching to MANUAL HTML FALLBACK.")
+                    return await self._audit_with_manual_html(url, manual_html_content)
+
+                return nodriver_result
 
             return {
                 "error": True,

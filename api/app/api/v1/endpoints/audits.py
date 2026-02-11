@@ -62,7 +62,11 @@ async def run_audit_task(
 
         # Ejecutar auditoría con Playwright/Lighthouse
         audit_engine = get_audit_engine()
-        req_lighthouse_params = dict(url=webpage.url, instructions=webpage.instructions)
+        req_lighthouse_params = dict(
+            url=webpage.url,
+            instructions=webpage.instructions,
+            manual_html_content=webpage.manual_html_content
+        )
         lighthouse_result = await _cache.loadFromCacheAsync(
             params=req_lighthouse_params,
             prefix="___lighthouse_report___",

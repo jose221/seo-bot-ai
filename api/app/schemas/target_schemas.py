@@ -41,6 +41,7 @@ class WebPageUpdate(BaseModel):
   instructions: Optional[str] = None
   tech_stack: Optional[str] = Field(None, max_length=500)
   is_active: Optional[bool] = None
+  manual_html_content: Optional[str] = None
 
 
 class WebPageResponse(BaseModel):
@@ -51,6 +52,7 @@ class WebPageResponse(BaseModel):
   name: Optional[str]
   instructions: Optional[str]
   tech_stack: Optional[str]
+  manual_html_content: Optional[str]
   is_active: bool
   audit_reports: Optional[List[AuditReport]] = None
 
