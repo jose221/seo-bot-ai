@@ -1,16 +1,29 @@
 import asyncio
-import re
-import json
 import sys
 import os
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 # Playwright Imports
 from playwright.async_api import async_playwright, Page, Browser
-# Importar stealth de la librería instalada
-from playwright_stealth import stealth_async
+
+# Adaptador para soporte de versiones 1.x y 2.x de playwright-stealth
+stealth_async = None
+try:
+    # Intento 1: Versión antigua (función directa)
+    from playwright_stealth import stealth_async
+except ImportError:
+    try:
+        # Intento 2: Versión nueva/Clase (v2.x)
+        from playwright_stealth import Stealth
+        _stealth_instance = Stealth()
+        stealth_async = _stealth_instance.apply_stealth_async
+        logging.getLogger(__name__).info("✅ Using playwright-stealth v2 (Class-based strategy)")
+    except ImportError:
+        # Log warning and set to None if not available
+        logging.getLogger(__name__).warning("⚠️ playwright-stealth not found or incompatible. Using custom stealth only.")
+        stealth_async = None
 
 # Nodriver Import (Fallback)
 import nodriver as uc
@@ -62,10 +75,11 @@ class AuditEngine:
     async def _apply_playwright_stealth(self, page: Page):
         """Manual stealth injection for Playwright."""
         # Aplicar stealth de la librería (más robusto)
-        try:
-            await stealth_async(page)
-        except Exception as e:
-            logger.warning(f"⚠️ Error aplicando playwright-stealth: {e}")
+        if stealth_async:
+            try:
+                await stealth_async(page)
+            except Exception as e:
+                logger.warning(f"⚠️ Error aplicando playwright-stealth: {e}")
 
         # Refuerzos manuales adicionales
         await page.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
@@ -175,7 +189,7 @@ class AuditEngine:
                     if not os.path.exists(debug_dir):
                         os.makedirs(debug_dir, exist_ok=True)
 
-                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
                     screenshot_path = f"{debug_dir}/BLOCK_DEBUG_{timestamp}.jpg"
                     await page.save_screenshot(screenshot_path)
                     logger.error(f"📸 Screenshot de bloqueo guardado en: {screenshot_path}")
@@ -227,7 +241,7 @@ class AuditEngine:
 
             return {
                 'url': url,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'status_code': 200, # Nodriver handles connection errors via exception
                 'html_content': content[:15000],
                 'html_content_raw': content,
@@ -344,7 +358,7 @@ class AuditEngine:
 
             return {
                 'url': url,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'status_code': response.status if response else 0,
                 'html_content': html_content[:15000],
                 'html_content_raw': html_content,
