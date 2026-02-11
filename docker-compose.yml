@@ -28,6 +28,9 @@ services:
       DISPLAY: ":99"
     # Recursos necesarios para Chrome + Xvfb
     shm_size: '2gb'
+    # Volumen para persistencia de archivos generados
+    volumes:
+      - api-storage:/app/storage
     deploy:
       resources:
         limits:
@@ -35,3 +38,9 @@ services:
         reservations:
           memory: 2G
     restart: unless-stopped
+
+# Volúmenes nombrados para persistencia de datos
+volumes:
+  api-storage:
+    driver: local
+
