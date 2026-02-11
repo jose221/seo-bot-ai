@@ -472,7 +472,9 @@ async def get_comparison(
         created_at=comparison.created_at,
         completed_at=comparison.completed_at,
         comparison_result=comparison_result,
-        error_message=comparison.error_message
+        error_message=comparison.error_message,
+        report_pdf_path=comparison.report_pdf_path,
+        report_excel_path=comparison.report_excel_path
     )
 
 
