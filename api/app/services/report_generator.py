@@ -665,6 +665,90 @@ class ReportGenerator:
         doc.save(filename)
         return str(filename)
 
+    # =========================================================================
+    #  COMPARATIVOS (Benchmarking)
+    # =========================================================================
+
+    def generate_comparison_reports(self, comparison_data: Union[Dict, Any]) -> Dict[str, str]:
+        # 1. Normalización
+        if hasattr(comparison_data, 'model_dump'):
+            data = comparison_data.model_dump()
+        elif hasattr(comparison_data, 'dict'):
+            data = comparison_data.dict()
+        else:
+            data = comparison_data
+
+        ts = datetime.now().strftime("%Y%m%d_%H%M")
+        pdf_path = self.base_dir / f"Benchmark_Report_{ts}.pdf"
+        xlsx_path = self.base_dir / f"Benchmark_Data_{ts}.xlsx"
+        word_path = self.base_dir / f"Benchmark_Report_{ts}.docx"
+
+        self._create_comparison_pdf(data, pdf_path)
+        self._create_comparison_excel(data, xlsx_path)
+        self._create_comparison_docx(data, word_path)
+
+        return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path), "word_path": str(word_path)}
+
+    def _create_comparison_docx(self, data: dict, filename: Path):
+        """Genera el reporte comparativo en Word (DOCX)."""
+        doc = Document()
+
+        # Estilos base
+        self._setup_docx_styles(doc)
+
+        # --- Encabezado ---
+        title = doc.add_heading('Reporte Comparativo de Auditoría SEO', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Meta Info - Suponiendo que hay un campo 'url' y 'id' en los datos de comparación
+        for comp in data.get('comparisons', []):
+            url = comp.get('url', 'Desconocida')
+            audit_id = comp.get('id', 'N/A')
+
+            p = doc.add_paragraph()
+            p.add_run(f"URL: ").bold = True
+            p.add_run(f"{url}\n")
+            p.add_run(f"ID: ").bold = True
+            p.add_run(f"{audit_id}\n")
+            p.add_run(f"Generado: ").bold = True
+            p.add_run(f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
+            doc.add_paragraph() # Spacer
+
+        # --- Tabla Comparativa ---
+        # Suponiendo que hay una sección 'table' en los datos de comparación
+        if 'table' in data:
+            table_data = data['table']
+            # Extraer headers asumiendo que son la primera fila
+            headers = table_data[0] if table_data else []
+            # Crear tabla
+            table = doc.add_table(rows=0, cols=len(headers))
+            table.style = 'Table Grid'
+            table.autofit = True
+
+            # Agregar encabezados
+            hdr_cells = table.add_row().cells
+            for i, header in enumerate(headers):
+                hdr_cells[i].text = str(header)
+                # Estilo header
+                self._set_cell_background(hdr_cells[i], "102A43") # Azul oscuro
+                for layout in hdr_cells[i].paragraphs:
+                    for run in layout.runs:
+                        run.font.color.rgb = RGBColor(255, 255, 255)
+                        run.bold = True
+
+            # Agregar datos
+            for row in table_data[1:]:
+                if not row: continue # Saltar filas vacías
+                row_cells = table.add_row().cells
+                for i, cell_value in enumerate(row):
+                    if i < len(row_cells):
+                        p = row_cells[i].paragraphs[0]
+                        # Limpiar y agregar texto
+                        p.clear()
+                        p.add_run(str(cell_value)).font.size = Pt(10.5)
+
+        doc.save(filename)
+
     def _setup_docx_styles(self, doc):
         """Configura estilos del documento Word."""
         try:
