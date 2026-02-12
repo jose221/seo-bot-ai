@@ -5,6 +5,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Union, Any, Dict
 import openpyxl # Importar openpyxl para estilos
+import docx
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.style import WD_STYLE_TYPE
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 # Importamos tu modelo (ajusta la ruta según tu estructura)
 from app.models.audit import AuditReport
@@ -915,4 +922,3 @@ class ReportGenerator:
                     self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
                 else:
                     pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
-
