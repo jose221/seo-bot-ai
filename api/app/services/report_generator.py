@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import List, Union, Any, Dict
+import openpyxl # Importar openpyxl para estilos
 
 # Importamos tu modelo (ajusta la ruta según tu estructura)
 from app.models.audit import AuditReport
@@ -42,128 +43,170 @@ class ReportGenerator:
         self._setup_pdf_styles()
 
     def _setup_pdf_styles(self):
-        """Define estilos visuales profesionales."""
+        """Define estilos visuales profesionales y sobrios (Corporate/Executive)."""
         self.styles = getSampleStyleSheet()
 
-        # Colores Corporativos (Azul Profundo y Acentos)
-        self.color_primary = colors.HexColor("#2C3E50")
-        self.color_secondary = colors.HexColor("#3498DB")
-        self.color_accent = colors.HexColor("#E74C3C")
-        self.color_bg_light = colors.HexColor("#F8F9F9")
+        # Colores Corporativos Sobrios (Dark Navy & Grey scales)
+        self.color_primary = colors.HexColor("#102A43")   # Azul marino oscuro profundo
+        self.color_secondary = colors.HexColor("#334E68") # Azul acero
+        self.color_accent = colors.HexColor("#D32F2F")    # Rojo oscuro para alertas
+        self.color_bg_light = colors.HexColor("#F0F4F8")  # Gris azulado muy claro
 
         # Estilo Normal Justificado
         self.styles.add(ParagraphStyle(
             name='Justify',
             parent=self.styles['Normal'],
+            fontName='Helvetica',
             alignment=TA_JUSTIFY,
-            leading=14,
-            fontSize=10,
-            textColor=colors.HexColor("#333333")
+            leading=15,             # Interlineado más aireado
+            fontSize=11,            # Letra más legible
+            textColor=colors.HexColor("#243B53"),
+            spaceAfter=8
         ))
 
         # Listas Markdown
         self.styles.add(ParagraphStyle(
             name='MarkdownList',
             parent=self.styles['Normal'],
-            leftIndent=20,
+            fontName='Helvetica',
+            leftIndent=24,
             firstLineIndent=0,
-            spaceAfter=3,
-            bulletIndent=10,
-            leading=12,
-            fontSize=10
+            spaceAfter=6,
+            bulletIndent=12,
+            leading=14,
+            fontSize=11,
+            textColor=colors.HexColor("#243B53")
         ))
 
-        # Bloques de Código (JSON/Code)
+        # Bloques de Código (JSON/Code) - Estilo terminal limpio
         self.styles.add(ParagraphStyle(
             name='CodeBlock',
             fontName='Courier',
-            fontSize=8,
-            leading=10,
-            backColor=colors.whitesmoke,
-            borderPadding=8,
-            leftIndent=0,
-            textColor=colors.HexColor("#2c3e50")
+            fontSize=9,
+            leading=11,
+            backColor=colors.HexColor("#F5F7FA"),
+            borderPadding=10,
+            leftIndent=6,
+            rightIndent=6,
+            textColor=colors.HexColor("#102A43"),
+            spaceBefore=10,
+            spaceAfter=10,
+            borderColor=colors.HexColor("#D9E2EC"),
+            borderWidth=0.5
         ))
 
         # Títulos
         self.styles.add(ParagraphStyle(
             name='ReportTitle',
             parent=self.styles['Title'],
-            fontSize=24,
+            fontSize=28,
             fontName='Helvetica-Bold',
-            spaceBefore=30,
-            spaceAfter=30,
-            leading=32,
+            spaceBefore=40,
+            spaceAfter=50,
+            leading=36,
             textColor=self.color_primary,
             alignment=TA_CENTER
         ))
 
         self.styles.add(ParagraphStyle(
             name='H1',
-            fontSize=16,
+            fontSize=18,
             fontName='Helvetica-Bold',
-            spaceBefore=15,
-            spaceAfter=10,
-            leading=20,
+            spaceBefore=24,
+            spaceAfter=12,
+            leading=22,
             textColor=self.color_primary,
-            borderPadding=5,
-            borderWidth=0,
-            borderColor=self.color_secondary
+            borderPadding=0,
+            borderWidth=0
         ))
 
         self.styles.add(ParagraphStyle(
             name='H2',
-            fontSize=14,
+            fontSize=15,
             fontName='Helvetica-Bold',
-            spaceBefore=12,
-            spaceAfter=6,
-            leading=18,
+            spaceBefore=18,
+            spaceAfter=10,
+            leading=20,
             textColor=self.color_secondary
         ))
 
         self.styles.add(ParagraphStyle(
             name='H3',
-            fontSize=12,
-            fontName='Helvetica-Bold',
-            spaceBefore=10,
-            spaceAfter=5,
-            leading=14,
-            textColor=colors.HexColor("#555555")
+            fontSize=13,
+            fontName='Helvetica-BoldOblique',
+            spaceBefore=12,
+            spaceAfter=6,
+            leading=16,
+            textColor=colors.HexColor("#486581")
         ))
 
         # Estilos para celdas de tabla
         self.styles.add(ParagraphStyle(
             name='CellHeader',
-            fontSize=9,
+            fontSize=10,
             fontName='Helvetica-Bold',
             textColor=colors.white,
-            alignment=TA_CENTER
+            alignment=TA_CENTER,
+            leading=12
         ))
 
         self.styles.add(ParagraphStyle(
             name='CellBody',
-            fontSize=9,
+            fontSize=10,
             fontName='Helvetica',
-            textColor=colors.black,
+            textColor=colors.HexColor("#102A43"),
             alignment=TA_LEFT,
-            leading=11
+            leading=13
         ))
 
-        # Estilo para valores de scores (números grandes)
+        # Estilo para valores de scores
         self.styles.add(ParagraphStyle(
             name='ScoreVal',
-            fontSize=14,
+            fontSize=16,
             fontName='Helvetica-Bold',
             textColor=colors.black,
             alignment=TA_CENTER,
-            leading=16
+            leading=20
         ))
 
     def _get_score_color(self, score: Union[float, None]):
         if score is None: return colors.grey
-        if score >= 90: return colors.HexColor("#27ae60")
-        if score >= 50: return colors.HexColor("#f39c12")
-        return colors.HexColor("#c0392b")
+        if score >= 90: return colors.HexColor("#107C10") # Verde corporativo
+        if score >= 50: return colors.HexColor("#D83B01") # Naranja oscuro
+        return colors.HexColor("#A80000") # Rojo oscuro
+
+    def _extract_json_blocks(self, text: str) -> List[Dict]:
+        """Extrae bloques de código JSON del texto markdown."""
+        if not text: return []
+
+        json_blocks = []
+
+        # 1. Buscar bloques ```json
+        pattern = r"```json\s*([\s\S]*?)\s*```"
+        matches = re.findall(pattern, text)
+
+        for match in matches:
+            try:
+                clean_json = match.strip()
+                parsed = json.loads(clean_json)
+                json_blocks.append(parsed)
+            except json.JSONDecodeError:
+                pass
+
+        # 2. Si no hay bloques explicito, buscar bloques de codigo genericos
+        if not json_blocks:
+            pattern_gen = r"```\s*([\s\S]*?)\s*```"
+            matches_gen = re.findall(pattern_gen, text)
+            for match in matches_gen:
+                try:
+                    clean_json = match.strip()
+                    if clean_json.startswith('{') or clean_json.startswith('['):
+                        parsed = json.loads(clean_json)
+                        json_blocks.append(parsed)
+                except:
+                    pass
+
+        return json_blocks
 
     def _parse_markdown_to_flowables(self, text: str) -> List:
         """
@@ -637,13 +680,30 @@ class ReportGenerator:
             pd.DataFrame(summary_data).to_excel(writer, sheet_name='Dashboard', index=False)
 
             # Ajustar ancho de columnas en Dashboard
-            worksheet = writer.sheets['Dashboard']
-            worksheet.column_dimensions['A'].width = 30
-            worksheet.column_dimensions['B'].width = 50
+            try:
+                worksheet = writer.sheets['Dashboard']
+                worksheet.column_dimensions['A'].width = 30
+                worksheet.column_dimensions['B'].width = 50
+            except: pass
 
-            # 2. Tablas del Análisis de IA para Schemas
+            # 2. Propuesta de Schemas (Global IA Comparison)
             ai_schema_txt = data.get('ai_schema_comparison', '')
             schema_tables = self._extract_tables_from_text(ai_schema_txt)
+            proposed_schemas_global = self._extract_json_blocks(ai_schema_txt)
+
+            if proposed_schemas_global:
+                 prop_data = []
+                 for idx, sc in enumerate(proposed_schemas_global, 1):
+                    prop_data.append({
+                        'Origen': 'Análisis Comparativo Global',
+                        'Type': sc.get('@type', 'Unknown'),
+                        'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
+                    })
+                 pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta Schemas', index=False)
+                 try:
+                     ws = writer.sheets['Propuesta Schemas']
+                     ws.column_dimensions['C'].width = 70
+                 except: pass
 
             if schema_tables:
                 self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
@@ -660,23 +720,6 @@ class ReportGenerator:
 
                 if comp_tables:
                     self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
-                    # Agregar info de cabecera a la hoja (opcional, pero las tablas salen pegadas arriba)
                 else:
-                    # Si no hay tablas, crear hoja vacía con nota
                     pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
 
-    def _write_dfs_to_sheet(self, writer, dfs: List[pd.DataFrame], sheet_name: str):
-        """Escribe múltiples dataframes en una misma hoja, uno debajo del otro."""
-        startrow = 0
-        for i, df in enumerate(dfs):
-            # Agregar titulo numerado si hay varias
-            # Pero to_excel no deja escribir string suelto facilmente sin manipular worksheet directo
-            # Asi que escribimos el DF.
-            try:
-                # Escribir el DF
-                df.to_excel(writer, sheet_name=sheet_name, startrow=startrow, index=False)
-
-                # Ajustar startrow para lasiguiente tabla (+ header + rows + spacing)
-                startrow += len(df) + 3
-            except Exception as e:
-                print(f"Error escribiendo tabla en hoja {sheet_name}: {e}")
