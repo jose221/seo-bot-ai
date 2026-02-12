@@ -342,6 +342,20 @@ async def search_audits(
         # Actualizar el total
         total = len(audits)
 
+    # Verificar reportes faltantes también en búsqueda
+    audits_modified = False
+    # audits es lista de Row (si no seleccionamos scalars) o lista de objetos.
+    # En search_audits seleccionamos columnas especificas asi que 'audits' es lista de Rows/Tuples, NO objetos ORM attached a session completos de la misma manera
+    # Wait, 'statement' en search_audits hace select de columnas especificas: select(AuditReport.id, ...).
+    # Entonces 'audits' son named tuples. No podemos hacer session.add(audit).
+    # Tendriamos que cargar los objetos completos o hacer update.
+    # Dado que search es más light, y devolvemos un esquema simplificado AuditSearchItem,
+    # tal vez NO deberiamos regenerar aqui para no matar performance en busquedas rapidas.
+    # Pero el usuario pidio "getALL y el find". search es un find? Probablemente 'list_audits' es el getAll.
+    # search_audits devuelve AuditSearchItem. list_audits devuelve AuditResponse.
+    # El usuario dijo "getALL y find". Asumire list_audits y get_audit.
+    # En search solo devolveremos lo que hay.
+
     return audit_schemas.AuditSearchResponse(
         items=[
             audit_schemas.AuditSearchItem(
@@ -503,6 +517,20 @@ async def get_audit(
             detail="Auditoría no encontrada"
         )
 
+    # Verificar y generar reportes si faltan
+    if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_excel_path):
+        try:
+            print(f"🔄 Generando reportes faltantes para audit {audit.id}")
+            report_paths = ReportGenerator(audit=audit).generate_all()
+            audit.report_pdf_path = report_paths.get('pdf_path')
+            audit.report_excel_path = report_paths.get('xlsx_path')
+
+            session.add(audit)
+            await session.commit()
+            await session.refresh(audit)
+        except Exception as e:
+            print(f"⚠️ Error generando reportes on-demand: {e}")
+
     return audit
 
 
@@ -653,5 +681,4 @@ async def audits_compare(
         status=comparison.status,
         message=f"Comparación iniciada para {base_webpage.url} vs {len(audit_request.web_page_id_to_compare)} competidores"
     )
-
 

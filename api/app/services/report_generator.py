@@ -381,6 +381,74 @@ class ReportGenerator:
 
         return flowables
 
+    def _extract_tables_from_text(self, text: str) -> List[pd.DataFrame]:
+        """Extrae tablas Markdown de un texto y devuelve una lista de DataFrames."""
+        if not text: return []
+
+        tables = []
+        lines = text.split('\n')
+        current_table = []
+        in_table = False
+        headers = None
+
+        for line in lines:
+            stripped = line.strip()
+            # Detectar fila de tabla
+            if stripped.startswith('|') and '|' in stripped[1:]:
+                # Detectar separador |---|---|
+                if re.match(r'\|?[\s-]+\|[\s-]+\|?', stripped):
+                    continue
+
+                # Limpiar celdas
+                cells = [c.strip() for c in stripped.strip('|').split('|')]
+
+                if not in_table:
+                    # Nueva tabla encontrada
+                    in_table = True
+                    headers = cells
+                else:
+                    # Fila de datos
+                    if headers and len(cells) != len(headers):
+                        if len(cells) < len(headers):
+                            cells.extend([''] * (len(headers) - len(cells)))
+                        else:
+                            cells = cells[:len(headers)]
+                    current_table.append(cells)
+            else:
+                if in_table:
+                    # Fin de tabla
+                    if headers:
+                        try:
+                            df = pd.DataFrame(current_table, columns=headers)
+                            if not df.empty:
+                                tables.append(df)
+                        except Exception as e:
+                            print(f"Error creando tabla excel: {e}")
+
+                    in_table = False
+                    current_table = []
+                    headers = None
+
+        if in_table and headers:
+            try:
+                df = pd.DataFrame(current_table, columns=headers)
+                if not df.empty:
+                    tables.append(df)
+            except:
+                pass
+
+        return tables
+
+    def _write_dfs_to_sheet(self, writer, dfs: List[pd.DataFrame], sheet_name: str):
+        """Escribe múltiples dataframes en una misma hoja, uno debajo del otro."""
+        startrow = 0
+        for i, df in enumerate(dfs):
+            try:
+                df.to_excel(writer, sheet_name=sheet_name, startrow=startrow, index=False)
+                startrow += len(df) + 3
+            except Exception as e:
+                print(f"Error escribiendo tabla en hoja {sheet_name}: {e}")
+
     # =========================================================================
     #  METODOS DE GENERACIÓN (Integrados)
     # =========================================================================
