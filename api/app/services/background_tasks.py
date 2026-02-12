@@ -299,6 +299,7 @@ async def run_comparison_task(
                 # Guardar rutas de los reportes generados
                 comparison.report_pdf_path = report.get('pdf_path')
                 comparison.report_excel_path = report.get('xlsx_path')
+                comparison.report_word_path = report.get('word_path')
 
                 session.add(comparison)
 

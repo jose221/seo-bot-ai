@@ -401,7 +401,8 @@ async def list_comparisons(
         AuditComparison.error_message,
         AuditComparison.comparison_result,
         AuditComparison.report_pdf_path,
-        AuditComparison.report_excel_path
+        AuditComparison.report_excel_path,
+        AuditComparison.report_word_path
     ).where(
         AuditComparison.user_id == current_user.id
     ).order_by(desc(AuditComparison.created_at))
@@ -441,7 +442,8 @@ async def list_comparisons(
             total_competitors=total_competitors,
             error_message=comp.error_message,
             report_pdf_path=comp.report_pdf_path,
-            report_excel_path=comp.report_excel_path
+            report_excel_path=comp.report_excel_path,
+            report_word_path=comp.report_word_path
         ))
 
     return audit_schemas.ComparisonListResponse(
@@ -491,7 +493,8 @@ async def get_comparison(
         comparison_result=comparison_result,
         error_message=comparison.error_message,
         report_pdf_path=comparison.report_pdf_path,
-        report_excel_path=comparison.report_excel_path
+        report_excel_path=comparison.report_excel_path,
+        report_word_path=comparison.report_word_path
     )
 
 
@@ -518,12 +521,13 @@ async def get_audit(
         )
 
     # Verificar y generar reportes si faltan
-    if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_excel_path):
+    if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_excel_path or not audit.report_word_path):
         try:
             print(f"🔄 Generando reportes faltantes para audit {audit.id}")
             report_paths = ReportGenerator(audit=audit).generate_all()
             audit.report_pdf_path = report_paths.get('pdf_path')
             audit.report_excel_path = report_paths.get('xlsx_path')
+            audit.report_word_path = report_paths.get('word_path')
 
             session.add(audit)
             await session.commit()
@@ -570,6 +574,28 @@ async def list_audits(
 
     result = await session.execute(statement)
     audits = result.unique().scalars().all()
+
+    # Verificar reportes faltantes para los items devueltos (solo si status=completed)
+    # Esto asegura que el frontend reciba URLs válidas aunque sea la primera vez que se piden
+    audits_modified = False
+    for audit in audits:
+        if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_excel_path or not audit.report_word_path):
+            try:
+                # Generar reportes
+                # Nota: Esto es bloqueante, pero necesario para cumplir requerimiento de devolver URLs
+                # Para paginación grande esto podría ser lento la primera vez
+                report_paths = ReportGenerator(audit=audit).generate_all()
+                audit.report_pdf_path = report_paths.get('pdf_path')
+                audit.report_excel_path = report_paths.get('xlsx_path')
+                audit.report_word_path = report_paths.get('word_path')
+                session.add(audit)
+                audits_modified = True
+            except Exception as e:
+                print(f"⚠️ Error generando reportes en listado para audit {audit.id}: {e}")
+
+    if audits_modified:
+        # Hacer commit si se generaron reportes para algún audit
+        await session.commit()
 
     return audit_schemas.AuditListResponse(
         items=[audit_schemas.AuditResponse.model_validate(a) for a in audits],

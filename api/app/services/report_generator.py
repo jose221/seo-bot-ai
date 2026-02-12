@@ -574,6 +574,10 @@ class ReportGenerator:
     #  COMPARATIVOS (Benchmarking)
     # =========================================================================
 
+    def _create_comparison_reports(self, comparison_data: Union[Dict, Any]) -> Dict[str, str]:
+        # Método renombrado o usando el de arriba 'generate_comparison_reports'
+        pass
+
     def generate_comparison_reports(self, comparison_data: Union[Dict, Any]) -> Dict[str, str]:
         # 1. Normalización
         if hasattr(comparison_data, 'model_dump'):
@@ -586,12 +590,133 @@ class ReportGenerator:
         ts = datetime.now().strftime("%Y%m%d_%H%M")
         pdf_path = self.base_dir / f"Benchmark_Report_{ts}.pdf"
         xlsx_path = self.base_dir / f"Benchmark_Data_{ts}.xlsx"
+        word_path = self.base_dir / f"Benchmark_Report_{ts}.docx"
 
         self._create_comparison_pdf(data, pdf_path)
-        # Reutilizamos tu lógica de excel existente, o puedes pegarla aquí
         self._create_comparison_excel(data, xlsx_path)
+        self._create_comparison_docx(data, word_path)
 
-        return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path)}
+        return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path), "word_path": str(word_path)}
+
+    def _create_comparison_docx(self, data: dict, filename: Path):
+        """Genera el reporte comparativo en Word."""
+        doc = Document()
+        self._setup_docx_styles(doc)
+
+        base_url = data.get('base_url', 'Unknown URL')
+
+        # Titulo
+        title = doc.add_heading('Reporte de Benchmarking SEO', 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Meta Info
+        p = doc.add_paragraph()
+        p.add_run("Base: ").bold = True
+        run = p.add_run(base_url)
+        run.font.color.rgb = RGBColor(41, 128, 185)
+        p.add_run(f"\nFecha: ").bold = True
+        p.add_run(datetime.now().strftime('%d/%m/%Y'))
+
+        doc.add_paragraph() # Spacer
+
+        # Overall Summary
+        overall = data.get('overall_summary', {})
+        if overall:
+            doc.add_heading("Resumen Ejecutivo", level=1)
+
+            table = doc.add_table(rows=3, cols=2)
+            table.style = 'Table Grid'
+
+            metrics = [
+                ("Total Competidores", str(overall.get('total_competitors', 0))),
+                ("Ranking Performance", str(overall.get('performance_rank', '-'))),
+                ("Ranking SEO", str(overall.get('seo_rank', '-')))
+            ]
+
+            for i, (label, val) in enumerate(metrics):
+                row = table.rows[i].cells
+                row[0].text = label
+                row[0].paragraphs[0].runs[0].bold = True
+                self._set_cell_background(row[0], "F5F5F5")
+                row[1].text = val
+
+            doc.add_paragraph()
+
+        # Markdown de IA Global Comparison
+        ai_schema_md = data.get('ai_schema_comparison', '')
+        if ai_schema_md:
+            # Deberia tener su propio titulo dentro del texto o lo agregamos
+            # doc.add_heading("Análisis Global de Schemas", level=1)
+            self._parse_markdown_to_docx(doc, ai_schema_md)
+            doc.add_page_break()
+
+        # Comparaciones individuales
+        comparisons = data.get('comparisons', [])
+        for comp in comparisons:
+            comp_url = comp.get('compare_url', 'N/A')
+            doc.add_heading(f"VS: {comp_url}", level=1)
+
+            # Tabla Cara a Cara
+            scores = comp.get('performance', {}).get('scores', {})
+
+            table = doc.add_table(rows=1, cols=4)
+            table.style = 'Table Grid'
+
+            headers = ['Métrica', 'Base', 'Competidor', 'Dif.']
+            hdr_cells = table.rows[0].cells
+            for i, h in enumerate(headers):
+                hdr_cells[i].text = h
+                self._set_cell_background(hdr_cells[i], "102A43")
+                p = hdr_cells[i].paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                if p.runs:
+                    p.runs[0].font.color.rgb = RGBColor(255, 255, 255)
+                    p.runs[0].bold = True
+
+            metrics_map = {
+                'performance_score': 'Performance',
+                'seo_score': 'SEO',
+                'accessibility_score': 'Accesibilidad',
+                'best_practices_score': 'Best Practices'
+            }
+
+            for key, label in metrics_map.items():
+                s_data = scores.get(key, {})
+                base_val = s_data.get('base', 0)
+                comp_val = s_data.get('compare', 0)
+                diff = s_data.get('difference', 0)
+
+                row_cells = table.add_row().cells
+                row_cells[0].text = label
+                row_cells[1].text = f"{base_val:.1f}"
+                row_cells[2].text = f"{comp_val:.1f}"
+
+                diff_char = "+" if diff >= 0 else ""
+                row_cells[3].text = f"{diff_char}{diff:.1f}"
+
+                # Color difference
+                p_diff = row_cells[3].paragraphs[0]
+                if diff >= 0:
+                    p_diff.runs[0].font.color.rgb = RGBColor(0, 128, 0)
+                else:
+                    p_diff.runs[0].font.color.rgb = RGBColor(255, 0, 0)
+                p_diff.runs[0].bold = True
+
+                # Align centers
+                for j in range(1, 4):
+                    row_cells[j].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+            doc.add_paragraph()
+
+            # IA Analysis del competidor
+            ai_analysis = comp.get('ai_analysis', '')
+            if ai_analysis:
+                doc.add_heading("Análisis Detallado", level=2)
+                self._parse_markdown_to_docx(doc, ai_analysis)
+
+            doc.add_page_break()
+
+        doc.save(filename)
 
     def _create_comparison_pdf(self, data: dict, filename: Path):
         doc = SimpleDocTemplate(

@@ -71,6 +71,7 @@ class AuditReport(SQLModel, table=True):
     # Rutas de reportes generados
     report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
     report_excel_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+    report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
     # Metadata
     error_message: Optional[str] = Field(default=None)
@@ -91,4 +92,3 @@ class AuditReport(SQLModel, table=True):
                 "web_page": {}
             }
         }
-

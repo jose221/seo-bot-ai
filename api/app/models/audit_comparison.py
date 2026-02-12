@@ -54,6 +54,7 @@ class AuditComparison(SQLModel, table=True):
     # Rutas de reportes generados
     report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
     report_excel_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+    report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
     # Metadata
     include_ai_analysis: bool = Field(default=True)
@@ -69,4 +70,3 @@ class AuditComparison(SQLModel, table=True):
                 "competitor_web_page_ids": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"]
             }
         }
-
