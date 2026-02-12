@@ -218,10 +218,11 @@ class ReportGenerator:
 
             if not data: return None
 
-            # Calcular ancho dinámico (asumiendo ancho página LETTER - margenes)
-            # Ancho disponible aprox 470 puntos
+            # Calcular ancho dinámico (asumiendo ancho página LETTER - margenes 0.4 inch cada lado)
+            # Ancho disponible aprox 7.7 inch
             col_count = len(data[0])
-            col_width = (7.5 * inch) / col_count # Distribuir equitativamente
+            available_width = 7.7 * inch
+            col_width = available_width / col_count # Distribuir equitativamente
 
             t = Table(data, colWidths=[col_width] * col_count)
 

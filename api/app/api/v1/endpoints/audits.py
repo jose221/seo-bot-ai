@@ -460,6 +460,9 @@ async def get_comparison(
             detail="Comparación no encontrada"
         )
 
+    # Asegurar que se carguen los datos más recientes
+    await session.refresh(comparison)
+
     # Construir respuesta
     comparison_result = None
     if comparison.comparison_result and comparison.status == ComparisonStatus.COMPLETED:
