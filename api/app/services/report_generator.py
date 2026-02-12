@@ -596,10 +596,87 @@ class ReportGenerator:
         doc.build(story)
 
     def _create_comparison_excel(self, data: dict, filename: Path):
-        # (Tu código de excel existente aquí)
-        # Lo incluyo simplificado para que el bloque de código sea funcional
+        """Genera un Excel rico con múltiples hojas y tablas extraídas de la IA."""
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            rows = []
-            for c in data.get('comparisons', []):
-                rows.append({'URL': c.get('compare_url'), 'Score': c.get('performance', {}).get('scores', {}).get('performance_score', {}).get('compare')})
-            if rows: pd.DataFrame(rows).to_excel(writer, sheet_name='Summary')
+            # 1. Hoja de Resumen (Dashboard)
+            summary_data = []
+
+            # Datos Generales
+            base_url = data.get('base_url', 'Unknown')
+            overall = data.get('overall_summary', {})
+
+            summary_data.append({'Metric': 'Base URL', 'Value': base_url})
+            summary_data.append({'Metric': 'Fecha Reporte', 'Value': datetime.now().strftime("%Y-%m-%d %H:%M")})
+            summary_data.append({'Metric': 'Total Competidores', 'Value': overall.get('total_competitors', 0)})
+            summary_data.append({'Metric': 'Ranking Performance', 'Value': overall.get('performance_rank', '-')})
+            summary_data.append({'Metric': 'Ranking SEO', 'Value': overall.get('seo_rank', '-')})
+
+            # Espacio
+            summary_data.append({'Metric': '', 'Value': ''})
+
+            # Tabla comparativa de scores principales
+            comparisons = data.get('comparisons', [])
+            for comp in comparisons:
+                c_url = comp.get('compare_url', 'N/A')
+                scores = comp.get('performance', {}).get('scores', {})
+
+                # Performance
+                p_s = scores.get('performance_score', {})
+                summary_data.append({
+                    'Metric': f"VS {c_url} - Performance",
+                    'Value': f"Base: {p_s.get('base')} | Comp: {p_s.get('compare')} ({p_s.get('difference'):+})"
+                })
+
+                # SEO
+                s_s = scores.get('seo_score', {})
+                summary_data.append({
+                    'Metric': f"VS {c_url} - SEO",
+                    'Value': f"Base: {s_s.get('base')} | Comp: {s_s.get('compare')} ({s_s.get('difference'):+})"
+                })
+
+            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Dashboard', index=False)
+
+            # Ajustar ancho de columnas en Dashboard
+            worksheet = writer.sheets['Dashboard']
+            worksheet.column_dimensions['A'].width = 30
+            worksheet.column_dimensions['B'].width = 50
+
+            # 2. Tablas del Análisis de IA para Schemas
+            ai_schema_txt = data.get('ai_schema_comparison', '')
+            schema_tables = self._extract_tables_from_text(ai_schema_txt)
+
+            if schema_tables:
+                self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
+
+            # 3. Hojas por Competidor (Tablas de su análisis)
+            for idx, comp in enumerate(comparisons, 1):
+                comp_url = comp.get('compare_url', 'Unknown')
+                # Limpiar nombre hoja (max 31 chars)
+                sheet_name = f"Comp {idx}"
+
+                # Extraer tablas del análisis individual
+                ai_analysis_txt = comp.get('ai_analysis', '')
+                comp_tables = self._extract_tables_from_text(ai_analysis_txt)
+
+                if comp_tables:
+                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
+                    # Agregar info de cabecera a la hoja (opcional, pero las tablas salen pegadas arriba)
+                else:
+                    # Si no hay tablas, crear hoja vacía con nota
+                    pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
+
+    def _write_dfs_to_sheet(self, writer, dfs: List[pd.DataFrame], sheet_name: str):
+        """Escribe múltiples dataframes en una misma hoja, uno debajo del otro."""
+        startrow = 0
+        for i, df in enumerate(dfs):
+            # Agregar titulo numerado si hay varias
+            # Pero to_excel no deja escribir string suelto facilmente sin manipular worksheet directo
+            # Asi que escribimos el DF.
+            try:
+                # Escribir el DF
+                df.to_excel(writer, sheet_name=sheet_name, startrow=startrow, index=False)
+
+                # Ajustar startrow para lasiguiente tabla (+ header + rows + spacing)
+                startrow += len(df) + 3
+            except Exception as e:
+                print(f"Error escribiendo tabla en hoja {sheet_name}: {e}")
