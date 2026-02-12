@@ -86,7 +86,8 @@ export class FindCompareAuditResponseModel {
     public comparison_result: ComparisonResultModel,
     public error_message: string | null,
     public report_pdf_path?: string | null,
-    public report_excel_path?: string | null
+    public report_excel_path?: string | null,
+    public report_word_path?: string | null
   ) {}
 }
 

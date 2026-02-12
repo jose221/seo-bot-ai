@@ -153,14 +153,16 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     this.init()
   }
 
-  downloadReport(type: 'pdf' | 'excel') {
+  downloadReport(type: 'pdf' | 'excel' | 'word') {
     const baseUrl = environment.apiUrl.replace('/api/v1', '');
     let reportPath: string | null | undefined;
 
     if (type === 'pdf') {
       reportPath = this.responseCompareAudit().report_pdf_path;
-    } else {
+    } else if (type === 'excel') {
       reportPath = this.responseCompareAudit().report_excel_path;
+    } else {
+      reportPath = this.responseCompareAudit().report_word_path;
     }
 
     if (!reportPath) {
