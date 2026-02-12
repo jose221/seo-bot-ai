@@ -749,6 +749,204 @@ class ReportGenerator:
 
         doc.save(filename)
 
+    def _create_comparison_pdf(self, data: dict, filename: Path):
+        doc = SimpleDocTemplate(
+            str(filename),
+            pagesize=LETTER,
+            topMargin=40,
+            bottomMargin=40,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
+        )
+        story = []
+
+        base_url = data.get('base_url', 'Unknown URL')
+
+        # Titulo
+        story.append(Paragraph("Reporte de Benchmarking SEO", self.styles["ReportTitle"]))
+
+        # Meta Info
+        story.append(Paragraph(f"<b>Base:</b> <font color='#2980b9'>{base_url}</font>", self.styles["Justify"]))
+        story.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y')}", self.styles["Justify"]))
+
+        # Separator Line
+        line_data = [[" "]]
+        t_line = Table(line_data, colWidths=[7.5*inch], rowHeights=[5])
+        t_line.setStyle(TableStyle([
+            ('LINEBELOW', (0,0), (-1,-1), 2, self.color_secondary),
+        ]))
+        story.append(t_line)
+
+        story.append(Spacer(1, 25))
+
+        # Overall Summary
+        overall = data.get('overall_summary', {})
+        if overall:
+            story.append(Paragraph("Resumen Ejecutivo", self.styles["H1"]))
+            # Formateamos el resumen como una tabla pequeña para que se vea limpio
+            summ_data = [
+                ["Total Competidores", str(overall.get('total_competitors', 0))],
+                ["Ranking Performance", str(overall.get('performance_rank', '-'))],
+                ["Ranking SEO", str(overall.get('seo_rank', '-'))]
+            ]
+            t = Table(summ_data, colWidths=[2.5*inch, 2*inch], hAlign='LEFT')
+            t.setStyle(TableStyle([
+                ('GRID', (0,0), (-1,-1), 0.5, colors.lightgrey),
+                ('BACKGROUND', (0,0), (0,-1), colors.whitesmoke),
+                ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+                ('PADDING', (0,0), (-1,-1), 6),
+            ]))
+            story.append(t)
+            story.append(Spacer(1, 15))
+
+        # Markdown de IA (Aquí es donde la magia del nuevo parser actúa)
+        ai_schema_md = data.get('ai_schema_comparison', '')
+        if ai_schema_md:
+            story.append(Spacer(1, 10))
+            # Esto ahora detectará las tablas Markdown y las pintará bonitas
+            story.extend(self._parse_markdown_to_flowables(ai_schema_md))
+            story.append(PageBreak())
+
+        # Comparaciones individuales
+        comparisons = data.get('comparisons', [])
+        for comp in comparisons:
+            comp_url = comp.get('compare_url', 'N/A')
+            story.append(Paragraph(f"VS: {comp_url}", self.styles["H1"]))
+
+            # Tabla Cara a Cara
+            scores = comp.get('performance', {}).get('scores', {})
+            table_data = [['Métrica', 'Base', 'Competidor', 'Dif.']]
+
+            metrics_map = {
+                'performance_score': 'Performance',
+                'seo_score': 'SEO',
+                'accessibility_score': 'Accesibilidad',
+                'best_practices_score': 'Best Practices'
+            }
+
+            for key, label in metrics_map.items():
+                s_data = scores.get(key, {})
+                base_val = s_data.get('base', 0)
+                comp_val = s_data.get('compare', 0)
+                diff = s_data.get('difference', 0)
+
+                c_diff = "green" if diff >= 0 else "red"
+                diff_char = "+" if diff >= 0 else ""
+
+                table_data.append([
+                    label,
+                    f"{base_val:.1f}",
+                    f"{comp_val:.1f}",
+                    Paragraph(f"<font color='{c_diff}'><b>{diff_char}{diff:.1f}</b></font>", self.styles["CellBody"])
+                ])
+
+            t = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+            t.setStyle(TableStyle([
+                ('BACKGROUND', (0,0), (-1,0), self.color_primary),
+                ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+                ('ALIGN', (1,0), (-1,-1), 'CENTER'),
+                ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
+                ('PADDING', (0,0), (-1,-1), 8),
+                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+            ]))
+            story.append(t)
+            story.append(Spacer(1, 15))
+
+            # IA Analysis del competidor
+            ai_analysis = comp.get('ai_analysis', '')
+            if ai_analysis:
+                story.append(Paragraph("Análisis Detallado", self.styles["H2"]))
+                story.extend(self._parse_markdown_to_flowables(ai_analysis))
+
+            story.append(PageBreak())
+
+        doc.build(story)
+
+    def _create_comparison_excel(self, data: dict, filename: Path):
+        """Genera un Excel rico con múltiples hojas y tablas extraídas de la IA."""
+        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
+            # 1. Hoja de Resumen (Dashboard)
+            summary_data = []
+
+            # Datos Generales
+            base_url = data.get('base_url', 'Unknown')
+            overall = data.get('overall_summary', {})
+
+            summary_data.append({'Metric': 'Base URL', 'Value': base_url})
+            summary_data.append({'Metric': 'Fecha Reporte', 'Value': datetime.now().strftime("%Y-%m-%d %H:%M")})
+            summary_data.append({'Metric': 'Total Competidores', 'Value': overall.get('total_competitors', 0)})
+            summary_data.append({'Metric': 'Ranking Performance', 'Value': overall.get('performance_rank', '-')})
+            summary_data.append({'Metric': 'Ranking SEO', 'Value': overall.get('seo_rank', '-')})
+
+            # Espacio
+            summary_data.append({'Metric': '', 'Value': ''})
+
+            # Tabla comparativa de scores principales
+            comparisons = data.get('comparisons', [])
+            for comp in comparisons:
+                c_url = comp.get('compare_url', 'N/A')
+                scores = comp.get('performance', {}).get('scores', {})
+
+                # Performance
+                p_s = scores.get('performance_score', {})
+                summary_data.append({
+                    'Metric': f"VS {c_url} - Performance",
+                    'Value': f"Base: {p_s.get('base')} | Comp: {p_s.get('compare')} ({p_s.get('difference'):+})"
+                })
+
+                # SEO
+                s_s = scores.get('seo_score', {})
+                summary_data.append({
+                    'Metric': f"VS {c_url} - SEO",
+                    'Value': f"Base: {s_s.get('base')} | Comp: {s_s.get('compare')} ({s_s.get('difference'):+})"
+                })
+
+            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Dashboard', index=False)
+
+            # Ajustar ancho de columnas en Dashboard
+            try:
+                worksheet = writer.sheets['Dashboard']
+                worksheet.column_dimensions['A'].width = 30
+                worksheet.column_dimensions['B'].width = 50
+            except: pass
+
+            # 2. Propuesta de Schemas (Global IA Comparison)
+            ai_schema_txt = data.get('ai_schema_comparison', '')
+            schema_tables = self._extract_tables_from_text(ai_schema_txt)
+            proposed_schemas_global = self._extract_json_blocks(ai_schema_txt)
+
+            if proposed_schemas_global:
+                 prop_data = []
+                 for idx, sc in enumerate(proposed_schemas_global, 1):
+                    prop_data.append({
+                        'Origen': 'Análisis Comparativo Global',
+                        'Type': sc.get('@type', 'Unknown'),
+                        'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
+                    })
+                 pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta Schemas', index=False)
+                 try:
+                     ws = writer.sheets['Propuesta Schemas']
+                     ws.column_dimensions['C'].width = 70
+                 except: pass
+
+            if schema_tables:
+                self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
+
+            # 3. Hojas por Competidor (Tablas de su análisis)
+            for idx, comp in enumerate(comparisons, 1):
+                comp_url = comp.get('compare_url', 'Unknown')
+                # Limpiar nombre hoja (max 31 chars)
+                sheet_name = f"Comp {idx}"
+
+                # Extraer tablas del análisis individual
+                ai_analysis_txt = comp.get('ai_analysis', '')
+                comp_tables = self._extract_tables_from_text(ai_analysis_txt)
+
+                if comp_tables:
+                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
+                else:
+                    pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
+
     def _setup_docx_styles(self, doc):
         """Configura estilos del documento Word."""
         try:
