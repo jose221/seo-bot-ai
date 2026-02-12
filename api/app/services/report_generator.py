@@ -5,13 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Union, Any, Dict
 import openpyxl # Importar openpyxl para estilos
-import docx
-from docx import Document
-from docx.shared import Inches, Pt, RGBColor
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml.ns import qn
-from docx.oxml import OxmlElement
+from pdf2docx import Converter
 
 # Importamos tu modelo (ajusta la ruta según tu estructura)
 from app.models.audit import AuditReport
@@ -575,95 +569,16 @@ class ReportGenerator:
         return str(filename)
 
     def generate_docx(self) -> str:
-        """Genera el reporte en Word (DOCX)."""
-        filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.docx"
-        doc = Document()
+        """Genera el reporte en Word (DOCX) convirtiendo el PDF."""
+        pdf_filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.pdf"
+        docx_filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.docx"
 
-        # Estilos base
-        self._setup_docx_styles(doc)
+        # Si el PDF no existe, lo creamos
+        if not pdf_filename.exists():
+            self.generate_pdf()
 
-        # --- Encabezado ---
-        title = doc.add_heading('Reporte de Auditoría SEO Integral', 0)
-        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-        # Meta Info
-        p = doc.add_paragraph()
-        p.add_run(f"URL Objetivo: ").bold = True
-        p.add_run(f"{self.url}\n")
-        p.add_run(f"ID: ").bold = True
-        p.add_run(f"{self.audit.id}\n")
-        p.add_run(f"Generado: ").bold = True
-        p.add_run(f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
-
-        doc.add_paragraph() # Spacer
-
-        # --- Score Cards ---
-        # Tabla de 2 filas: Headers y Valores
-        table = doc.add_table(rows=2, cols=4)
-        table.style = 'Table Grid'
-
-        headers = ['Performance', 'SEO', 'Accessibility', 'Best Practices']
-        scores = [
-            self.audit.performance_score, self.audit.seo_score,
-            self.audit.accessibility_score, self.audit.best_practices_score
-        ]
-
-        # Llenar headers
-        for i, header in enumerate(headers):
-            cell = table.cell(0, i)
-            cell.text = header
-            # Centrar y negrita
-            tc = cell.paragraphs[0]
-            tc.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            tc.runs[0].bold = True
-            self._set_cell_background(cell, "102A43") # Azul oscuro
-            tc.runs[0].font.color.rgb = RGBColor(255, 255, 255)
-
-        # Llenar valores
-        for i, score in enumerate(scores):
-            cell = table.cell(1, i)
-            cell.text = str(score or 'N/A')
-            tc = cell.paragraphs[0]
-            tc.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            tc.runs[0].font.size = Pt(16)
-            tc.runs[0].bold = True
-
-            # Color segun score
-            color = self._get_score_color_docx(score)
-            tc.runs[0].font.color.rgb = color
-
-        doc.add_paragraph()
-
-        # --- Análisis IA ---
-        doc.add_heading('Análisis de Inteligencia Artificial', level=1)
-        analysis_text = self.ai_data.get('analysis', '')
-        if analysis_text:
-            self._parse_markdown_to_docx(doc, analysis_text)
-        else:
-            doc.add_paragraph("No disponible.", style='Normal')
-
-        doc.add_page_break()
-
-        # --- Schemas ---
-        schemas = self.seo_data.get('schema_markup', [])
-        doc.add_heading(f"Datos Estructurados ({len(schemas)})", level=1)
-
-        if schemas:
-            for idx, schema in enumerate(schemas, 1):
-                s_type = schema.get('@type', 'Unknown')
-                doc.add_heading(f"{idx}. {s_type}", level=3)
-
-                json_str = json.dumps(schema, indent=2, ensure_ascii=False)
-                # Code block simulado
-                p = doc.add_paragraph(json_str)
-                p.style = 'Quote' # Usar estilo Quote o crear uno custom de código
-                # Aplicar fuente monoespaciada
-                for run in p.runs:
-                    run.font.name = 'Courier New'
-                    run.font.size = Pt(9)
-
-        doc.save(filename)
-        return str(filename)
+        self._convert_pdf_to_word(pdf_filename, docx_filename)
+        return str(docx_filename)
 
     # =========================================================================
     #  COMPARATIVOS (Benchmarking)
@@ -685,69 +600,19 @@ class ReportGenerator:
 
         self._create_comparison_pdf(data, pdf_path)
         self._create_comparison_excel(data, xlsx_path)
-        self._create_comparison_docx(data, word_path)
+
+        self._convert_pdf_to_word(pdf_path, word_path)
 
         return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path), "word_path": str(word_path)}
 
-    def _create_comparison_docx(self, data: dict, filename: Path):
-        """Genera el reporte comparativo en Word (DOCX)."""
-        doc = Document()
-
-        # Estilos base
-        self._setup_docx_styles(doc)
-
-        # --- Encabezado ---
-        title = doc.add_heading('Reporte Comparativo de Auditoría SEO', 0)
-        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-        # Meta Info - Suponiendo que hay un campo 'url' y 'id' en los datos de comparación
-        for comp in data.get('comparisons', []):
-            url = comp.get('url', 'Desconocida')
-            audit_id = comp.get('id', 'N/A')
-
-            p = doc.add_paragraph()
-            p.add_run(f"URL: ").bold = True
-            p.add_run(f"{url}\n")
-            p.add_run(f"ID: ").bold = True
-            p.add_run(f"{audit_id}\n")
-            p.add_run(f"Generado: ").bold = True
-            p.add_run(f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
-            doc.add_paragraph() # Spacer
-
-        # --- Tabla Comparativa ---
-        # Suponiendo que hay una sección 'table' en los datos de comparación
-        if 'table' in data:
-            table_data = data['table']
-            # Extraer headers asumiendo que son la primera fila
-            headers = table_data[0] if table_data else []
-            # Crear tabla
-            table = doc.add_table(rows=0, cols=len(headers))
-            table.style = 'Table Grid'
-            table.autofit = True
-
-            # Agregar encabezados
-            hdr_cells = table.add_row().cells
-            for i, header in enumerate(headers):
-                hdr_cells[i].text = str(header)
-                # Estilo header
-                self._set_cell_background(hdr_cells[i], "102A43") # Azul oscuro
-                for layout in hdr_cells[i].paragraphs:
-                    for run in layout.runs:
-                        run.font.color.rgb = RGBColor(255, 255, 255)
-                        run.bold = True
-
-            # Agregar datos
-            for row in table_data[1:]:
-                if not row: continue # Saltar filas vacías
-                row_cells = table.add_row().cells
-                for i, cell_value in enumerate(row):
-                    if i < len(row_cells):
-                        p = row_cells[i].paragraphs[0]
-                        # Limpiar y agregar texto
-                        p.clear()
-                        p.add_run(str(cell_value)).font.size = Pt(10.5)
-
-        doc.save(filename)
+    def _convert_pdf_to_word(self, pdf_path: Path, word_path: Path):
+        """Convierte un archivo PDF a Word (DOCX) usando pdf2docx."""
+        try:
+            cv = Converter(str(pdf_path))
+            cv.convert(str(word_path), start=0, end=None)
+            cv.close()
+        except Exception as e:
+            print(f"Error convirtiendo PDF a Word: {e}")
 
     def _create_comparison_pdf(self, data: dict, filename: Path):
         doc = SimpleDocTemplate(
@@ -947,170 +812,9 @@ class ReportGenerator:
                 else:
                     pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
 
-    def _setup_docx_styles(self, doc):
-        """Configura estilos del documento Word."""
-        try:
-            # Puedes personalizar estilos existentes o crear nuevos
-            # Estilo Normal
-            styles = doc.styles
-            if 'Normal' in styles:
-                style = styles['Normal']
-                font = style.font
-                font.name = 'Helvetica'
-                font.size = Pt(11)
-                font.color.rgb = RGBColor(36, 59, 83) # #243B53
-        except:
-            pass
 
-    def _get_score_color_docx(self, score):
-        if score is None: return RGBColor(128, 128, 128)
-        if score >= 90: return RGBColor(16, 124, 16) # #107C10
-        if score >= 50: return RGBColor(216, 59, 1) # #D83B01
-        return RGBColor(168, 0, 0) # #A80000
 
-    def _set_cell_background(self, cell, hex_color):
-        """Helper para poner color de fondo a una celda."""
-        shading_elm = OxmlElement('w:shd')
-        shading_elm.set(qn('w:val'), 'clear')
-        shading_elm.set(qn('w:color'), 'auto')
-        shading_elm.set(qn('w:fill'), hex_color)
-        cell._tc.get_or_add_tcPr().append(shading_elm)
 
-    def _parse_markdown_to_docx(self, doc, text: str):
-        """Parsea Markdown básico a elementos de Word."""
-        lines = text.split('\n')
-        in_code = False
-        code_buffer = []
-        in_table = False
-        table_buffer = []
-
-        # Helper para procesar formato inline (**negrita**)
-        def add_formatted_text(paragraph, text):
-            # Split por **
-            parts = re.split(r'(\*\*.*?\*\*)', text)
-            for part in parts:
-                if part.startswith('**') and part.endswith('**'):
-                    run = paragraph.add_run(part[2:-2])
-                    run.bold = True
-                else:
-                    # Buscar `code` inline
-                    subparts = re.split(r'(`.*?`)', part)
-                    for subpart in subparts:
-                        if subpart.startswith('`') and subpart.endswith('`'):
-                            run = paragraph.add_run(subpart[1:-1])
-                            run.font.name = 'Courier New'
-                            run.font.highlight_color = 16 # Gris claro (WD_COLOR_INDEX.GRAY_25 aprox)
-                        else:
-                            paragraph.add_run(subpart)
-
-        def flush_table_docx(buffer):
-            if not buffer: return
-            # Determinar dimensiones
-            rows_data = []
-            for line in buffer:
-                # Basic pipe parsing
-                cols = [c.strip() for c in line.strip('|').split('|')]
-                rows_data.append(cols)
-
-            if not rows_data: return
-
-            # Crear tabla
-            num_cols = len(rows_data[0])
-            table = doc.add_table(rows=0, cols=num_cols)
-            table.style = 'Table Grid'
-            table.autofit = True
-
-            # Header
-            hdr_cells = table.add_row().cells
-            for i, col_txt in enumerate(rows_data[0]):
-                if i < len(hdr_cells):
-                    hdr_cells[i].text = col_txt
-                    # Estilo header
-                    self._set_cell_background(hdr_cells[i], "102A43") # Azul oscuro
-                    for layout in hdr_cells[i].paragraphs:
-                        for run in layout.runs:
-                            run.font.color.rgb = RGBColor(255, 255, 255)
-                            run.bold = True
-
-            # Data
-            for row_cols in rows_data[1:]:
-                # Check if separator row
-                if set(''.join(row_cols)) <= set(['-', ' ', ':']): continue
-
-                row_cells = table.add_row().cells
-                for i, col_txt in enumerate(row_cols):
-                    if i < len(row_cells):
-                        p = row_cells[i].paragraphs[0]
-                        add_formatted_text(p, col_txt)
-
-            doc.add_paragraph() # Spacer
-
-        for line in lines:
-            stripped = line.strip()
-
-            # Code Blocks
-            if stripped.startswith("```"):
-                if in_code:
-                    # Flush code
-                    p = doc.add_paragraph('\n'.join(code_buffer))
-                    p.style = 'Quote' # Estilo simple para código
-                    for run in p.runs:
-                        run.font.name = 'Courier New'
-                        run.font.size = Pt(9)
-                    code_buffer = []
-                    in_code = False
-                else:
-                    if in_table:
-                        flush_table_docx(table_buffer)
-                        table_buffer = []
-                        in_table = False
-                    in_code = True
-                continue
-
-            if in_code:
-                code_buffer.append(line)
-                continue
-
-            # Tables
-            if stripped.startswith('|') and '|' in stripped[1:]:
-                if not in_table:
-                    in_table = True
-                    table_buffer = []
-                table_buffer.append(stripped)
-                continue
-
-            if in_table:
-                flush_table_docx(table_buffer)
-                table_buffer = []
-                in_table = False
-
-            if not stripped: continue
-
-            # Headings
-            if stripped.startswith('#'):
-                level = stripped.count('#')
-                txt = stripped.strip('# ').strip()
-                # Word supports levels 1-9
-                lvl = min(level, 9)
-                doc.add_heading(txt, level=lvl)
-
-            # Lists
-            elif stripped.startswith('- ') or stripped.startswith('* '):
-                txt = stripped[2:]
-                p = doc.add_paragraph(style='List Bullet')
-                add_formatted_text(p, txt)
-
-            else:
-                p = doc.add_paragraph()
-                add_formatted_text(p, stripped)
-
-        # Final flush
-        if in_table: flush_table_docx(table_buffer)
-        if in_code and code_buffer:
-            p = doc.add_paragraph('\n'.join(code_buffer))
-            p.style = 'Quote'
-            for run in p.runs:
-                run.font.name = 'Courier New'
 
     def generate_all(self):
         return {
