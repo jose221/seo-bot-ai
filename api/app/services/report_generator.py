@@ -574,351 +574,266 @@ class ReportGenerator:
 
         return str(filename)
 
-    def generate_all(self):
-        return {"pdf_path": self.generate_pdf(), "xlsx_path": self.generate_excel()}
-
-    # =========================================================================
-    #  COMPARATIVOS (Benchmarking)
-    # =========================================================================
-
-    def _create_comparison_reports(self, comparison_data: Union[Dict, Any]) -> Dict[str, str]:
-        # Método renombrado o usando el de arriba 'generate_comparison_reports'
-        pass
-
-    def generate_comparison_reports(self, comparison_data: Union[Dict, Any]) -> Dict[str, str]:
-        # 1. Normalización
-        if hasattr(comparison_data, 'model_dump'):
-            data = comparison_data.model_dump()
-        elif hasattr(comparison_data, 'dict'):
-            data = comparison_data.dict()
-        else:
-            data = comparison_data
-
-        ts = datetime.now().strftime("%Y%m%d_%H%M")
-        pdf_path = self.base_dir / f"Benchmark_Report_{ts}.pdf"
-        xlsx_path = self.base_dir / f"Benchmark_Data_{ts}.xlsx"
-        word_path = self.base_dir / f"Benchmark_Report_{ts}.docx"
-
-        self._create_comparison_pdf(data, pdf_path)
-        self._create_comparison_excel(data, xlsx_path)
-        self._create_comparison_docx(data, word_path)
-
-        return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path), "word_path": str(word_path)}
-
-    def _create_comparison_docx(self, data: dict, filename: Path):
-        """Genera el reporte comparativo en Word."""
+    def generate_docx(self) -> str:
+        """Genera el reporte en Word (DOCX)."""
+        filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.docx"
         doc = Document()
+
+        # Estilos base
         self._setup_docx_styles(doc)
 
-        base_url = data.get('base_url', 'Unknown URL')
-
-        # Titulo
-        title = doc.add_heading('Reporte de Benchmarking SEO', 0)
+        # --- Encabezado ---
+        title = doc.add_heading('Reporte de Auditoría SEO Integral', 0)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         # Meta Info
         p = doc.add_paragraph()
-        p.add_run("Base: ").bold = True
-        run = p.add_run(base_url)
-        run.font.color.rgb = RGBColor(41, 128, 185)
-        p.add_run(f"\nFecha: ").bold = True
-        p.add_run(datetime.now().strftime('%d/%m/%Y'))
+        p.add_run(f"URL Objetivo: ").bold = True
+        p.add_run(f"{self.url}\n")
+        p.add_run(f"ID: ").bold = True
+        p.add_run(f"{self.audit.id}\n")
+        p.add_run(f"Generado: ").bold = True
+        p.add_run(f"{datetime.now().strftime('%d/%m/%Y %H:%M')}")
 
         doc.add_paragraph() # Spacer
 
-        # Overall Summary
-        overall = data.get('overall_summary', {})
-        if overall:
-            doc.add_heading("Resumen Ejecutivo", level=1)
+        # --- Score Cards ---
+        # Tabla de 2 filas: Headers y Valores
+        table = doc.add_table(rows=2, cols=4)
+        table.style = 'Table Grid'
 
-            table = doc.add_table(rows=3, cols=2)
-            table.style = 'Table Grid'
+        headers = ['Performance', 'SEO', 'Accessibility', 'Best Practices']
+        scores = [
+            self.audit.performance_score, self.audit.seo_score,
+            self.audit.accessibility_score, self.audit.best_practices_score
+        ]
 
-            metrics = [
-                ("Total Competidores", str(overall.get('total_competitors', 0))),
-                ("Ranking Performance", str(overall.get('performance_rank', '-'))),
-                ("Ranking SEO", str(overall.get('seo_rank', '-')))
-            ]
+        # Llenar headers
+        for i, header in enumerate(headers):
+            cell = table.cell(0, i)
+            cell.text = header
+            # Centrar y negrita
+            tc = cell.paragraphs[0]
+            tc.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            tc.runs[0].bold = True
+            self._set_cell_background(cell, "102A43") # Azul oscuro
+            tc.runs[0].font.color.rgb = RGBColor(255, 255, 255)
 
-            for i, (label, val) in enumerate(metrics):
-                row = table.rows[i].cells
-                row[0].text = label
-                row[0].paragraphs[0].runs[0].bold = True
-                self._set_cell_background(row[0], "F5F5F5")
-                row[1].text = val
+        # Llenar valores
+        for i, score in enumerate(scores):
+            cell = table.cell(1, i)
+            cell.text = str(score or 'N/A')
+            tc = cell.paragraphs[0]
+            tc.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            tc.runs[0].font.size = Pt(16)
+            tc.runs[0].bold = True
 
-            doc.add_paragraph()
+            # Color segun score
+            color = self._get_score_color_docx(score)
+            tc.runs[0].font.color.rgb = color
 
-        # Markdown de IA Global Comparison
-        ai_schema_md = data.get('ai_schema_comparison', '')
-        if ai_schema_md:
-            # Deberia tener su propio titulo dentro del texto o lo agregamos
-            # doc.add_heading("Análisis Global de Schemas", level=1)
-            self._parse_markdown_to_docx(doc, ai_schema_md)
-            doc.add_page_break()
+        doc.add_paragraph()
 
-        # Comparaciones individuales
-        comparisons = data.get('comparisons', [])
-        for comp in comparisons:
-            comp_url = comp.get('compare_url', 'N/A')
-            doc.add_heading(f"VS: {comp_url}", level=1)
+        # --- Análisis IA ---
+        doc.add_heading('Análisis de Inteligencia Artificial', level=1)
+        analysis_text = self.ai_data.get('analysis', '')
+        if analysis_text:
+            self._parse_markdown_to_docx(doc, analysis_text)
+        else:
+            doc.add_paragraph("No disponible.", style='Normal')
 
-            # Tabla Cara a Cara
-            scores = comp.get('performance', {}).get('scores', {})
+        doc.add_page_break()
 
-            table = doc.add_table(rows=1, cols=4)
-            table.style = 'Table Grid'
+        # --- Schemas ---
+        schemas = self.seo_data.get('schema_markup', [])
+        doc.add_heading(f"Datos Estructurados ({len(schemas)})", level=1)
 
-            headers = ['Métrica', 'Base', 'Competidor', 'Dif.']
-            hdr_cells = table.rows[0].cells
-            for i, h in enumerate(headers):
-                hdr_cells[i].text = h
-                self._set_cell_background(hdr_cells[i], "102A43")
-                p = hdr_cells[i].paragraphs[0]
-                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                if p.runs:
-                    p.runs[0].font.color.rgb = RGBColor(255, 255, 255)
-                    p.runs[0].bold = True
+        if schemas:
+            for idx, schema in enumerate(schemas, 1):
+                s_type = schema.get('@type', 'Unknown')
+                doc.add_heading(f"{idx}. {s_type}", level=3)
 
-            metrics_map = {
-                'performance_score': 'Performance',
-                'seo_score': 'SEO',
-                'accessibility_score': 'Accesibilidad',
-                'best_practices_score': 'Best Practices'
-            }
-
-            for key, label in metrics_map.items():
-                s_data = scores.get(key, {})
-                base_val = s_data.get('base', 0)
-                comp_val = s_data.get('compare', 0)
-                diff = s_data.get('difference', 0)
-
-                row_cells = table.add_row().cells
-                row_cells[0].text = label
-                row_cells[1].text = f"{base_val:.1f}"
-                row_cells[2].text = f"{comp_val:.1f}"
-
-                diff_char = "+" if diff >= 0 else ""
-                row_cells[3].text = f"{diff_char}{diff:.1f}"
-
-                # Color difference
-                p_diff = row_cells[3].paragraphs[0]
-                if diff >= 0:
-                    p_diff.runs[0].font.color.rgb = RGBColor(0, 128, 0)
-                else:
-                    p_diff.runs[0].font.color.rgb = RGBColor(255, 0, 0)
-                p_diff.runs[0].bold = True
-
-                # Align centers
-                for j in range(1, 4):
-                    row_cells[j].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-            doc.add_paragraph()
-
-            # IA Analysis del competidor
-            ai_analysis = comp.get('ai_analysis', '')
-            if ai_analysis:
-                doc.add_heading("Análisis Detallado", level=2)
-                self._parse_markdown_to_docx(doc, ai_analysis)
-
-            doc.add_page_break()
+                json_str = json.dumps(schema, indent=2, ensure_ascii=False)
+                # Code block simulado
+                p = doc.add_paragraph(json_str)
+                p.style = 'Quote' # Usar estilo Quote o crear uno custom de código
+                # Aplicar fuente monoespaciada
+                for run in p.runs:
+                    run.font.name = 'Courier New'
+                    run.font.size = Pt(9)
 
         doc.save(filename)
+        return str(filename)
 
-    def _create_comparison_pdf(self, data: dict, filename: Path):
-        doc = SimpleDocTemplate(
-            str(filename),
-            pagesize=LETTER,
-            topMargin=40,
-            bottomMargin=40,
-            leftMargin=0.5*inch,
-            rightMargin=0.5*inch
-        )
-        story = []
+    def _setup_docx_styles(self, doc):
+        """Configura estilos del documento Word."""
+        try:
+            # Puedes personalizar estilos existentes o crear nuevos
+            # Estilo Normal
+            styles = doc.styles
+            if 'Normal' in styles:
+                style = styles['Normal']
+                font = style.font
+                font.name = 'Helvetica'
+                font.size = Pt(11)
+                font.color.rgb = RGBColor(36, 59, 83) # #243B53
+        except:
+            pass
 
-        base_url = data.get('base_url', 'Unknown URL')
+    def _get_score_color_docx(self, score):
+        if score is None: return RGBColor(128, 128, 128)
+        if score >= 90: return RGBColor(16, 124, 16) # #107C10
+        if score >= 50: return RGBColor(216, 59, 1) # #D83B01
+        return RGBColor(168, 0, 0) # #A80000
 
-        # Titulo
-        story.append(Paragraph("Reporte de Benchmarking SEO", self.styles["ReportTitle"]))
+    def _set_cell_background(self, cell, hex_color):
+        """Helper para poner color de fondo a una celda."""
+        shading_elm = OxmlElement('w:shd')
+        shading_elm.set(qn('w:val'), 'clear')
+        shading_elm.set(qn('w:color'), 'auto')
+        shading_elm.set(qn('w:fill'), hex_color)
+        cell._tc.get_or_add_tcPr().append(shading_elm)
 
-        # Meta Info
-        story.append(Paragraph(f"<b>Base:</b> <font color='#2980b9'>{base_url}</font>", self.styles["Justify"]))
-        story.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y')}", self.styles["Justify"]))
+    def _parse_markdown_to_docx(self, doc, text: str):
+        """Parsea Markdown básico a elementos de Word."""
+        lines = text.split('\n')
+        in_code = False
+        code_buffer = []
+        in_table = False
+        table_buffer = []
 
-        # Separator Line
-        line_data = [[" "]]
-        t_line = Table(line_data, colWidths=[7.5*inch], rowHeights=[5])
-        t_line.setStyle(TableStyle([
-            ('LINEBELOW', (0,0), (-1,-1), 2, self.color_secondary),
-        ]))
-        story.append(t_line)
-
-        story.append(Spacer(1, 25))
-
-        # Overall Summary
-        overall = data.get('overall_summary', {})
-        if overall:
-            story.append(Paragraph("Resumen Ejecutivo", self.styles["H1"]))
-            # Formateamos el resumen como una tabla pequeña para que se vea limpio
-            summ_data = [
-                ["Total Competidores", str(overall.get('total_competitors', 0))],
-                ["Ranking Performance", str(overall.get('performance_rank', '-'))],
-                ["Ranking SEO", str(overall.get('seo_rank', '-'))]
-            ]
-            t = Table(summ_data, colWidths=[2.5*inch, 2*inch], hAlign='LEFT')
-            t.setStyle(TableStyle([
-                ('GRID', (0,0), (-1,-1), 0.5, colors.lightgrey),
-                ('BACKGROUND', (0,0), (0,-1), colors.whitesmoke),
-                ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
-                ('PADDING', (0,0), (-1,-1), 6),
-            ]))
-            story.append(t)
-            story.append(Spacer(1, 15))
-
-        # Markdown de IA (Aquí es donde la magia del nuevo parser actúa)
-        ai_schema_md = data.get('ai_schema_comparison', '')
-        if ai_schema_md:
-            story.append(Spacer(1, 10))
-            # Esto ahora detectará las tablas Markdown y las pintará bonitas
-            story.extend(self._parse_markdown_to_flowables(ai_schema_md))
-            story.append(PageBreak())
-
-        # Comparaciones individuales
-        comparisons = data.get('comparisons', [])
-        for comp in comparisons:
-            comp_url = comp.get('compare_url', 'N/A')
-            story.append(Paragraph(f"VS: {comp_url}", self.styles["H1"]))
-
-            # Tabla Cara a Cara
-            scores = comp.get('performance', {}).get('scores', {})
-            table_data = [['Métrica', 'Base', 'Competidor', 'Dif.']]
-
-            metrics_map = {
-                'performance_score': 'Performance',
-                'seo_score': 'SEO',
-                'accessibility_score': 'Accesibilidad',
-                'best_practices_score': 'Best Practices'
-            }
-
-            for key, label in metrics_map.items():
-                s_data = scores.get(key, {})
-                base_val = s_data.get('base', 0)
-                comp_val = s_data.get('compare', 0)
-                diff = s_data.get('difference', 0)
-
-                c_diff = "green" if diff >= 0 else "red"
-                diff_char = "+" if diff >= 0 else ""
-
-                table_data.append([
-                    label,
-                    f"{base_val:.1f}",
-                    f"{comp_val:.1f}",
-                    Paragraph(f"<font color='{c_diff}'><b>{diff_char}{diff:.1f}</b></font>", self.styles["CellBody"])
-                ])
-
-            t = Table(table_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch, 1.5*inch])
-            t.setStyle(TableStyle([
-                ('BACKGROUND', (0,0), (-1,0), self.color_primary),
-                ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-                ('ALIGN', (1,0), (-1,-1), 'CENTER'),
-                ('GRID', (0,0), (-1,-1), 0.5, colors.grey),
-                ('PADDING', (0,0), (-1,-1), 8),
-                ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-            ]))
-            story.append(t)
-            story.append(Spacer(1, 15))
-
-            # IA Analysis del competidor
-            ai_analysis = comp.get('ai_analysis', '')
-            if ai_analysis:
-                story.append(Paragraph("Análisis Detallado", self.styles["H2"]))
-                story.extend(self._parse_markdown_to_flowables(ai_analysis))
-
-            story.append(PageBreak())
-
-        doc.build(story)
-
-    def _create_comparison_excel(self, data: dict, filename: Path):
-        """Genera un Excel rico con múltiples hojas y tablas extraídas de la IA."""
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            # 1. Hoja de Resumen (Dashboard)
-            summary_data = []
-
-            # Datos Generales
-            base_url = data.get('base_url', 'Unknown')
-            overall = data.get('overall_summary', {})
-
-            summary_data.append({'Metric': 'Base URL', 'Value': base_url})
-            summary_data.append({'Metric': 'Fecha Reporte', 'Value': datetime.now().strftime("%Y-%m-%d %H:%M")})
-            summary_data.append({'Metric': 'Total Competidores', 'Value': overall.get('total_competitors', 0)})
-            summary_data.append({'Metric': 'Ranking Performance', 'Value': overall.get('performance_rank', '-')})
-            summary_data.append({'Metric': 'Ranking SEO', 'Value': overall.get('seo_rank', '-')})
-
-            # Espacio
-            summary_data.append({'Metric': '', 'Value': ''})
-
-            # Tabla comparativa de scores principales
-            comparisons = data.get('comparisons', [])
-            for comp in comparisons:
-                c_url = comp.get('compare_url', 'N/A')
-                scores = comp.get('performance', {}).get('scores', {})
-
-                # Performance
-                p_s = scores.get('performance_score', {})
-                summary_data.append({
-                    'Metric': f"VS {c_url} - Performance",
-                    'Value': f"Base: {p_s.get('base')} | Comp: {p_s.get('compare')} ({p_s.get('difference'):+})"
-                })
-
-                # SEO
-                s_s = scores.get('seo_score', {})
-                summary_data.append({
-                    'Metric': f"VS {c_url} - SEO",
-                    'Value': f"Base: {s_s.get('base')} | Comp: {s_s.get('compare')} ({s_s.get('difference'):+})"
-                })
-
-            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Dashboard', index=False)
-
-            # Ajustar ancho de columnas en Dashboard
-            try:
-                worksheet = writer.sheets['Dashboard']
-                worksheet.column_dimensions['A'].width = 30
-                worksheet.column_dimensions['B'].width = 50
-            except: pass
-
-            # 2. Propuesta de Schemas (Global IA Comparison)
-            ai_schema_txt = data.get('ai_schema_comparison', '')
-            schema_tables = self._extract_tables_from_text(ai_schema_txt)
-            proposed_schemas_global = self._extract_json_blocks(ai_schema_txt)
-
-            if proposed_schemas_global:
-                 prop_data = []
-                 for idx, sc in enumerate(proposed_schemas_global, 1):
-                    prop_data.append({
-                        'Origen': 'Análisis Comparativo Global',
-                        'Type': sc.get('@type', 'Unknown'),
-                        'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
-                    })
-                 pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta Schemas', index=False)
-                 try:
-                     ws = writer.sheets['Propuesta Schemas']
-                     ws.column_dimensions['C'].width = 70
-                 except: pass
-
-            if schema_tables:
-                self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
-
-            # 3. Hojas por Competidor (Tablas de su análisis)
-            for idx, comp in enumerate(comparisons, 1):
-                comp_url = comp.get('compare_url', 'Unknown')
-                # Limpiar nombre hoja (max 31 chars)
-                sheet_name = f"Comp {idx}"
-
-                # Extraer tablas del análisis individual
-                ai_analysis_txt = comp.get('ai_analysis', '')
-                comp_tables = self._extract_tables_from_text(ai_analysis_txt)
-
-                if comp_tables:
-                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
+        # Helper para procesar formato inline (**negrita**)
+        def add_formatted_text(paragraph, text):
+            # Split por **
+            parts = re.split(r'(\*\*.*?\*\*)', text)
+            for part in parts:
+                if part.startswith('**') and part.endswith('**'):
+                    run = paragraph.add_run(part[2:-2])
+                    run.bold = True
                 else:
-                    pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
+                    # Buscar `code` inline
+                    subparts = re.split(r'(`.*?`)', part)
+                    for subpart in subparts:
+                        if subpart.startswith('`') and subpart.endswith('`'):
+                            run = paragraph.add_run(subpart[1:-1])
+                            run.font.name = 'Courier New'
+                            run.font.highlight_color = 16 # Gris claro (WD_COLOR_INDEX.GRAY_25 aprox)
+                        else:
+                            paragraph.add_run(subpart)
+
+        def flush_table_docx(buffer):
+            if not buffer: return
+            # Determinar dimensiones
+            rows_data = []
+            for line in buffer:
+                # Basic pipe parsing
+                cols = [c.strip() for c in line.strip('|').split('|')]
+                rows_data.append(cols)
+
+            if not rows_data: return
+
+            # Crear tabla
+            num_cols = len(rows_data[0])
+            table = doc.add_table(rows=0, cols=num_cols)
+            table.style = 'Table Grid'
+            table.autofit = True
+
+            # Header
+            hdr_cells = table.add_row().cells
+            for i, col_txt in enumerate(rows_data[0]):
+                if i < len(hdr_cells):
+                    hdr_cells[i].text = col_txt
+                    # Estilo header
+                    self._set_cell_background(hdr_cells[i], "102A43") # Azul oscuro
+                    for layout in hdr_cells[i].paragraphs:
+                        for run in layout.runs:
+                            run.font.color.rgb = RGBColor(255, 255, 255)
+                            run.bold = True
+
+            # Data
+            for row_cols in rows_data[1:]:
+                # Check if separator row
+                if set(''.join(row_cols)) <= set(['-', ' ', ':']): continue
+
+                row_cells = table.add_row().cells
+                for i, col_txt in enumerate(row_cols):
+                    if i < len(row_cells):
+                        p = row_cells[i].paragraphs[0]
+                        add_formatted_text(p, col_txt)
+
+            doc.add_paragraph() # Spacer
+
+        for line in lines:
+            stripped = line.strip()
+
+            # Code Blocks
+            if stripped.startswith("```"):
+                if in_code:
+                    # Flush code
+                    p = doc.add_paragraph('\n'.join(code_buffer))
+                    p.style = 'Quote' # Estilo simple para código
+                    for run in p.runs:
+                        run.font.name = 'Courier New'
+                        run.font.size = Pt(9)
+                    code_buffer = []
+                    in_code = False
+                else:
+                    if in_table:
+                        flush_table_docx(table_buffer)
+                        table_buffer = []
+                        in_table = False
+                    in_code = True
+                continue
+
+            if in_code:
+                code_buffer.append(line)
+                continue
+
+            # Tables
+            if stripped.startswith('|') and '|' in stripped[1:]:
+                if not in_table:
+                    in_table = True
+                    table_buffer = []
+                table_buffer.append(stripped)
+                continue
+
+            if in_table:
+                flush_table_docx(table_buffer)
+                table_buffer = []
+                in_table = False
+
+            if not stripped: continue
+
+            # Headings
+            if stripped.startswith('#'):
+                level = stripped.count('#')
+                txt = stripped.strip('# ').strip()
+                # Word supports levels 1-9
+                lvl = min(level, 9)
+                doc.add_heading(txt, level=lvl)
+
+            # Lists
+            elif stripped.startswith('- ') or stripped.startswith('* '):
+                txt = stripped[2:]
+                p = doc.add_paragraph(style='List Bullet')
+                add_formatted_text(p, txt)
+
+            else:
+                p = doc.add_paragraph()
+                add_formatted_text(p, stripped)
+
+        # Final flush
+        if in_table: flush_table_docx(table_buffer)
+        if in_code and code_buffer:
+            p = doc.add_paragraph('\n'.join(code_buffer))
+            p.style = 'Quote'
+            for run in p.runs:
+                run.font.name = 'Courier New'
+
+    def generate_all(self):
+        return {
+            "pdf_path": self.generate_pdf(),
+            "xlsx_path": self.generate_excel(),
+            "word_path": self.generate_docx()
+        }
+
