@@ -298,6 +298,9 @@ async def run_comparison_task(
         ai_schema_comparison_text = ""
         if isinstance(ai_schema_comparison, dict):
             ai_schema_comparison_text = ai_schema_comparison.get('content', '')
+            schema_usage = ai_schema_comparison.get('usage', {}) or {}
+            total_input_tokens += schema_usage.get('prompt_tokens', 0)
+            total_output_tokens += schema_usage.get('completion_tokens', 0)
         else:
             ai_schema_comparison_text = str(ai_schema_comparison)
 
