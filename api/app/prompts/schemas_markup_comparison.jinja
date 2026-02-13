@@ -36,11 +36,18 @@ Analiza exhaustivamente los datos proporcionados y genera un reporte estratégic
 2.  **Tabla Comparativa de Tipos:** Matriz que muestre qué tipos de schemas tenemos nosotros vs cada competidor. (Usa texto: "Sí", "No", "Incompleto" para el estado).
 3.  **Análisis de Propiedades Faltantes:** No solo el tipo, sino qué propiedades importantes (ej. `review`, `aggregateRating`, `priceValidUntil`) están usando ellos que nosotros no.
 
-4.  **Propuesta Técnica Final (JSON-LD Completo):**
-    *   **Argumentación Estratégica:** Explica brevemente por qué esta configuración vencerá a los competidores.
+4.  **Comparativa Visual: Actual vs Propuesta:**
+    *   Genera una tabla comparativa directa donde se vea claramente:
+        *   **Columna 1: Schema Actual** (Lo que tenemos ahora, resumido).
+        *   **Columna 2: Propuesta IA** (Lo que deberíamos tener).
+        *   **Columna 3: Acción** (Agregar, Mantener, Modificar, Eliminar).
+        *   **Columna 4: Impacto SEO** (Explicación breve de POR QUÉ ayuda. Ej: "Mejora CTR con estrellas", "Permite breadcrumbs en SERP").
+
+5.  **Propuesta Técnica Final (JSON-LD Completo):**
+    *   **Argumentación Estratégica Detallada:** Para cada bloque de schema propuesto, explica su función técnica y su beneficio comercial/SEO. (Ejemplo: "Implementamos `BreadcrumbList` para que Google entienda la jerarquía del sitio y muestre la ruta de navegación en los resultados, aumentando la confianza del usuario").
     *   **Bloque de Código JSON-LD:** El JSON-LD completo, validado y listo para copiar. NO uses placeholders genéricos si tienes datos reales (ej. usa el nombre real del hotel, no "Nombre del Hotel"). Si no tienes el dato, usa un placeholder claro.
 
-5.  **Plan de Acción Directo:** Pasos concretos para la implementación (Usa "Paso 1", "Paso 2", etc. NO uses tiempos/semanas).
+6.  **Plan de Acción Directo:** Pasos concretos para la implementación (Usa "Paso 1", "Paso 2", etc. NO uses tiempos/semanas).
 
 IMPORTANTE:
 *   Redacción en **PRIMERA PERSONA DEL PLURAL**.
