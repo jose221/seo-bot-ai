@@ -714,7 +714,7 @@ class ReportGenerator:
             for idx, schema in enumerate(base_raw, 1):
                 s_type = schema.get('@type', 'Unknown')
                 story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
-
+                story.append(Spacer(1, 30))
                 json_str = json.dumps(schema, indent=2, ensure_ascii=False)
                 json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                 story.append(XPreformatted(json_str, self.styles["CodeBlock"]))
