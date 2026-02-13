@@ -305,21 +305,25 @@ async def run_comparison_task(
         overall_summary = _generate_overall_summary(base_audit, comparisons)
 
         # Generar comparación de schemas con IA
-        ai_schema_comparison = await comparator.generate_ai_schema_comparison(
-            base_audit=base_audit,
-            compare_audits=competitors_audit,
-            token=token,
-            base_url=base_webpage.url
-        )
-
         ai_schema_comparison_text = ""
-        if isinstance(ai_schema_comparison, dict):
-            ai_schema_comparison_text = ai_schema_comparison.get('content', '')
-            schema_usage = ai_schema_comparison.get('usage', {}) or {}
-            total_input_tokens += schema_usage.get('prompt_tokens', 0)
-            total_output_tokens += schema_usage.get('completion_tokens', 0)
-        else:
-            ai_schema_comparison_text = str(ai_schema_comparison)
+        try:
+            ai_schema_comparison = await comparator.generate_ai_schema_comparison(
+                base_audit=base_audit,
+                compare_audits=competitors_audit,
+                token=token,
+                base_url=base_webpage.url
+            )
+
+            if isinstance(ai_schema_comparison, dict):
+                ai_schema_comparison_text = ai_schema_comparison.get('content', '')
+                schema_usage = ai_schema_comparison.get('usage', {}) or {}
+                total_input_tokens += schema_usage.get('prompt_tokens', 0)
+                total_output_tokens += schema_usage.get('completion_tokens', 0)
+            else:
+                ai_schema_comparison_text = str(ai_schema_comparison)
+        except Exception as e:
+             print(f"⚠️ Error generando comparación de schemas con IA: {e}")
+             ai_schema_comparison_text = "No se pudo generar el análisis de IA para schemas debido a un error en el servicio."
 
         # Extract base schemas for report
         base_schemas = []

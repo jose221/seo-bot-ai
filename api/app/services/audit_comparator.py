@@ -343,7 +343,7 @@ class AuditComparator:
 
         request = ChatCompletionRequest(
             messages=[user_message],
-            model="deepseek-chat",
+            model="gpt-5-mini",
             stream=False,
             # tools=["web_search"] # Desactivar web_search para reducir complejidad si ya tenemos los datos
         )

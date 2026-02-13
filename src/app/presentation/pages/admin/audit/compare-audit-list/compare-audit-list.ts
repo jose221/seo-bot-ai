@@ -163,7 +163,7 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     console.log('response:', response);
   }
   async toDelete(item: CompareAuditResponseModel){
-    if(item.id) await this._auditRepository.delete(item.id)
+    if(item.id) await this._auditRepository.deleteComparisons(item.id)
     this.init()
   }
 
