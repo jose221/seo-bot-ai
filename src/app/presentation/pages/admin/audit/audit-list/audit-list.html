@@ -345,7 +345,7 @@
               @if (showItem()?.ai_suggestions) {
                 <div class="ai-content" style="max-height: 800px; overflow-y: auto;">
                   <div class="small" style="white-space: pre-line;">
-                    <markdown [data]="showItem()?.ai_suggestions?.analysis.content"></markdown>
+                    <markdown [data]="showItem()?.ai_suggestions?.analysis?.content ?? showItem()?.ai_suggestions?.content"></markdown>
                   </div>
                 </div>
               } @else {
