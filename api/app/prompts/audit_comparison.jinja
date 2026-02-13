@@ -27,7 +27,11 @@ Core Web Vitals:
 - FID: {{ compare_audit.fid }}ms
 - CLS: {{ compare_audit.cls }}
 
-Schema Markup: {{ compare_schemas | length }} schemas implementados
+Schema Markup: {{ compare_schemas | length }} schemas encontrados.
+Tipos detectados:
+{% for s in compare_schemas[:10] %}
+- {{ s.get('@type', 'Unknown') }}
+{% endfor %}
 
 Analiza y compara utilizando TABLAS siempre que sea posible para la comparativa y propuestas de mejora:
 1. Diferencias en rendimiento y métricas (Presentar en TABLA)
