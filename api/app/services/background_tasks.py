@@ -214,7 +214,7 @@ async def run_comparison_task(
                         continue
 
                     # Obtener auditoría del competidor
-                    competitor_audit_stmt = select(AuditReport).where(
+                    competitor_audit_stmt = select(AuditReport).options(joinedload(AuditReport.web_page)).where(
                         AuditReport.web_page_id == competitor_id,
                         sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
                     ).order_by(desc(AuditReport.created_at)).limit(1)
