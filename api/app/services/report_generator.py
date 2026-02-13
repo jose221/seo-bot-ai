@@ -245,6 +245,10 @@ class ReportGenerator:
 
             # Eliminar emojis especificos (rangos altos)
             safe = re.sub(r'[\U00010000-\U0010ffff]', '', raw_text)
+            safe = re.sub(r'[\u2700-\u27BF]', '', safe) # Dingbats
+            safe = re.sub(r'[\u2600-\u26FF]', '', safe) # Misc Symbols
+            safe = re.sub(r'[\u2300-\u23FF]', '', safe) # Misc Technical (algunos iconos)
+            safe = re.sub(r'[\u2B50]', '', safe)        # Star (⭐) especifico si no cae en rangos
 
             # 1. Escapar XML básico
             safe = safe.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')

@@ -18,6 +18,7 @@ from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
 from app.helpers import extract_domain
 from sqlalchemy import String, cast as sql_cast, desc
+from sqlalchemy.orm import joinedload
 from sqlmodel import select
 
 
@@ -128,6 +129,7 @@ async def run_audit_task(
                 # Guardar rutas de los reportes generados
                 audit.report_pdf_path = report.get('pdf_path')
                 audit.report_excel_path = report.get('xlsx_path')
+                audit.report_word_path = report.get('word_path')
 
                 session.add(audit)
 
@@ -187,7 +189,7 @@ async def run_comparison_task(
                 raise Exception("Página base no encontrada")
 
             # Obtener última auditoría completada de la página base
-            base_audit_stmt = select(AuditReport).where(
+            base_audit_stmt = select(AuditReport).options(joinedload(AuditReport.web_page)).where(
                 AuditReport.web_page_id == base_web_page_id,
                 sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
             ).order_by(desc(AuditReport.created_at)).limit(1)
