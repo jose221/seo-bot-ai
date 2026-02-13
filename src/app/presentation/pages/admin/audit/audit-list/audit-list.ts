@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, inject, signal, OnInit, OnDestroy} from '@angular/core';
 import {ListDefaultBase} from '@/app/presentation/shared/list-default.base';
 import {AuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
 import {FilterListConfig} from '@/app/domain/models/general/filter-list.model';
@@ -44,8 +44,9 @@ import {MarkdownComponent} from 'ngx-markdown';
   templateUrl: './audit-list.html',
   styleUrl: './audit-list.scss',
 })
-export class AuditList extends ListDefaultBase<AuditResponseModel>{
+export class AuditList extends ListDefaultBase<AuditResponseModel> implements OnInit, OnDestroy {
   public statusAuditUtil = inject(StatusAuditUtil);
+  private intervalId: any;
   configFilter  = signal<FilterListConfig>({
     limit: 6,
     search: {
@@ -131,18 +132,31 @@ export class AuditList extends ListDefaultBase<AuditResponseModel>{
     super();
   }
 
-  async init() {
+  override async ngOnInit() {
+    await super.ngOnInit();
+    this.intervalId = setInterval(() => {
+      this.init(true);
+    }, 10000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+  }
+
+  async init(silent: boolean = false) {
     try {
-      this.isLoading.set(true);
+      if (!silent) this.isLoading.set(true);
       const data = await this._auditRepository.get();
       console.log('data:', data);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       console.log('items:', this.items());
-      this.isLoading.set(false);
+      if (!silent) this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar items:', error);
-      this.isLoading.set(false);
+      if (!silent) this.isLoading.set(false);
     }
   }
 

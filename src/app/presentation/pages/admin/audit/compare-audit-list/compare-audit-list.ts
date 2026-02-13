@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, inject, signal, OnInit, OnDestroy} from '@angular/core';
 import {ListDefaultBase} from '@/app/presentation/shared/list-default.base';
 import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
 import {FilterListConfig} from '@/app/domain/models/general/filter-list.model';
@@ -49,8 +49,9 @@ import {environment} from '@/environments/environment';
   templateUrl: './compare-audit-list.html',
   styleUrl: './compare-audit-list.scss',
 })
-export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel>{
+export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel> implements OnInit, OnDestroy{
   public statusAuditUtil = inject(StatusAuditUtil);
+  private intervalId: any;
   configFilter  = signal<FilterListConfig>({
     limit: 6,
     search: {
@@ -123,18 +124,31 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     super();
   }
 
-  async init() {
+  override async ngOnInit() {
+    await super.ngOnInit();
+    this.intervalId = setInterval(() => {
+      this.init(true);
+    }, 10000);
+  }
+
+  ngOnDestroy() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+    }
+  }
+
+  async init(silent: boolean = false) {
     try {
-      this.isLoading.set(true);
+      if (!silent) this.isLoading.set(true);
       const data = await this._auditRepository.getComparisons();
       console.log('data:', data);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       console.log('items:', this.items());
-      this.isLoading.set(false);
+      if (!silent) this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar items:', error);
-      this.isLoading.set(false);
+      if (!silent) this.isLoading.set(false);
     }
   }
 
