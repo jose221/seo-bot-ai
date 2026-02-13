@@ -164,31 +164,46 @@ class SEOAnalyzer:
 
     def analyze_structured_data(self) -> List[Dict[str, Any]]:
         """
-        Busca y extrae bloques de JSON-LD (Schema.org).
-        Valida que sean JSON válido.
+        Busca y extrae bloques de JSON-LD, Microdata y RDFa.
+        Usa la librería extruct para detectar esquemas definidos como atributos HTML o scripts.
         """
-        if not self.soup:
+        if not self.html:
             return []
 
-        schemas = []
-        # Buscar todas las etiquetas de script tipo ld+json
-        scripts = self.soup.find_all('script', type='application/ld+json')
+        extracted_schemas = []
 
-        for script in scripts:
-            try:
-                # El contenido suele estar dentro de la etiqueta
-                content = script.string
-                if content:
-                    # Limpiamos espacios en blanco extra
-                    data = json.loads(content.strip())
-                    schemas.append(data)
-            except json.JSONDecodeError:
-                # Si el JSON está mal formado, guardamos el error o lo ignoramos
-                schemas.append({"error": "Invalid JSON-LD syntax", "raw": script.string[:100]})
-            except Exception as e:
-                continue
+        try:
+            # Usar extruct para extraer todos los tipos de metadatos (JSON-LD, Microdata, RDFa)
+            data = extruct.extract(
+                self.html,
+                base_url=self.url,
+                syntaxes=['json-ld', 'microdata', 'rdfa'],
+                uniform=True  # Normaliza la salida a formato dict estandar
+            )
 
-        return schemas
+            # Combinar todos los formatos encontrados en una sola lista
+            if 'json-ld' in data:
+                extracted_schemas.extend(data['json-ld'])
+            if 'microdata' in data:
+                extracted_schemas.extend(data['microdata'])
+            if 'rdfa' in data:
+                extracted_schemas.extend(data['rdfa'])
+
+        except Exception as e:
+            print(f"⚠️ Error en extracción avanzada de schemas: {e}")
+            # Fallback basico: extracción manual de JSON-LD si extruct falla
+            if self.soup:
+                scripts = self.soup.find_all('script', type='application/ld+json')
+                for script in scripts:
+                    try:
+                        content = script.string
+                        if content:
+                            data = json.loads(content.strip())
+                            extracted_schemas.append(data)
+                    except:
+                        pass
+
+        return extracted_schemas
 
     def run_full_analysis(self) -> Dict[str, Any]:
         return {
