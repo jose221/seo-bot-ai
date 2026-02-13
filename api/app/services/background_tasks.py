@@ -86,11 +86,20 @@ async def run_audit_task(
 
                 ai_analysis_content = ""
 
+                print(f"🔍 DEBUG AI Analysis Type: {type(ai_analysis)}")
                 if isinstance(ai_analysis, dict):
+                     print(f"🔍 DEBUG AI Analysis Keys: {ai_analysis.keys()}")
                      ai_analysis_content = ai_analysis.get('content', '')
+
+                     # Fallback si content esta vacio o no existe
+                     if not ai_analysis_content and 'analysis' in ai_analysis:
+                         ai_analysis_content = ai_analysis.get('analysis', '')
+
                      # Tokens se extraen mas abajo
                 else:
                      ai_analysis_content = str(ai_analysis)
+
+                print(f"🔍 DEBUG AI Content Length: {len(ai_analysis_content)}")
 
                 ai_analysis_data = {
                     'analysis': ai_analysis_content, # GUARDAR SOLO EL TEXTO
