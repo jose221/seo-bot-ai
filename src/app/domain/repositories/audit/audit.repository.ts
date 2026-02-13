@@ -18,5 +18,6 @@ export abstract class AuditRepository {
   abstract compare(params: CreateCompareAuditRequestModel): Promise<CreateCompareAuditResponseModel>;
   abstract findComparisons(id: string): Promise<FindCompareAuditResponseModel>;
   abstract getComparisons(params?: FilterCompareAuditRequestModel): Promise<CompareAuditResponseModel[]>;
+  abstract deleteComparisons(id: string): Promise<any>
 
 }

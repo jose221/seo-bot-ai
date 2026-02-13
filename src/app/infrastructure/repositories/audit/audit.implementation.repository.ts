@@ -44,4 +44,8 @@ export class AuditImplementationRepository implements AuditRepository {
   async getComparisons(params?: FilterCompareAuditRequestModel): Promise<CompareAuditResponseModel[]>{
     return await this.primaryService.getComparisons(params);
   }
+
+  async deleteComparisons(id: string): Promise<any> {
+    return await this.primaryService.deleteComparisons(id);
+  }
 }

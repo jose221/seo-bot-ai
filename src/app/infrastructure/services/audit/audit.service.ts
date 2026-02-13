@@ -65,6 +65,10 @@ export class AuditService extends BaseService{
     return this.itemMapper.mapResponseFindComparisons(response);
   }
 
+  async deleteComparisons(id: string): Promise<any> {
+    return await this.httpService.delete<any>(`${environment.endpoints.audit.comparisons}/${id}`, {}, this.getToken);
+  }
+
   async search(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]>{
     const response = await this.httpService.get<HttpItemsModel<SearchAuditResponseDto[]>>(`${environment.endpoints.audit.search}`, params ? this.itemMapper.mapSearch(params) : {}, {}, this.getToken)
     return response.items.map((item: SearchAuditResponseDto) => this.itemMapper.mapResponseSearch(item));
