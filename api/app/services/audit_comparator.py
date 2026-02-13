@@ -244,7 +244,7 @@ class AuditComparator:
         base_url: str,
         compare_url: str,
         token: str
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Generar análisis de comparación usando IA.
 
@@ -256,7 +256,7 @@ class AuditComparator:
             token: Token de autenticación
 
         Returns:
-            Análisis textual de la comparación
+            Dict con análisis (content) y uso de tokens (usage)
         """
         # Extraer schemas
         base_schemas = []
@@ -348,44 +348,30 @@ class AuditComparator:
             # tools=["web_search"] # Desactivar web_search para reducir complejidad si ya tenemos los datos
         )
 
+        # Calcular tokens de entrada manualmente
+        input_tokens = self.ai_client.count_tokens(prompt_content)
+
         response = await self.ai_client.chat_completion(request, token)
-        return response.get_content()
+        content = response.get_content()
 
-    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 50, max_chars: int = 100000) -> List[Dict[str, Any]]:
+        # Calcular tokens de salida manualmente
+        output_tokens = self.ai_client.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens
+            }
+        }
+
+    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 50) -> List[Dict[str, Any]]:
         """
-        Trunca la lista de schemas para no exceder límites de tokens.
-        Prioriza schemas únicos y reduce el contenido si es necesario.
+        No trunca schemas. Devuelve todo el contenido para análisis completo.
+        Se mantiene la firma para compatibilidad.
         """
-        if not schemas:
-            return []
-
-        # 1. Limitar número de items
-        truncated = schemas[:max_items]
-
-        # 2. Verificar tamaño total en caracteres (aprox tokens)
-        import json
-        current_chars = len(json.dumps(truncated))
-
-        if current_chars > max_chars:
-            # Si sigue siendo muy grande, reducir más agresivamente
-            # O eliminar propiedades muy largas como 'articleBody' o 'description' larga
-            cleaned = []
-            for s in truncated:
-                c_s = s.copy()
-                # Eliminar campos grandes que no aportan tanto al análisis de estructura
-                if 'articleBody' in c_s: c_s['articleBody'] = c_s['articleBody'][:100] + "..."
-                if 'description' in c_s and isinstance(c_s['description'], str) and len(c_s['description']) > 200:
-                    c_s['description'] = c_s['description'][:200] + "..."
-                cleaned.append(c_s)
-
-            # Volver a verificar
-            truncated = cleaned
-
-            # Si aun así... cortar lista
-            while len(json.dumps(truncated)) > max_chars and len(truncated) > 1:
-                truncated.pop()
-
-        return truncated
+        return schemas
 
     def _get_comparison_status(self, difference: float) -> str:
         """Obtener estado de comparación basado en diferencia"""

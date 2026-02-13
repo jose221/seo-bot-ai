@@ -260,6 +260,8 @@ class ComparisonDetailResponse(BaseModel):
     created_at: datetime
     completed_at: Optional[datetime]
     comparison_result: Optional[AuditComparisonResponse] = None
+    input_tokens: Optional[int] = 0
+    output_tokens: Optional[int] = 0
     error_message: Optional[str] = None
     # Rutas de reportes generados
     report_pdf_path: Optional[str] = None

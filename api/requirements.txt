@@ -45,3 +45,7 @@ pdf2docx
 
 # Schema Extraction
 extruct
+
+# Tokenizer
+tiktoken
+

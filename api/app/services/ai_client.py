@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import HTTPException, status
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 from pathlib import Path
+import tiktoken
 
 from app.helpers import extract_domain
 from app.schemas.ai_schemas import (
@@ -159,9 +160,25 @@ class AIClient:
             stream=False
         )
 
+        # Calcular tokens de entrada manualmente
+        input_text = f"{system_content}\n{user_content}"
+        input_tokens = self.count_tokens(input_text)
+
         # Enviar y obtener respuesta
         response = await self.chat_completion(request, token)
-        return response.get_content()
+        content = response.get_content()
+
+        # Calcular tokens de salida manualmente
+        output_tokens = self.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens
+            }
+        }
 
     async def analyze_audit_comparison(
         self,
@@ -191,7 +208,7 @@ class AIClient:
             messages=[user_message],
             model="deepseek-chat",
             stream=False,
-            tools=["web_search"],
+            # tools=["web_search"], # Desahabilitado para evitar llamadas extras por ahora si no es necesario
             mcp_tools=[
                 {
                     "server_name": "playwright-browser",
@@ -200,31 +217,28 @@ class AIClient:
                     "args": [
                         "-y",
                         "@modelcontextprotocol/server-playwright"
-                    ],
-                    "env": {
-                        # Opcional: Define si quieres ver el navegador (headless=False) o no
-                        # Por defecto suele ser headless en servidores
-                        "PLAYWRIGHT_HEADLESS": "true"
-                    }
-                },
-                {
-                    "server_name": "lighthouse-audit",
-                    "transport": "stdio",
-                    "command": "npx",
-                    "args": [
-                        "-y",
-                        "lighthouse-mcp"
-                    ],
-                    "env": {
-                        # Opcional: Chrome flags si estás en un entorno Docker sin cabeza
-                        # "CHROME_FLAGS": "--no-sandbox --headless"
-                    }
+                    ]
                 }
             ]
         )
 
+        # Calcular tokens de entrada manualmente
+        input_tokens = self.count_tokens(prompt_content)
+
         response = await self.chat_completion(request, token)
-        return response.get_content()
+        content = response.get_content()
+
+        # Calcular tokens de salida manualmente
+        output_tokens = self.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens
+            }
+        }
 
 
 # Singleton

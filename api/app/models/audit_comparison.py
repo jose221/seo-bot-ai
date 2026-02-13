@@ -58,6 +58,8 @@ class AuditComparison(SQLModel, table=True):
 
     # Metadata
     include_ai_analysis: bool = Field(default=True)
+    input_tokens: Optional[int] = Field(default=0, description="Tokens de entrada usados por la IA")
+    output_tokens: Optional[int] = Field(default=0, description="Tokens de salida generados por la IA")
     error_message: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None

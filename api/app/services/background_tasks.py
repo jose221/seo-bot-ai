@@ -118,6 +118,12 @@ async def run_audit_task(
                 audit.cls = lighthouse_result.get('cls')
                 audit.lighthouse_data = lighthouse_result
                 audit.ai_suggestions = ai_analysis_data
+
+                # Extraer tokens si existen
+                if isinstance(ai_analysis, dict) and 'usage' in ai_analysis and ai_analysis['usage']:
+                     audit.input_tokens = ai_analysis['usage'].get('prompt_tokens', 0)
+                     audit.output_tokens = ai_analysis['usage'].get('completion_tokens', 0)
+
                 audit.status = AuditStatus.COMPLETED
                 audit.completed_at = datetime.now(timezone.utc)
                 audit.seo_analysis = seo_analysis
@@ -251,7 +257,16 @@ async def run_comparison_task(
                                 compare_audit=competitor_audit,
                                 token=token
                             )
-                            comparison_report['ai_analysis'] = ai_analysis
+                            # Handle AI response format
+                            if isinstance(ai_analysis, dict):
+                                content = ai_analysis.get('content', '')
+                                usage = ai_analysis.get('usage', {}) or {}
+                                total_input_tokens += usage.get('prompt_tokens', 0)
+                                total_output_tokens += usage.get('completion_tokens', 0)
+                                comparison_report['ai_analysis'] = content
+                            else:
+                                comparison_report['ai_analysis'] = ai_analysis
+
                         except Exception as e:
                             print(f"⚠️ Error en IA para {competitor_webpage.url}: {e}")
                             comparison_report['ai_analysis'] = None
@@ -287,7 +302,7 @@ async def run_comparison_task(
             "base_url": base_webpage.url,
             "comparisons": comparisons,
             "overall_summary": overall_summary,
-            "ai_schema_comparison": ai_schema_comparison,
+            "ai_schema_comparison": ai_schema_comparison_text,
             "raw_schemas": {"base": base_schemas}
         }
 
@@ -304,6 +319,10 @@ async def run_comparison_task(
                 comparison.status = ComparisonStatus.COMPLETED
                 comparison.comparison_result = comparison_result
                 comparison.completed_at = datetime.now(timezone.utc)
+
+                # Guardar tokens
+                comparison.input_tokens = total_input_tokens
+                comparison.output_tokens = total_output_tokens
 
                 # Guardar rutas de los reportes generados
                 comparison.report_pdf_path = report.get('pdf_path')

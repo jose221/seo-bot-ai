@@ -57,6 +57,10 @@ class AuditReport(SQLModel, table=True):
         description="Sugerencias y análisis generados por IA"
     )
 
+    # Métricas de IA
+    input_tokens: Optional[int] = Field(default=0, description="Tokens de entrada usados por la IA")
+    output_tokens: Optional[int] = Field(default=0, description="Tokens de salida generados por la IA")
+
     # Métricas clave (para búsquedas rápidas)
     performance_score: Optional[float] = Field(default=None, ge=0, le=100)
     seo_score: Optional[float] = Field(default=None, ge=0, le=100)
