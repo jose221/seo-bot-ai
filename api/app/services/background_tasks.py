@@ -84,8 +84,16 @@ async def run_audit_task(
                     **req_ai_analysis_params
                 )
 
+                ai_analysis_content = ""
+
+                if isinstance(ai_analysis, dict):
+                     ai_analysis_content = ai_analysis.get('content', '')
+                     # Tokens se extraen mas abajo
+                else:
+                     ai_analysis_content = str(ai_analysis)
+
                 ai_analysis_data = {
-                    'analysis': ai_analysis,
+                    'analysis': ai_analysis_content, # GUARDAR SOLO EL TEXTO
                     'generated_at': datetime.now(timezone.utc).isoformat(),
                     'model': 'deepseek-chat'
                 }
