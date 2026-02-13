@@ -716,6 +716,29 @@ class ReportGenerator:
             story.extend(self._parse_markdown_to_flowables(ai_schema_md))
             story.append(PageBreak())
 
+        # Inventario de Schemas Base (Para visualizar que tenemos actualmente)
+        # Esto ayuda al usuario a contrastar con la propuesta de IA
+        raw_schemas = data.get('raw_schemas', {})
+        base_raw = raw_schemas.get('base', [])
+
+        if base_raw:
+            story.append(Paragraph("Inventario Actual de Schemas Detectados", self.styles["H1"]))
+            schema_list = []
+            for s in base_raw:
+                s_type = s.get('@type', 'Unknown')
+                if isinstance(s_type, list): s_type = ", ".join(s_type)
+                schema_list.append(s_type)
+
+            # Mostrar lista de tipos como resumen
+            if schema_list:
+                story.append(Paragraph(f"Tipos encontrados ({len(base_raw)}):", self.styles["Justify"]))
+                for st in schema_list:
+                    story.append(Paragraph(f"• {st}", self.styles["MarkdownList"]))
+            else:
+                story.append(Paragraph("No se encontraron schemas válidos.", self.styles["Justify"]))
+
+            story.append(Spacer(1, 15))
+
         # Comparaciones individuales
         comparisons = data.get('comparisons', [])
         for comp in comparisons:
@@ -766,6 +789,20 @@ class ReportGenerator:
             if ai_analysis:
                 story.append(Paragraph("Análisis Detallado", self.styles["H2"]))
                 story.extend(self._parse_markdown_to_flowables(ai_analysis))
+
+            # Schemas del Competidor (Resumen Visual)
+            comp_raw_schemas = comp.get('raw_schemas', {}).get('compare', [])
+            if comp_raw_schemas:
+                story.append(Paragraph("Schemas Detectados en Competidor", self.styles["H2"]))
+                c_schema_list = []
+                for s in comp_raw_schemas:
+                    s_type = s.get('@type', 'Unknown')
+                    if isinstance(s_type, list): s_type = ", ".join(s_type)
+                    c_schema_list.append(s_type)
+
+                for st in c_schema_list:
+                    story.append(Paragraph(f"• {st}", self.styles["MarkdownList"]))
+                story.append(Spacer(1, 10))
 
             story.append(PageBreak())
 
@@ -841,23 +878,51 @@ class ReportGenerator:
             if schema_tables:
                 self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
 
-            # 3. Hojas por Competidor (Tablas de su análisis)
+            # 3. Schemas Crudos (Base vs Competidores)
+            raw_schemas = data.get('raw_schemas', {})
+
+            # Base Raw
+            base_raw = raw_schemas.get('base', [])
+            if base_raw:
+                try:
+                    base_url = data.get('base_url', 'Base')
+                    pd.json_normalize(base_raw).to_excel(writer, sheet_name='Base Schemas', index=False)
+                except Exception as e:
+                    print(f"Error escribiendo Base Schemas: {e}")
+
+            # Competitors Raw
+            compare_raw = raw_schemas.get('compare', []) # Este viene de audit_comparator, pero ojo, es UN solo array si solo hay 1 competidor?
+            # En audit_comparator.generate_comparison_report: return "raw_schemas": {"base": base_schemas, "compare": compare_schemas}
+            # compare_schemas es el schema dEL competidor único que se está procesando en ese momento.
+
+            # PERO wait, en AuditComparisonResponse (backend) 'comparisons' es una lista de resultados INDIVIDUALES.
+            # Data es AuditComparisonResponse.
+            # comparison_data['comparisons'] es lista de reportes individuales.
+            # En 'raw_schemas' de CADA elemento de 'comparisons' debería estar el schema de ese competidor.
+
+            # Hojas por Competidor (Tablas de su análisis + Schemas)
             for idx, comp in enumerate(comparisons, 1):
                 comp_url = comp.get('compare_url', 'Unknown')
                 # Limpiar nombre hoja (max 31 chars)
-                sheet_name = f"Comp {idx}"
+                sheet_name_analysis = f"Comp {idx} Analysis"
+                sheet_name_schemas = f"Comp {idx} Schemas"
 
                 # Extraer tablas del análisis individual
                 ai_analysis_txt = comp.get('ai_analysis', '')
                 comp_tables = self._extract_tables_from_text(ai_analysis_txt)
 
                 if comp_tables:
-                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
-                else:
-                    pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
+                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name_analysis)
 
-
-
+                # Extraer Raw Schemas del competidor específicos de este reporte
+                # Necesitamos que audit_comparator ponga los schemas del competidor EN EL REPORTE INDIVIDUAL
+                # En audit_comparator.generate_comparison_report lo pusimos en "raw_schemas": { "compare": ... }
+                comp_raw_schemas = comp.get('raw_schemas', {}).get('compare', [])
+                if comp_raw_schemas:
+                    try:
+                        pd.json_normalize(comp_raw_schemas).to_excel(writer, sheet_name=sheet_name_schemas, index=False)
+                    except Exception as e:
+                        print(f"Error escribiendo schemas de comp {idx}: {e}")
 
 
     def generate_all(self):

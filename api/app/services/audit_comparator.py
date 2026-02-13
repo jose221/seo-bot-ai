@@ -224,6 +224,11 @@ class AuditComparator:
             },
             "performance": performance_comparison,
             "schemas": schema_comparison,
+            # Agregamos los schemas crudos para reportes detallados
+            "raw_schemas": {
+                "base": base_schemas,
+                "compare": compare_schemas
+            },
             "seo_analysis": seo_comparison,
             "recommendations": self._generate_recommendations(
                 schema_comparison,
