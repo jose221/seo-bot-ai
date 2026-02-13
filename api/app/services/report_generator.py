@@ -535,8 +535,12 @@ class ReportGenerator:
         if schemas:
             for idx, schema in enumerate(schemas, 1):
                 s_type = schema.get('@type', 'Unknown')
+        if schemas:
+            for idx, schema in enumerate(schemas, 1):
+                s_type = schema.get('@type', 'Unknown')
+                story.append(Spacer(1, 25))
                 story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
-                story.append(Spacer(1, 6))
+                story.append(Spacer(1, 12))
 
                 # Convertir JSON a string formateado
                 json_str = json.dumps(schema, indent=2, ensure_ascii=False)
