@@ -42,6 +42,3 @@ prometheus-fastapi-instrumentator
 
 # Office Documents
 pdf2docx
-
-# Schema Extraction
-extruct

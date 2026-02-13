@@ -4,6 +4,7 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import List, Union, Any, Dict
+import openpyxl # Importar openpyxl para estilos
 from pdf2docx import Converter
 
 # Importamos tu modelo (ajusta la ruta según tu estructura)
@@ -16,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    PageBreak, Preformatted
+    PageBreak, Preformatted, Image
 )
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
 
@@ -33,7 +34,7 @@ class ReportGenerator:
         self.url = self.lh_data.get('url') or self.seo_data.get('onpage_seo', {}).get('canonical') or f"audit-{self.audit.id}"
 
         clean_domain = self.url.replace('https://', '').replace('http://', '').split('/')[0]
-        clean_domain = re.sub(r'[^\w\-_.]', '_', clean_domain)
+        clean_domain = re.sub(r'[^\w\-_\.]', '_', clean_domain)
 
         self.base_dir = Path("storage/reports") / clean_domain
         self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -99,22 +100,22 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(
             name='ReportTitle',
             parent=self.styles['Title'],
-            fontSize=26,
+            fontSize=28,
             fontName='Helvetica-Bold',
             spaceBefore=40,
-            spaceAfter=30,
-            leading=42,  # Mayor interlineado para títulos multilínea
+            spaceAfter=50,
+            leading=36,
             textColor=self.color_primary,
             alignment=TA_CENTER
         ))
 
         self.styles.add(ParagraphStyle(
             name='H1',
-            fontSize=16,
+            fontSize=18,
             fontName='Helvetica-Bold',
-            spaceBefore=20,
+            spaceBefore=24,
             spaceAfter=12,
-            leading=24,
+            leading=22,
             textColor=self.color_primary,
             borderPadding=0,
             borderWidth=0
@@ -227,31 +228,10 @@ class ReportGenerator:
         table_headers = []
 
         # --- Helpers ---
-        def remove_emojis(text):
-            """Elimina caracteres en rangos Unicode de emojis."""
-            return re.sub(r'[^\x00-\x7F]+', '', text) # Solución drástica: Solo ASCII (elimina tildes también? Cuidado)
-            # Mejor approach: Solo rangos especificos de emojis o dejar unicode normal
-            # Pero reportlab a veces falla con caracteres complejos si la fuente no los tiene.
-            # Vamos a mantener caracteres latinos pero quitar simbolos
-
         def clean_and_format(raw_text):
             """Limpia XML y aplica formato inline (negritas, itálicas, código)."""
-            # 0. Limpieza de caracteres problemáticos (Emojis)
-            # Mantiene letras acentuadas (L), números (N), puntuación (P), simbolos basicos (S)
-            # Esta regex es compleja, mejor un reemplazo simple de rangos conocidos de emojis
-            # Rango aproximado de emojis: U+1F600-U+1F64F, etc.
-            # Simplemente eliminamos caracteres que no sean basic latin-1 supplement
-            # O mejor, confiamos en el prompt de la IA pero hacemos un fallback visual
-
-            # Eliminar emojis especificos (rangos altos)
-            safe = re.sub(r'[\U00010000-\U0010ffff]', '', raw_text)
-            safe = re.sub(r'[\u2700-\u27BF]', '', safe) # Dingbats
-            safe = re.sub(r'[\u2600-\u26FF]', '', safe) # Misc Symbols
-            safe = re.sub(r'[\u2300-\u23FF]', '', safe) # Misc Technical (algunos iconos)
-            safe = re.sub(r'[\u2B50]', '', safe)        # Star (⭐) especifico si no cae en rangos
-
             # 1. Escapar XML básico
-            safe = safe.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            safe = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
             # 2. Negritas: **texto** -> <b>texto</b>
             safe = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe)
@@ -282,10 +262,10 @@ class ReportGenerator:
 
             if not data: return None
 
-            # Calcular ancho dinámico (asumiendo ancho página LETTER - margenes 0.5 inch cada lado)
-            # Ancho disponible = 8.5 - 1.0 = 7.5 inch
+            # Calcular ancho dinámico (asumiendo ancho página LETTER - margenes 0.4 inch cada lado)
+            # Ancho disponible aprox 7.7 inch
             col_count = len(data[0])
-            available_width = 7.5 * inch
+            available_width = 7.7 * inch
             col_width = available_width / col_count # Distribuir equitativamente
 
             t = Table(data, colWidths=[col_width] * col_count)
@@ -578,41 +558,13 @@ class ReportGenerator:
             summary = {
                 'ID': [str(self.audit.id)], 'URL': [self.url],
                 'Created At': [_clean_dt(self.audit.created_at)],
-                'Performance': [self.audit.performance_score],
-                'SEO Score': [self.audit.seo_score],
-                'Accessibility': [self.audit.accessibility_score]
+                'Performance': [self.audit.performance_score]
             }
             pd.DataFrame(summary).to_excel(writer, sheet_name='Dashboard', index=False)
 
-            # Schemas encontrados
             schemas = self.seo_data.get('schema_markup', [])
             if schemas:
-                try:
-                    pd.json_normalize(schemas).to_excel(writer, sheet_name='Schemas Detectados', index=False)
-                except Exception as e:
-                    print(f"Error exportando schemas detectados: {e}")
-
-            # Tablas extraídas del análisis de IA
-            ai_text = self.ai_data.get('analysis', '')
-            if ai_text:
-                ia_tables = self._extract_tables_from_text(ai_text)
-                if ia_tables:
-                     self._write_dfs_to_sheet(writer, ia_tables, 'Tablas Analisis IA')
-
-                # Propuesta de Schemas extraidos del texto IA
-                proposed_schemas = self._extract_json_blocks(ai_text)
-                if proposed_schemas:
-                    prop_data = []
-                    for idx, sc in enumerate(proposed_schemas, 1):
-                        prop_data.append({
-                            'Origen': 'IA Proposal',
-                            'Type': sc.get('@type', 'Unknown'),
-                            'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
-                        })
-                    pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta IA', index=False)
-                    try:
-                        writer.sheets['Propuesta IA'].column_dimensions['C'].width = 70
-                    except: pass
+                pd.json_normalize(schemas).to_excel(writer, sheet_name='Schemas', index=False)
 
         return str(filename)
 
@@ -668,8 +620,8 @@ class ReportGenerator:
             pagesize=LETTER,
             topMargin=40,
             bottomMargin=40,
-            leftMargin=0.4*inch, # Menor margen
-            rightMargin=0.4*inch
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
         )
         story = []
 
@@ -719,29 +671,6 @@ class ReportGenerator:
             # Esto ahora detectará las tablas Markdown y las pintará bonitas
             story.extend(self._parse_markdown_to_flowables(ai_schema_md))
             story.append(PageBreak())
-
-        # Inventario de Schemas Base (Para visualizar que tenemos actualmente)
-        # Esto ayuda al usuario a contrastar con la propuesta de IA
-        raw_schemas = data.get('raw_schemas', {})
-        base_raw = raw_schemas.get('base', [])
-
-        if base_raw:
-            story.append(Paragraph("Inventario Actual de Schemas Detectados", self.styles["H1"]))
-            schema_list = []
-            for s in base_raw:
-                s_type = s.get('@type', 'Unknown')
-                if isinstance(s_type, list): s_type = ", ".join(s_type)
-                schema_list.append(s_type)
-
-            # Mostrar lista de tipos como resumen
-            if schema_list:
-                story.append(Paragraph(f"Tipos encontrados ({len(base_raw)}):", self.styles["Justify"]))
-                for st in schema_list:
-                    story.append(Paragraph(f"• {st}", self.styles["MarkdownList"]))
-            else:
-                story.append(Paragraph("No se encontraron schemas válidos.", self.styles["Justify"]))
-
-            story.append(Spacer(1, 15))
 
         # Comparaciones individuales
         comparisons = data.get('comparisons', [])
@@ -793,20 +722,6 @@ class ReportGenerator:
             if ai_analysis:
                 story.append(Paragraph("Análisis Detallado", self.styles["H2"]))
                 story.extend(self._parse_markdown_to_flowables(ai_analysis))
-
-            # Schemas del Competidor (Resumen Visual)
-            comp_raw_schemas = comp.get('raw_schemas', {}).get('compare', [])
-            if comp_raw_schemas:
-                story.append(Paragraph("Schemas Detectados en Competidor", self.styles["H2"]))
-                c_schema_list = []
-                for s in comp_raw_schemas:
-                    s_type = s.get('@type', 'Unknown')
-                    if isinstance(s_type, list): s_type = ", ".join(s_type)
-                    c_schema_list.append(s_type)
-
-                for st in c_schema_list:
-                    story.append(Paragraph(f"• {st}", self.styles["MarkdownList"]))
-                story.append(Spacer(1, 10))
 
             story.append(PageBreak())
 
@@ -882,51 +797,23 @@ class ReportGenerator:
             if schema_tables:
                 self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
 
-            # 3. Schemas Crudos (Base vs Competidores)
-            raw_schemas = data.get('raw_schemas', {})
-
-            # Base Raw
-            base_raw = raw_schemas.get('base', [])
-            if base_raw:
-                try:
-                    base_url = data.get('base_url', 'Base')
-                    pd.json_normalize(base_raw).to_excel(writer, sheet_name='Base Schemas', index=False)
-                except Exception as e:
-                    print(f"Error escribiendo Base Schemas: {e}")
-
-            # Competitors Raw
-            compare_raw = raw_schemas.get('compare', []) # Este viene de audit_comparator, pero ojo, es UN solo array si solo hay 1 competidor?
-            # En audit_comparator.generate_comparison_report: return "raw_schemas": {"base": base_schemas, "compare": compare_schemas}
-            # compare_schemas es el schema dEL competidor único que se está procesando en ese momento.
-
-            # PERO wait, en AuditComparisonResponse (backend) 'comparisons' es una lista de resultados INDIVIDUALES.
-            # Data es AuditComparisonResponse.
-            # comparison_data['comparisons'] es lista de reportes individuales.
-            # En 'raw_schemas' de CADA elemento de 'comparisons' debería estar el schema de ese competidor.
-
-            # Hojas por Competidor (Tablas de su análisis + Schemas)
+            # 3. Hojas por Competidor (Tablas de su análisis)
             for idx, comp in enumerate(comparisons, 1):
                 comp_url = comp.get('compare_url', 'Unknown')
                 # Limpiar nombre hoja (max 31 chars)
-                sheet_name_analysis = f"Comp {idx} Analysis"
-                sheet_name_schemas = f"Comp {idx} Schemas"
+                sheet_name = f"Comp {idx}"
 
                 # Extraer tablas del análisis individual
                 ai_analysis_txt = comp.get('ai_analysis', '')
                 comp_tables = self._extract_tables_from_text(ai_analysis_txt)
 
                 if comp_tables:
-                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name_analysis)
+                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
+                else:
+                    pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
 
-                # Extraer Raw Schemas del competidor específicos de este reporte
-                # Necesitamos que audit_comparator ponga los schemas del competidor EN EL REPORTE INDIVIDUAL
-                # En audit_comparator.generate_comparison_report lo pusimos en "raw_schemas": { "compare": ... }
-                comp_raw_schemas = comp.get('raw_schemas', {}).get('compare', [])
-                if comp_raw_schemas:
-                    try:
-                        pd.json_normalize(comp_raw_schemas).to_excel(writer, sheet_name=sheet_name_schemas, index=False)
-                    except Exception as e:
-                        print(f"Error escribiendo schemas de comp {idx}: {e}")
+
+
 
 
     def generate_all(self):
@@ -935,3 +822,4 @@ class ReportGenerator:
             "xlsx_path": self.generate_excel(),
             "word_path": self.generate_docx()
         }
+
