@@ -211,7 +211,10 @@ class ReportGenerator:
             try:
                 clean_json = match.strip()
                 parsed = json.loads(clean_json)
-                json_blocks.append(parsed)
+                if isinstance(parsed, list):
+                    json_blocks.extend([item for item in parsed if isinstance(item, dict)])
+                elif isinstance(parsed, dict):
+                    json_blocks.append(parsed)
             except json.JSONDecodeError:
                 pass
 
@@ -224,7 +227,10 @@ class ReportGenerator:
                     clean_json = match.strip()
                     if clean_json.startswith('{') or clean_json.startswith('['):
                         parsed = json.loads(clean_json)
-                        json_blocks.append(parsed)
+                        if isinstance(parsed, list):
+                            json_blocks.extend([item for item in parsed if isinstance(item, dict)])
+                        elif isinstance(parsed, dict):
+                            json_blocks.append(parsed)
                 except:
                     pass
 
