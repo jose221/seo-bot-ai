@@ -479,6 +479,39 @@ async def get_comparison(
     # Asegurar que se carguen los datos más recientes
     await session.refresh(comparison)
 
+    # Verificar y generar reportes si faltan (On-demand)
+    if comparison.status == ComparisonStatus.COMPLETED and (not comparison.report_pdf_path or not comparison.report_excel_path or not comparison.report_word_path):
+        try:
+            print(f"🔄 Generando reportes faltantes para comparison {comparison.id}")
+            # Reconstruir objeto de respuesta para el generador
+            comparison_data = audit_schemas.AuditComparisonResponse(**comparison.comparison_result)
+
+            # Obtener audit base para inicializar generador (necesita base_audit para paths)
+            base_audit_stmt = select(AuditReport).where(
+                AuditReport.web_page_id == comparison.base_web_page_id,
+                sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
+            ).order_by(desc(AuditReport.created_at)).limit(1)
+
+            result_audit = await session.execute(base_audit_stmt)
+            base_audit = result_audit.scalars().first()
+
+            if base_audit:
+                 report_paths = ReportGenerator(audit=base_audit).generate_comparison_reports(comparison_data)
+                 comparison.report_pdf_path = report_paths.get('pdf_path')
+                 comparison.report_excel_path = report_paths.get('xlsx_path')
+                 comparison.report_word_path = report_paths.get('word_path')
+
+                 session.add(comparison)
+                 await session.commit()
+                 await session.refresh(comparison)
+            else:
+                 print(f"⚠️ No se encontró audit base para regenerar reportes de comparación {comparison.id}")
+
+        except Exception as e:
+            print(f"⚠️ Error generando reportes on-demand para comparison: {e}")
+            import traceback
+            traceback.print_exc()
+
     # Construir respuesta
     comparison_result = None
     if comparison.comparison_result and comparison.status == ComparisonStatus.COMPLETED:

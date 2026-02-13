@@ -33,20 +33,15 @@ IMPORTANTE: No utilices emojis ni iconos en tu respuesta. El formato debe ser es
 Analiza exhaustivamente los datos proporcionados y genera un reporte estratégico siguiendo esta estructura. Usa TABLAS para las comparativas.
 
 1.  **Resumen Ejecutivo de Brechas:** ¿Qué estamos perdiendo frente a la competencia?
-2.  **Tabla Comparativa de Tipos:** Matriz que muestre qué tipos de schemas tenemos nosotros vs cada competidor.
+2.  **Tabla Comparativa de Tipos:** Matriz que muestre qué tipos de schemas tenemos nosotros vs cada competidor. (Usa texto: "Sí", "No", "Incompleto" para el estado).
 3.  **Análisis de Propiedades Faltantes:** No solo el tipo, sino qué propiedades importantes (ej. `review`, `aggregateRating`, `priceValidUntil`) están usando ellos que nosotros no.
 
-4.  **Propuesta Final de Schema Markup (La Cereza del Pastel):**
-    Basándote en el análisis de TODAS las páginas comparadas, genera una propuesta final OPTIMIZADA de JSON-LD para la página base.
-    *   **Justificación de Cambios:** Argumenta claramente por qué se agrega, actualiza o elimina cada elemento.
-        *   *Agregado:* "Se añade 'AggregateRating' porque 3 de 4 competidores lo usan y mejora CTR."
-        *   *Actualizado:* "Se añade la propiedad 'priceValidUntil' al schema 'Product' para elegibilidad en ofertas."
-        *   *Eliminado:* "Se elimina 'Article' por ser redundante con 'BlogPosting'."
-    *   **Bloque de Código JSON-LD:** Proporciona el código JSON-LD COMPLETO y listo para copiar/pegar con la estructura ideal recomendada (puedes usar placeholders como `{{ titulo }}` para valores dinámicos si es necesario, pero la estructura debe ser válida).
+4.  **Propuesta Técnica Final (JSON-LD Completo):**
+    *   **Argumentación Estratégica:** Explica brevemente por qué esta configuración vencerá a los competidores.
+    *   **Bloque de Código JSON-LD:** El JSON-LD completo, validado y listo para copiar. NO uses placeholders genéricos si tienes datos reales (ej. usa el nombre real del hotel, no "Nombre del Hotel"). Si no tienes el dato, usa un placeholder claro.
 
 5.  **Plan de Acción Directo:** Pasos concretos para la implementación (Usa "Paso 1", "Paso 2", etc. NO uses tiempos/semanas).
 
 IMPORTANTE:
-*   Redacción en **PRIMERA PERSONA DEL PLURAL** (nosotros, nuestro sitio, hemos detectado).
-*   Tono profesional, directo y técnico. Sin rodeos.
-*   **ESTRICTAMENTE PROHIBIDO usar emojis o iconos** (ni ✅, ni ❌, etc.). En tablas usa texto: "Sí/No", "N/A".
+*   Redacción en **PRIMERA PERSONA DEL PLURAL**.
+*   NO EMOJIS

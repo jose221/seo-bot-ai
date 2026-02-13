@@ -4,7 +4,6 @@ import pandas as pd
 from datetime import datetime
 from pathlib import Path
 from typing import List, Union, Any, Dict
-import openpyxl # Importar openpyxl para estilos
 from pdf2docx import Converter
 
 # Importamos tu modelo (ajusta la ruta según tu estructura)
@@ -17,7 +16,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    PageBreak, Preformatted, Image
+    PageBreak, Preformatted
 )
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
 
@@ -34,7 +33,7 @@ class ReportGenerator:
         self.url = self.lh_data.get('url') or self.seo_data.get('onpage_seo', {}).get('canonical') or f"audit-{self.audit.id}"
 
         clean_domain = self.url.replace('https://', '').replace('http://', '').split('/')[0]
-        clean_domain = re.sub(r'[^\w\-_\.]', '_', clean_domain)
+        clean_domain = re.sub(r'[^\w\-_.]', '_', clean_domain)
 
         self.base_dir = Path("storage/reports") / clean_domain
         self.base_dir.mkdir(parents=True, exist_ok=True)
@@ -100,22 +99,22 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(
             name='ReportTitle',
             parent=self.styles['Title'],
-            fontSize=28,
+            fontSize=26,
             fontName='Helvetica-Bold',
             spaceBefore=40,
-            spaceAfter=50,
-            leading=36,
+            spaceAfter=30,
+            leading=42,  # Mayor interlineado para títulos multilínea
             textColor=self.color_primary,
             alignment=TA_CENTER
         ))
 
         self.styles.add(ParagraphStyle(
             name='H1',
-            fontSize=18,
+            fontSize=16,
             fontName='Helvetica-Bold',
-            spaceBefore=24,
+            spaceBefore=20,
             spaceAfter=12,
-            leading=22,
+            leading=24,
             textColor=self.color_primary,
             borderPadding=0,
             borderWidth=0
@@ -228,10 +227,27 @@ class ReportGenerator:
         table_headers = []
 
         # --- Helpers ---
+        def remove_emojis(text):
+            """Elimina caracteres en rangos Unicode de emojis."""
+            return re.sub(r'[^\x00-\x7F]+', '', text) # Solución drástica: Solo ASCII (elimina tildes también? Cuidado)
+            # Mejor approach: Solo rangos especificos de emojis o dejar unicode normal
+            # Pero reportlab a veces falla con caracteres complejos si la fuente no los tiene.
+            # Vamos a mantener caracteres latinos pero quitar simbolos
+
         def clean_and_format(raw_text):
             """Limpia XML y aplica formato inline (negritas, itálicas, código)."""
+            # 0. Limpieza de caracteres problemáticos (Emojis)
+            # Mantiene letras acentuadas (L), números (N), puntuación (P), simbolos basicos (S)
+            # Esta regex es compleja, mejor un reemplazo simple de rangos conocidos de emojis
+            # Rango aproximado de emojis: U+1F600-U+1F64F, etc.
+            # Simplemente eliminamos caracteres que no sean basic latin-1 supplement
+            # O mejor, confiamos en el prompt de la IA pero hacemos un fallback visual
+
+            # Eliminar emojis especificos (rangos altos)
+            safe = re.sub(r'[\U00010000-\U0010ffff]', '', raw_text)
+
             # 1. Escapar XML básico
-            safe = raw_text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            safe = safe.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
             # 2. Negritas: **texto** -> <b>texto</b>
             safe = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', safe)
@@ -262,10 +278,10 @@ class ReportGenerator:
 
             if not data: return None
 
-            # Calcular ancho dinámico (asumiendo ancho página LETTER - margenes 0.4 inch cada lado)
-            # Ancho disponible aprox 7.7 inch
+            # Calcular ancho dinámico (asumiendo ancho página LETTER - margenes 0.5 inch cada lado)
+            # Ancho disponible = 8.5 - 1.0 = 7.5 inch
             col_count = len(data[0])
-            available_width = 7.7 * inch
+            available_width = 7.5 * inch
             col_width = available_width / col_count # Distribuir equitativamente
 
             t = Table(data, colWidths=[col_width] * col_count)
@@ -558,13 +574,41 @@ class ReportGenerator:
             summary = {
                 'ID': [str(self.audit.id)], 'URL': [self.url],
                 'Created At': [_clean_dt(self.audit.created_at)],
-                'Performance': [self.audit.performance_score]
+                'Performance': [self.audit.performance_score],
+                'SEO Score': [self.audit.seo_score],
+                'Accessibility': [self.audit.accessibility_score]
             }
             pd.DataFrame(summary).to_excel(writer, sheet_name='Dashboard', index=False)
 
+            # Schemas encontrados
             schemas = self.seo_data.get('schema_markup', [])
             if schemas:
-                pd.json_normalize(schemas).to_excel(writer, sheet_name='Schemas', index=False)
+                try:
+                    pd.json_normalize(schemas).to_excel(writer, sheet_name='Schemas Detectados', index=False)
+                except Exception as e:
+                    print(f"Error exportando schemas detectados: {e}")
+
+            # Tablas extraídas del análisis de IA
+            ai_text = self.ai_data.get('analysis', '')
+            if ai_text:
+                ia_tables = self._extract_tables_from_text(ai_text)
+                if ia_tables:
+                     self._write_dfs_to_sheet(writer, ia_tables, 'Tablas Analisis IA')
+
+                # Propuesta de Schemas extraidos del texto IA
+                proposed_schemas = self._extract_json_blocks(ai_text)
+                if proposed_schemas:
+                    prop_data = []
+                    for idx, sc in enumerate(proposed_schemas, 1):
+                        prop_data.append({
+                            'Origen': 'IA Proposal',
+                            'Type': sc.get('@type', 'Unknown'),
+                            'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
+                        })
+                    pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta IA', index=False)
+                    try:
+                        writer.sheets['Propuesta IA'].column_dimensions['C'].width = 70
+                    except: pass
 
         return str(filename)
 
@@ -822,4 +866,3 @@ class ReportGenerator:
             "xlsx_path": self.generate_excel(),
             "word_path": self.generate_docx()
         }
-
