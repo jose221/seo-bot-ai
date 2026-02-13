@@ -530,18 +530,20 @@ class ReportGenerator:
         # --- Schemas (Movido al inicio) ---
         schemas = self.seo_data.get('schema_markup', [])
         story.append(Paragraph("Esquema actual", self.styles["H1"]))
+        story.append(Spacer(1, 10))
 
         if schemas:
             for idx, schema in enumerate(schemas, 1):
                 s_type = schema.get('@type', 'Unknown')
                 story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
+                story.append(Spacer(1, 6))
 
                 # Convertir JSON a string formateado
                 json_str = json.dumps(schema, indent=2, ensure_ascii=False)
                 # Escapado simple manual porque va a Preformatted
                 json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                 story.append(XPreformatted(json_str, self.styles["CodeBlock"]))
-                story.append(Spacer(1, 10))
+                story.append(Spacer(1, 15))
 
         story.append(PageBreak())
 
