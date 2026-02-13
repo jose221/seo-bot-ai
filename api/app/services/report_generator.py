@@ -17,7 +17,7 @@ from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (
     SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle,
-    PageBreak, Preformatted, Image
+    PageBreak, Preformatted, Image, XPreformatted
 )
 from reportlab.lib.enums import TA_JUSTIFY, TA_CENTER, TA_LEFT
 
@@ -83,17 +83,21 @@ class ReportGenerator:
         self.styles.add(ParagraphStyle(
             name='CodeBlock',
             fontName='Courier',
-            fontSize=9,
-            leading=11,
+            fontSize=8, # Reducir un poco el tamaño
+            leading=10,
             backColor=colors.HexColor("#F5F7FA"),
             borderPadding=10,
             leftIndent=6,
             rightIndent=6,
             textColor=colors.HexColor("#102A43"),
-            spaceBefore=10,
-            spaceAfter=10,
+            spaceBefore=5,
+            spaceAfter=5,
             borderColor=colors.HexColor("#D9E2EC"),
-            borderWidth=0.5
+            borderWidth=0.5,
+            splitLongWords=True, # Permitir cortar palabras largas
+            allowWidows=0,
+            allowOrphans=0,
+            wordWrap='CJK' # wrap violento si es necesario
         ))
 
         # Títulos
@@ -378,7 +382,11 @@ class ReportGenerator:
 
         if in_code and code_buffer:
             content = "\n".join(code_buffer).replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-            flowables.append(Preformatted(content, self.styles["CodeBlock"]))
+            # Usar Paragraph en lugar de Preformatted permite wrapping, pero pierde indentación si no se cuida
+            # XPreformatted es mejor opción para mantener indentación y permitir wrap básico
+            # Sin embargo, para JSON muy largo, Paragraph con <br/> y &nbsp; es lo más seguro o XPreformatted
+            # Vamos a intentar XPreformatted que es más flexible que Preformatted
+            flowables.append(XPreformatted(content, self.styles["CodeBlock"]))
 
         return flowables
 
@@ -532,7 +540,7 @@ class ReportGenerator:
                 json_str = json.dumps(schema, indent=2, ensure_ascii=False)
                 # Escapado simple manual porque va a Preformatted
                 json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                story.append(Preformatted(json_str, self.styles["CodeBlock"]))
+                story.append(XPreformatted(json_str, self.styles["CodeBlock"]))
                 story.append(Spacer(1, 10))
 
         story.append(PageBreak())
@@ -703,7 +711,7 @@ class ReportGenerator:
 
                 json_str = json.dumps(schema, indent=2, ensure_ascii=False)
                 json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                story.append(Preformatted(json_str, self.styles["CodeBlock"]))
+                story.append(XPreformatted(json_str, self.styles["CodeBlock"]))
                 story.append(Spacer(1, 10))
             story.append(PageBreak())
 
