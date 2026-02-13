@@ -277,12 +277,18 @@ async def run_comparison_task(
             base_url=base_webpage.url
         )
 
+        # Extract base schemas for report
+        base_schemas = []
+        if base_audit.seo_analysis and 'schema_markup' in base_audit.seo_analysis:
+            base_schemas = base_audit.seo_analysis['schema_markup']
+
         # Construir resultado final
         comparison_result = {
             "base_url": base_webpage.url,
             "comparisons": comparisons,
             "overall_summary": overall_summary,
-            "ai_schema_comparison": ai_schema_comparison
+            "ai_schema_comparison": ai_schema_comparison,
+            "raw_schemas": {"base": base_schemas}
         }
 
         # Generar reporte

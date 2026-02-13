@@ -531,7 +531,7 @@ class ReportGenerator:
 
         # --- Schemas ---
         schemas = self.seo_data.get('schema_markup', [])
-        story.append(Paragraph(f"Datos Estructurados ({len(schemas)})", self.styles["H1"]))
+        story.append(Paragraph("Esquema actual", self.styles["H1"]))
 
         if schemas:
             for idx, schema in enumerate(schemas, 1):
@@ -670,6 +670,22 @@ class ReportGenerator:
             story.append(Spacer(1, 10))
             # Esto ahora detectará las tablas Markdown y las pintará bonitas
             story.extend(self._parse_markdown_to_flowables(ai_schema_md))
+            story.append(PageBreak())
+
+        # Esquema Actual (Full JSON)
+        raw_schemas = data.get('raw_schemas', {})
+        base_raw = raw_schemas.get('base', [])
+
+        if base_raw:
+            story.append(Paragraph("Esquema actual", self.styles["H1"]))
+            for idx, schema in enumerate(base_raw, 1):
+                s_type = schema.get('@type', 'Unknown')
+                story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
+
+                json_str = json.dumps(schema, indent=2, ensure_ascii=False)
+                json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Preformatted(json_str, self.styles["CodeBlock"]))
+                story.append(Spacer(1, 10))
             story.append(PageBreak())
 
         # Comparaciones individuales

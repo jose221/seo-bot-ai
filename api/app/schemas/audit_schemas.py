@@ -146,6 +146,7 @@ class AuditComparisonResponse(BaseModel):
         description="Resumen general comparando contra todos los competidores"
     )
     ai_schema_comparison: str
+    raw_schemas: Optional[Dict[str, Any]] = None
 
     class Config:
         json_schema_extra = {
