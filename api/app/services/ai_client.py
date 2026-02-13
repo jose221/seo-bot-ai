@@ -36,6 +36,18 @@ class AIClient:
             lstrip_blocks=True
         )
 
+    def count_tokens(self, text: str, model: str = "gpt-3.5-turbo") -> int:
+        """
+        Contar tokens de un texto usando tiktoken.
+        Usamos cl100k_base por defecto que es compatible con GPT-4 y GPT-3.5.
+        """
+        try:
+            encoding = tiktoken.encoding_for_model(model)
+        except KeyError:
+            encoding = tiktoken.get_encoding("cl100k_base")
+
+        return len(encoding.encode(text))
+
     async def chat_completion(
         self,
         request: ChatCompletionRequest,
@@ -109,7 +121,7 @@ class AIClient:
         url: str,
         lighthouse_data: Optional[dict] = None,
         token: str = None
-    ) -> str:
+    ) -> dict:
         """
         Analizar contenido HTML y métricas Lighthouse para SEO.
 
@@ -184,7 +196,7 @@ class AIClient:
         self,
         comparison_data: dict,
         token: str
-    ) -> str:
+    ) -> dict:
         """
         Analizar comparación de auditorías usando IA.
 
