@@ -31,7 +31,17 @@ class ReportGenerator:
         self.ai_data = self.audit.ai_suggestions or {}
 
         # 2. URL y Directorios
-        self.url = self.lh_data.get('url') or self.seo_data.get('onpage_seo', {}).get('canonical') or f"audit-{self.audit.id}"
+        raw_url = self.lh_data.get('url') or self.seo_data.get('onpage_seo', {}).get('canonical')
+
+        # FIX: Ensure URL is a string to avoid 'dict' object has no attribute 'split'
+        if isinstance(raw_url, dict):
+            # Try to salvage URL from dict if possible
+            raw_url = raw_url.get('url') or raw_url.get('canonical')
+
+        if not isinstance(raw_url, str):
+            raw_url = f"audit-{self.audit.id}"
+
+        self.url = raw_url
 
         clean_domain = self.url.replace('https://', '').replace('http://', '').split('/')[0]
         clean_domain = re.sub(r'[^\w\-_\.]', '_', clean_domain)
