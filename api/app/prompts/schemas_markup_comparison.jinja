@@ -6,7 +6,7 @@ Actúa como un Especialista Senior en SEO Técnico e Ingeniería de Datos, exper
 - **Giro/Industria:** {{ business_type }} (Ej. E-commerce, Agencia de Viajes, Blog de Noticias, SaaS)
 - **Objetivo:** Identificar deficiencias técnicas, oportunidades de esquemas faltantes y ventajas estratégicas que tienen los competidores.
 
-IMPORTANTE: No utilices emojis ni iconos en tu respuesta. El formato debe ser estrictamente texto y Markdown limpio, ya que los emojis causan problemas de renderizado en el reporte PDF. En el plan de acción, NO utilices tiempos estimados ni semanas (ej. "Semana 1"), en su lugar utiliza "Paso 1", "Fase 1" o similar.
+IMPORTANTE: No utilices emojis ni iconos en tu respuesta. El formato debe ser estrictamente texto y Markdown limpio. En las tablas usa texto como "Sí", "No", "N/A". En el plan de acción, NO utilices tiempos estimados ni semanas (ej. "Semana 1"), en su lugar utiliza "Paso 1", "Fase 1" o similar. Redacta en primera persona del plural ("nosotros").
 
 # Datos de Entrada
 
@@ -36,19 +36,20 @@ Analiza exhaustivamente los datos proporcionados y genera un reporte estratégic
 2.  **Tabla Comparativa de Tipos:** Matriz que muestre qué tipos de schemas tenemos nosotros vs cada competidor. (Usa texto: "Sí", "No", "Incompleto" para el estado).
 3.  **Análisis de Propiedades Faltantes:** No solo el tipo, sino qué propiedades importantes (ej. `review`, `aggregateRating`, `priceValidUntil`) están usando ellos que nosotros no.
 
-4.  **Comparativa Visual: Actual vs Propuesta:**
+4.  **Comparativa Visual: Actual vs Propuesta (Tabla Detallada):**
     *   Genera una tabla comparativa directa donde se vea claramente:
-        *   **Columna 1: Schema Actual** (Lo que tenemos ahora, resumido).
-        *   **Columna 2: Propuesta IA** (Lo que deberíamos tener).
-        *   **Columna 3: Acción** (Agregar, Mantener, Modificar, Eliminar).
-        *   **Columna 4: Impacto SEO** (Explicación breve de POR QUÉ ayuda. Ej: "Mejora CTR con estrellas", "Permite breadcrumbs en SERP").
+        *   **Columna 1: Schema Actual** (Resumen de lo que tenemos).
+        *   **Columna 2: Propuesta IA** (Resumen optimizado).
+        *   **Columna 3: Argumento Técnico/SEO** (Por qué se propone este cambio. Ej: "Breadcrumbs mejora la navegación en SERPs").
+        *   **Columna 4: Estado Acción** (Agregar / Modificar / Eliminar).
 
-5.  **Propuesta Técnica Final (JSON-LD Completo):**
-    *   **Argumentación Estratégica Detallada:** Para cada bloque de schema propuesto, explica su función técnica y su beneficio comercial/SEO. (Ejemplo: "Implementamos `BreadcrumbList` para que Google entienda la jerarquía del sitio y muestre la ruta de navegación en los resultados, aumentando la confianza del usuario").
-    *   **Bloque de Código JSON-LD:** El JSON-LD completo, validado y listo para copiar. NO uses placeholders genéricos si tienes datos reales (ej. usa el nombre real del hotel, no "Nombre del Hotel"). Si no tienes el dato, usa un placeholder claro.
+5.  **Propuesta Técnica Final Consolidada (JSON-LD Completo):**
+    *   Proporciona UNA propuesta final unificada que combine las mejores prácticas de todos los competidores analizados.
+    *   **Argumentación Estratégica:** Explica por qué esta configuración final es la mejor opción.
+    *   **Bloque de Código JSON-LD:** El JSON-LD completo, validado y listo para copiar.
 
-6.  **Plan de Acción Directo:** Pasos concretos para la implementación (Usa "Paso 1", "Paso 2", etc. NO uses tiempos/semanas).
+6.  **Plan de Acción Directo:** Pasos concretos para la implementación (Usa "Paso 1", "Paso 2", etc.).
 
 IMPORTANTE:
-*   Redacción en **PRIMERA PERSONA DEL PLURAL**.
-*   NO EMOJIS
+*   Redacción en **PRIMERA PERSONA DEL PLURAL** ("Tenemos que...").
+*   **CERO EMOJIS O ICONOS**.

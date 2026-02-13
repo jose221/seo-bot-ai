@@ -302,22 +302,35 @@ class AuditComparator:
             self,
             base_audit: AuditReport,
             compare_audits: List[AuditReport],
-            token: str
+            token: str,
+            base_url: str = "NA"
     ):
         template_schemas_compare = self.ai_client.jinja_env.get_template("schemas_markup_comparison.jinja")
         competitors = []
         base_schemas = []
+
         if base_audit.seo_analysis and 'schema_markup' in base_audit.seo_analysis:
-            base_schemas = base_audit.seo_analysis['schema_markup']
+            base_schemas = self._truncate_schemas(base_audit.seo_analysis['schema_markup'])
 
         for compare_audit in compare_audits:
             if compare_audit.seo_analysis and 'schema_markup' in compare_audit.seo_analysis:
-                compare_schemas = compare_audit.seo_analysis['schema_markup']
-                competitors.append({"url": "NA", "schemas": compare_schemas})
+                compare_schemas = self._truncate_schemas(compare_audit.seo_analysis['schema_markup'])
+                # Necesitamos la URL del competidor para el reporte
+                # Como compare_audits son objetos AuditReport, necesitamos acceder a web_page.url si está cargado
+                # O pasarlo como argumento. Por simplicidad, usaremos un placeholder si no está disponible,
+                # pero idealmente background_tasks deberia pasar una estructura mejor.
+                # Sin embargo, en background_tasks.py pasamos 'competitors_audit' que son AuditReports.
+                # Intentemos obtener la URL de alguna manera o usar ID.
+                comp_url = "Competidor"
+                if hasattr(compare_audit, 'web_page') and compare_audit.web_page:
+                    comp_url = compare_audit.web_page.url
+
+                competitors.append({"url": comp_url, "schemas": compare_schemas})
+
         params = {
-            "base_url": "NA",
-            "business_type": "Agencia de Viajes (OTA)",
-            "schemas": base_schemas,  # Lista de dicts
+            "base_url": base_url,
+            "business_type": "Sitio Web", # Generic fallback
+            "schemas": base_schemas,
             "competitors": competitors
         }
         prompt_content = template_schemas_compare.render(**params)
@@ -332,11 +345,47 @@ class AuditComparator:
             messages=[user_message],
             model="deepseek-chat",
             stream=False,
-            tools=["web_search"]
+            # tools=["web_search"] # Desactivar web_search para reducir complejidad si ya tenemos los datos
         )
 
         response = await self.ai_client.chat_completion(request, token)
         return response.get_content()
+
+    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 20, max_chars: int = 15000) -> List[Dict[str, Any]]:
+        """
+        Trunca la lista de schemas para no exceder límites de tokens.
+        Prioriza schemas únicos y reduce el contenido si es necesario.
+        """
+        if not schemas:
+            return []
+
+        # 1. Limitar número de items
+        truncated = schemas[:max_items]
+
+        # 2. Verificar tamaño total en caracteres (aprox tokens)
+        import json
+        current_chars = len(json.dumps(truncated))
+
+        if current_chars > max_chars:
+            # Si sigue siendo muy grande, reducir más agresivamente
+            # O eliminar propiedades muy largas como 'articleBody' o 'description' larga
+            cleaned = []
+            for s in truncated:
+                c_s = s.copy()
+                # Eliminar campos grandes que no aportan tanto al análisis de estructura
+                if 'articleBody' in c_s: c_s['articleBody'] = c_s['articleBody'][:100] + "..."
+                if 'description' in c_s and isinstance(c_s['description'], str) and len(c_s['description']) > 200:
+                    c_s['description'] = c_s['description'][:200] + "..."
+                cleaned.append(c_s)
+
+            # Volver a verificar
+            truncated = cleaned
+
+            # Si aun así... cortar lista
+            while len(json.dumps(truncated)) > max_chars and len(truncated) > 1:
+                truncated.pop()
+
+        return truncated
 
     def _get_comparison_status(self, difference: float) -> str:
         """Obtener estado de comparación basado en diferencia"""

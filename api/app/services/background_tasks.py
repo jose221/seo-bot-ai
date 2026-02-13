@@ -271,7 +271,8 @@ async def run_comparison_task(
         ai_schema_comparison = await comparator.generate_ai_schema_comparison(
             base_audit=base_audit,
             compare_audits=competitors_audit,
-            token=token
+            token=token,
+            base_url=base_webpage.url
         )
 
         # Construir resultado final

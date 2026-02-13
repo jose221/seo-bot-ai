@@ -664,8 +664,8 @@ class ReportGenerator:
             pagesize=LETTER,
             topMargin=40,
             bottomMargin=40,
-            leftMargin=0.5*inch,
-            rightMargin=0.5*inch
+            leftMargin=0.4*inch, # Menor margen
+            rightMargin=0.4*inch
         )
         story = []
 
