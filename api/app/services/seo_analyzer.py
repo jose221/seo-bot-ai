@@ -8,6 +8,7 @@ from collections import Counter
 from string import punctuation
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
+import extruct
 
 
 class SEOAnalyzer:

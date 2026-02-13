@@ -105,8 +105,8 @@ async def run_audit_task(
         # Guardar resultados
         with db_manager.sync_session_context() as session:
             audit = session.get(AuditReport, audit_id)
-            lighthouse_result.pop('html_content', None)
-            lighthouse_result.pop('html_content_raw', None)
+            # lighthouse_result.pop('html_content', None)
+            # lighthouse_result.pop('html_content_raw', None)
 
             if audit:
                 audit.performance_score = lighthouse_result.get('performance_score')

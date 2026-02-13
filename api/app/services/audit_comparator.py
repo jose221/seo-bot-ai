@@ -351,7 +351,7 @@ class AuditComparator:
         response = await self.ai_client.chat_completion(request, token)
         return response.get_content()
 
-    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 20, max_chars: int = 15000) -> List[Dict[str, Any]]:
+    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 50, max_chars: int = 100000) -> List[Dict[str, Any]]:
         """
         Trunca la lista de schemas para no exceder límites de tokens.
         Prioriza schemas únicos y reduce el contenido si es necesario.
