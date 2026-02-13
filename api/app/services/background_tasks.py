@@ -60,6 +60,7 @@ async def run_audit_task(
 
         # Análisis de IA si se solicita
         ai_analysis_data = None
+        ai_analysis = None
         if include_ai:
             print(f"🤖 Ejecutando análisis de IA...")
             ai_client = get_ai_client()
@@ -210,6 +211,8 @@ async def run_comparison_task(
         comparator = get_audit_comparator()
         comparisons = []
         competitors_audit = []
+        total_input_tokens = 0
+        total_output_tokens = 0
 
         with db_manager.sync_session_context() as session:
             for competitor_id in competitor_ids:
@@ -291,6 +294,12 @@ async def run_comparison_task(
             token=token,
             base_url=base_webpage.url
         )
+
+        ai_schema_comparison_text = ""
+        if isinstance(ai_schema_comparison, dict):
+            ai_schema_comparison_text = ai_schema_comparison.get('content', '')
+        else:
+            ai_schema_comparison_text = str(ai_schema_comparison)
 
         # Extract base schemas for report
         base_schemas = []
