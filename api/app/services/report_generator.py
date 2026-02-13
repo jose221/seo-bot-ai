@@ -519,17 +519,7 @@ class ReportGenerator:
         story.append(t)
         story.append(Spacer(1, 20))
 
-        # --- Análisis IA ---
-        story.append(Paragraph(f"Análisis de Inteligencia Artificial", self.styles["H1"]))
-        analysis_text = self.ai_data.get('analysis', '')
-        if analysis_text:
-            story.extend(self._parse_markdown_to_flowables(analysis_text))
-        else:
-            story.append(Paragraph("<i>No disponible.</i>", self.styles["Justify"]))
-
-        story.append(PageBreak())
-
-        # --- Schemas ---
+        # --- Schemas (Movido al inicio) ---
         schemas = self.seo_data.get('schema_markup', [])
         story.append(Paragraph("Esquema actual", self.styles["H1"]))
 
@@ -544,6 +534,43 @@ class ReportGenerator:
                 json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
                 story.append(Preformatted(json_str, self.styles["CodeBlock"]))
                 story.append(Spacer(1, 10))
+
+        story.append(PageBreak())
+
+        # --- Análisis IA ---
+        story.append(Paragraph(f"Análisis de Inteligencia Artificial", self.styles["H1"]))
+        analysis_text = self.ai_data.get('analysis', '')
+        if analysis_text:
+            story.extend(self._parse_markdown_to_flowables(analysis_text))
+        else:
+            story.append(Paragraph("<i>No disponible.</i>", self.styles["Justify"]))
+
+        story.append(PageBreak())
+
+        # --- Comparativa Global (Benchmarking) ---
+        global_comparison = self.seo_data.get('global_comparison', {})
+        if global_comparison:
+            story.append(Paragraph("Comparativa Global", self.styles["H1"]))
+
+            # Extraer tablas de la comparación global
+            global_tables = self._extract_tables_from_text(global_comparison.get('ai_analysis', ''))
+            if global_tables:
+                for idx, table in enumerate(global_tables, 1):
+                    # Convertir DataFrame a tabla ReportLab
+                    data = [table.columns.tolist()] + table.values.tolist()
+                    t = Table(data)
+                    t.setStyle(TableStyle([
+
+                        ('BACKGROUND', (0, 0), (-1, 0), self.color_primary),
+                        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                        ('PADDING', (0, 0), (-1, -1), 6),
+                    ]))
+
+                    story.append(t)
+                    story.append(Spacer(1, 20))
 
         doc.build(story)
         return str(filename)
@@ -663,6 +690,22 @@ class ReportGenerator:
             ]))
             story.append(t)
             story.append(Spacer(1, 15))
+
+        # Esquema Actual (Full JSON) - MOVIDO AQUI
+        raw_schemas = data.get('raw_schemas', {})
+        base_raw = raw_schemas.get('base', [])
+
+        if base_raw:
+            story.append(Paragraph("Esquema actual", self.styles["H1"]))
+            for idx, schema in enumerate(base_raw, 1):
+                s_type = schema.get('@type', 'Unknown')
+                story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
+
+                json_str = json.dumps(schema, indent=2, ensure_ascii=False)
+                json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                story.append(Preformatted(json_str, self.styles["CodeBlock"]))
+                story.append(Spacer(1, 10))
+            story.append(PageBreak())
 
         # Markdown de IA (Aquí es donde la magia del nuevo parser actúa)
         ai_schema_md = data.get('ai_schema_comparison', '')
@@ -823,4 +866,3 @@ class ReportGenerator:
             "xlsx_path": self.generate_excel(),
             "word_path": self.generate_docx()
         }
-
