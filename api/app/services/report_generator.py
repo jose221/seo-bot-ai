@@ -190,9 +190,16 @@ class ReportGenerator:
         if score >= 50: return colors.HexColor("#D83B01") # Naranja oscuro
         return colors.HexColor("#A80000") # Rojo oscuro
 
-    def _extract_json_blocks(self, text: str) -> List[Dict]:
+    def _extract_json_blocks(self, text: Union[str, Dict, Any]) -> List[Dict]:
         """Extrae bloques de código JSON del texto markdown."""
         if not text: return []
+
+        # Safety check
+        if isinstance(text, dict):
+             text = text.get('content', '') or str(text)
+
+        if not isinstance(text, str):
+            text = str(text)
 
         json_blocks = []
 
@@ -223,12 +230,20 @@ class ReportGenerator:
 
         return json_blocks
 
-    def _parse_markdown_to_flowables(self, text: str) -> List:
+    def _parse_markdown_to_flowables(self, text: Union[str, Dict, Any]) -> List:
         """
         Parser Avanzado: Convierte Markdown a elementos PDF.
         Soporta: Headers, Listas, Bloques de Código y **TABLAS**.
         """
         if not text: return []
+
+        # Safety check: If text is a dict (e.g. from old cache or unhandled return), extract content
+        if isinstance(text, dict):
+            text = text.get('content', '') or text.get('analysis', '') or str(text)
+
+        # Ensure text is string before splitting
+        if not isinstance(text, str):
+            text = str(text)
 
         flowables = []
         lines = text.split('\n')
@@ -400,9 +415,16 @@ class ReportGenerator:
 
         return flowables
 
-    def _extract_tables_from_text(self, text: str) -> List[pd.DataFrame]:
+    def _extract_tables_from_text(self, text: Union[str, Dict, Any]) -> List[pd.DataFrame]:
         """Extrae tablas Markdown de un texto y devuelve una lista de DataFrames."""
         if not text: return []
+
+        # Safety check
+        if isinstance(text, dict):
+            text = text.get('content', '') or str(text)
+
+        if not isinstance(text, str):
+            text = str(text)
 
         tables = []
         lines = text.split('\n')
