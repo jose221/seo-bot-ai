@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module type="PYTHON_MODULE" version="4">
+  <component name="FacetManager">
+    <facet type="Python" name="Python facet">
+      <configuration sdkName="Python 3.13 (seo-bot-ai)" />
+    </facet>
+  </component>
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/api/myenv" />
@@ -7,5 +12,6 @@
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (seo-bot-ai)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="Python 3.13 (seo-bot-ai) interpreter library" level="application" />
   </component>
 </module>

@@ -102,8 +102,13 @@ async def run_audit_task(
                     **req_ai_analysis_params
                 )
 
+                # Extraer métricas de uso y contenido
+                usage = ai_analysis.get('usage', {})
+                content = ai_analysis.get('content', '')
+
                 ai_analysis_data = {
-                    'analysis': ai_analysis,
+                    'content': content,
+                    'usage': usage,
                     'generated_at': datetime.now(timezone.utc).isoformat(),
                     'model': 'deepseek-chat'
                 }
@@ -134,7 +139,16 @@ async def run_audit_task(
                 audit.fid = lighthouse_result.get('fid')
                 audit.cls = lighthouse_result.get('cls')
                 audit.lighthouse_data = lighthouse_result
-                audit.ai_suggestions = ai_analysis_data
+
+                # Asignar datos de IA y guardar tokens
+                if ai_analysis_data:
+                    audit.ai_suggestions = ai_analysis_data
+                    # Guardar tokens en columnas dedicadas si existen en ai_analysis_data
+                    if 'usage' in ai_analysis_data:
+                        usage_data = ai_analysis_data['usage']
+                        audit.input_tokens = usage_data.get('prompt_tokens', 0)
+                        audit.output_tokens = usage_data.get('completion_tokens', 0)
+
                 audit.status = AuditStatus.COMPLETED
                 audit.completed_at = datetime.now(timezone.utc)
                 audit.seo_analysis = seo_analysis
