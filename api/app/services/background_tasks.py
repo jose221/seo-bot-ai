@@ -323,7 +323,7 @@ async def run_comparison_task(
                 ai_schema_comparison_text = str(ai_schema_comparison)
         except Exception as e:
              print(f"⚠️ Error generando comparación de schemas con IA: {e}")
-             ai_schema_comparison_text = "No se pudo generar el análisis de IA para schemas debido a un error en el servicio."
+             ai_schema_comparison_text = f"No se pudo generar el análisis de IA para schemas debido a un error en el servicio. {e}"
 
         # Extract base schemas for report
         base_schemas = []
