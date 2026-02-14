@@ -369,30 +369,29 @@ class AuditComparator:
     def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 15) -> List[Dict[str, Any]]:
         """
         Trunca schemas para evitar exceder límites de tokens.
-        Devuelve una copia truncada. Limitamos:
-        1. El número total de schemas si son muchos del mismo tipo (ej. 100 reviews).
-        2. El tamaño de listas internas (ej. itemListElement).
+        Devuelve una copia truncada incluyendo listas.
         """
         import copy
         if not schemas: return []
 
-        # Limitar número total de schemas si es excesivo
-        truncated_list = schemas[:30] # Max 30 schemas top-level
+        # 1. Limitar número total de schemas
+        truncated_list = schemas[:40] # Ajustado a 40
         final_schemas = []
 
+        def truncate_value(val):
+            """Helper recursivo para truncar valores"""
+            if isinstance(val, list):
+                # Truncar lista
+                trunc_list = val[:max_items]
+                return [truncate_value(v) for v in trunc_list]
+            elif isinstance(val, dict):
+                return {k: truncate_value(v) for k, v in val.items()}
+            return val
+
         for schema in truncated_list:
-            # Deep copy para no modificar el original
             s_copy = copy.deepcopy(schema)
-
-            # Recorrer propiedades y truncar listas internas
-            for key, value in s_copy.items():
-                if isinstance(value, list) and len(value) > max_items:
-                    # Guardamos los primeros N elementos
-                    s_copy[key] = value[:max_items]
-                    # Agregamos indicación de truncado (solo para info de la IA)
-                    s_copy[f"_{key}_truncated_count"] = len(value)
-
-            final_schemas.append(s_copy)
+            # Aplicar truncado recursivo a listas y diccionarios, pero NO a textos
+            final_schemas.append(truncate_value(s_copy))
 
         return final_schemas
 
