@@ -567,27 +567,30 @@ class ReportGenerator:
 
         # --- Schemas (Movido al inicio) ---
         schemas = self.seo_data.get('schema_markup', [])
-        story.append(Paragraph("Esquema actual", self.styles["H1"]))
-        story.append(Spacer(1, 10))
 
-        if schemas:
-            for idx, schema in enumerate(schemas, 1):
-                s_type = schema.get('@type', 'Unknown')
-        if schemas:
-            for idx, schema in enumerate(schemas, 1):
-                s_type = schema.get('@type', 'Unknown')
-                story.append(Spacer(1, 25))
-                story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
-                story.append(Spacer(1, 30))
 
-                # Convertir JSON a string formateado
-                json_str = json.dumps(schema, indent=2, ensure_ascii=False)
-                # Escapado simple manual porque va a Preformatted
-                json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
-                story.append(XPreformatted(json_str, self.styles["CodeBlock"]))
-                story.append(Spacer(1, 30))
+        show_base_raw = False
+        if show_base_raw:
+          story.append(Paragraph("Esquema actual", self.styles["H1"]))
+          story.append(Spacer(1, 10))
+          if schemas:
+              for idx, schema in enumerate(schemas, 1):
+                  s_type = schema.get('@type', 'Unknown')
+          if schemas:
+              for idx, schema in enumerate(schemas, 1):
+                  s_type = schema.get('@type', 'Unknown')
+                  story.append(Spacer(1, 25))
+                  story.append(Paragraph(f"{idx}. {s_type}", self.styles["H3"]))
+                  story.append(Spacer(1, 30))
 
-        story.append(PageBreak())
+                  # Convertir JSON a string formateado
+                  json_str = json.dumps(schema, indent=2, ensure_ascii=False)
+                  # Escapado simple manual porque va a Preformatted
+                  json_str = json_str.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                  story.append(XPreformatted(json_str, self.styles["CodeBlock"]))
+                  story.append(Spacer(1, 30))
+
+          story.append(PageBreak())
 
         # --- Análisis IA ---
         story.append(Paragraph(f"Análisis de Inteligencia Artificial", self.styles["H1"]))
@@ -726,7 +729,7 @@ class ReportGenerator:
         # Overall Summary
         overall = data.get('overall_summary', {})
         if overall:
-            story.append(Paragraph("Resumen Ejecutivo", self.styles["H1"]))
+            story.append(Paragraph("Resumen", self.styles["H1"]))
             # Formateamos el resumen como una tabla pequeña para que se vea limpio
             summ_data = [
                 ["Total Competidores", str(overall.get('total_competitors', 0))],
@@ -746,8 +749,8 @@ class ReportGenerator:
         # Esquema Actual (Full JSON) - MOVIDO AQUI
         raw_schemas = data.get('raw_schemas', {})
         base_raw = raw_schemas.get('base', [])
-
-        if base_raw:
+        show_base_raw = False
+        if base_raw and show_base_raw:
             story.append(Paragraph("Esquema actual", self.styles["H1"]))
             for idx, schema in enumerate(base_raw, 1):
                 s_type = schema.get('@type', 'Unknown')
