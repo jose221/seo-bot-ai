@@ -366,12 +366,35 @@ class AuditComparator:
             }
         }
 
-    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 50) -> List[Dict[str, Any]]:
+    def _truncate_schemas(self, schemas: List[Dict[str, Any]], max_items: int = 15) -> List[Dict[str, Any]]:
         """
-        No trunca schemas. Devuelve todo el contenido para análisis completo.
-        Se mantiene la firma para compatibilidad.
+        Trunca schemas para evitar exceder límites de tokens.
+        Devuelve una copia truncada. Limitamos:
+        1. El número total de schemas si son muchos del mismo tipo (ej. 100 reviews).
+        2. El tamaño de listas internas (ej. itemListElement).
         """
-        return schemas
+        import copy
+        if not schemas: return []
+
+        # Limitar número total de schemas si es excesivo
+        truncated_list = schemas[:30] # Max 30 schemas top-level
+        final_schemas = []
+
+        for schema in truncated_list:
+            # Deep copy para no modificar el original
+            s_copy = copy.deepcopy(schema)
+
+            # Recorrer propiedades y truncar listas internas
+            for key, value in s_copy.items():
+                if isinstance(value, list) and len(value) > max_items:
+                    # Guardamos los primeros N elementos
+                    s_copy[key] = value[:max_items]
+                    # Agregamos indicación de truncado (solo para info de la IA)
+                    s_copy[f"_{key}_truncated_count"] = len(value)
+
+            final_schemas.append(s_copy)
+
+        return final_schemas
 
     def _get_comparison_status(self, difference: float) -> str:
         """Obtener estado de comparación basado en diferencia"""
