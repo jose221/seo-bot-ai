@@ -687,6 +687,49 @@ class ReportGenerator:
 
         return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path), "word_path": str(word_path)}
 
+    def generate_detailed_proposal_reports(self, detailed_proposal_text: str) -> Dict[str, str]:
+        """
+        Genera los reportes (PDF y Word) para la propuesta detallada de esquemas.
+        """
+        ts = datetime.now().strftime("%Y%m%d_%H%M")
+        pdf_path = self.base_dir / f"Esquema_Propuesta_Detalle_{ts}.pdf"
+        word_path = self.base_dir / f"Esquema_Propuesta_Detalle_{ts}.docx"
+
+        # 1. Generar PDF
+        doc = SimpleDocTemplate(
+            str(pdf_path),
+            pagesize=LETTER,
+            topMargin=40,
+            bottomMargin=40,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
+        )
+        story = []
+
+        # Título
+        story.append(Paragraph("Informe Detallado de Propuesta de Esquema", self.styles["ReportTitle"]))
+
+        # Meta Info
+        story.append(Paragraph(f"<b>URL Objetivo:</b> {self.url}", self.styles["Justify"]))
+        story.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y')}", self.styles["Justify"]))
+        story.append(Spacer(1, 20))
+
+        # Contenido (Markdown parseado)
+        if detailed_proposal_text:
+            story.extend(self._parse_markdown_to_flowables(detailed_proposal_text))
+        else:
+            story.append(Paragraph("<i>No se generó contenido detallado.</i>", self.styles["Justify"]))
+
+        doc.build(story)
+
+        # 2. Generar Word (Convirtiendo PDF)
+        self._convert_pdf_to_word(pdf_path, word_path)
+
+        return {
+            "pdf_path": str(pdf_path),
+            "word_path": str(word_path)
+        }
+
     def _convert_pdf_to_word(self, pdf_path: Path, word_path: Path):
         """Convierte un archivo PDF a Word (DOCX) usando pdf2docx."""
         try:

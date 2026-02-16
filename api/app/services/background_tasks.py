@@ -345,6 +345,28 @@ async def run_comparison_task(
         report = ReportGenerator(audit=base_audit).generate_comparison_reports(response_obj)
         print(f"📄 Reporte de comparación generado: {report}")
 
+        # NUEVO: Generar Reporte Detallado de Propuesta de Schema
+        detailed_report_paths = {}
+        try:
+             # Solo si hay contenido en ai_schema_comparison_text
+             if ai_schema_comparison_text and len(ai_schema_comparison_text) > 100:
+                 print("🔍 Generando explicación detallada de la propuesta...")
+                 detailed_ai_response = await comparator.generate_ai_detailed_proposal_report(
+                     schema_proposal=ai_schema_comparison_text,
+                     token=token
+                 )
+
+                 detailed_content = detailed_ai_response.get('content', '')
+                 d_usage = detailed_ai_response.get('usage', {})
+                 total_input_tokens += d_usage.get('prompt_tokens', 0)
+                 total_output_tokens += d_usage.get('completion_tokens', 0)
+
+                 detailed_report_paths = ReportGenerator(audit=base_audit).generate_detailed_proposal_reports(detailed_content)
+                 print(f"📘 Reporte detallado generado: {detailed_report_paths}")
+
+        except Exception as e:
+            print(f"⚠️ Error generando reporte detallado de propuesta: {e}")
+
         # Guardar resultado
         with db_manager.sync_session_context() as session:
             comparison = session.get(AuditComparison, comparison_id)
@@ -361,6 +383,10 @@ async def run_comparison_task(
                 comparison.report_pdf_path = report.get('pdf_path')
                 comparison.report_excel_path = report.get('xlsx_path')
                 comparison.report_word_path = report.get('word_path')
+
+                # Guardar rutas de reporte detallado
+                comparison.proposal_report_pdf_path = detailed_report_paths.get('pdf_path')
+                comparison.proposal_report_word_path = detailed_report_paths.get('word_path')
 
                 session.add(comparison)
 

@@ -56,6 +56,10 @@ class AuditComparison(SQLModel, table=True):
     report_excel_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
     report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
+    # Rutas de reporte detallado de propuesta de schema
+    proposal_report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+    proposal_report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+
     # Metadata
     include_ai_analysis: bool = Field(default=True)
     input_tokens: Optional[int] = Field(default=0, description="Tokens de entrada usados por la IA")

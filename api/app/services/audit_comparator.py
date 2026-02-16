@@ -296,6 +296,49 @@ class AuditComparator:
         response = await self.ai_client.chat_completion(request, token)
         return response.get_content()
 
+    async def generate_ai_detailed_proposal_report(
+            self,
+            schema_proposal: str,
+            token: str
+    ):
+        """
+        Genera un reporte detallado explicativo de la propuesta de esquema.
+        """
+        template_detailed = self.ai_client.jinja_env.get_template("schema_proposal_detail.jinja")
+
+        # Renderizar prompt
+        prompt_content = template_detailed.render(schema_proposal=schema_proposal)
+
+        from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
+
+        user_message = ChatMessage(
+            role=MessageRole.USER,
+            content=prompt_content
+        )
+
+        request = ChatCompletionRequest(
+            messages=[user_message],
+            model="deepseek-chat", # Usar modelo capaz de explicaciones detalladas
+            stream=False
+        )
+
+        # Llamada a IA
+        response = await self.ai_client.chat_completion(request, token)
+        content = response.get_content()
+
+        # Calcular tokens
+        input_tokens = self.ai_client.count_tokens(prompt_content)
+        output_tokens = self.ai_client.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens
+            }
+        }
+
     # Métodos auxiliares
 
     async def generate_ai_schema_comparison(
