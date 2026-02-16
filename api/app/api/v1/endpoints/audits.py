@@ -416,7 +416,9 @@ async def list_comparisons(
         AuditComparison.comparison_result,
         AuditComparison.report_pdf_path,
         AuditComparison.report_excel_path,
-        AuditComparison.report_word_path
+        AuditComparison.report_word_path,
+        AuditComparison.proposal_report_pdf_path,
+        AuditComparison.proposal_report_word_path
     ).where(
         AuditComparison.user_id == current_user.id
     ).order_by(desc(AuditComparison.created_at))
@@ -457,7 +459,9 @@ async def list_comparisons(
             error_message=comp.error_message,
             report_pdf_path=comp.report_pdf_path,
             report_excel_path=comp.report_excel_path,
-            report_word_path=comp.report_word_path
+            report_word_path=comp.report_word_path,
+            proposal_report_pdf_path=comp.proposal_report_pdf_path,
+            proposal_report_word_path=comp.proposal_report_word_path
         ))
 
     return audit_schemas.ComparisonListResponse(
@@ -508,7 +512,9 @@ async def get_comparison(
         error_message=comparison.error_message,
         report_pdf_path=comparison.report_pdf_path,
         report_excel_path=comparison.report_excel_path,
-        report_word_path=comparison.report_word_path
+        report_word_path=comparison.report_word_path,
+        proposal_report_pdf_path=comparison.proposal_report_pdf_path,
+        proposal_report_word_path=comparison.proposal_report_word_path
     )
 
 

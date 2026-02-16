@@ -240,6 +240,10 @@ class ComparisonListItem(BaseModel):
     report_excel_path: Optional[str] = None
     report_word_path: Optional[str] = None
 
+    # Rutas de reporte detallado de propuesta de schema
+    proposal_report_pdf_path: Optional[str] = None
+    proposal_report_word_path: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -267,6 +271,10 @@ class ComparisonDetailResponse(BaseModel):
     report_pdf_path: Optional[str] = None
     report_excel_path: Optional[str] = None
     report_word_path: Optional[str] = None
+
+    # Rutas de reporte detallado de propuesta de schema
+    proposal_report_pdf_path: Optional[str] = None
+    proposal_report_word_path: Optional[str] = None
 
     class Config:
         from_attributes = True
