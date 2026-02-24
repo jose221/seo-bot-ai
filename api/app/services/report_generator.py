@@ -594,7 +594,7 @@ class ReportGenerator:
 
         # --- Análisis IA ---
         story.append(Paragraph(f"Análisis de Inteligencia Artificial", self.styles["H1"]))
-        analysis_text = self.ai_data.get('analysis', '')
+        analysis_text = self.ai_data.get('content', '') or self.ai_data.get('analysis', '')
         if analysis_text:
             story.extend(self._parse_markdown_to_flowables(analysis_text))
         else:
