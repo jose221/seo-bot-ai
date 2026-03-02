@@ -10,12 +10,14 @@ from app.core.database import db_manager
 from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
 from app.models.audit_comparison import AuditComparison, ComparisonStatus
+from app.models.audit_schema_review import AuditSchemaReview, SchemaAuditStatus, SchemaAuditSourceType
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
 from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
+from app.services.schema_audit_service import get_schema_audit_service
 from app.helpers import extract_domain
 from sqlalchemy import String, cast as sql_cast, desc
 from sqlalchemy.orm import joinedload
@@ -410,6 +412,157 @@ async def run_comparison_task(
                     session.add(comparison)
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo: {inner_error}")
+
+
+async def run_schema_audit_task(
+    schema_audit_id: UUID,
+    token: str
+):
+    """
+    Ejecutar auditoría de schemas en segundo plano.
+    """
+    schema_audit = None
+
+    try:
+        with db_manager.sync_session_context() as session:
+            schema_audit = session.get(AuditSchemaReview, schema_audit_id)
+            if not schema_audit:
+                print(f"❌ No se encontró schema_audit {schema_audit_id}")
+                return
+
+            schema_audit.status = SchemaAuditStatus.IN_PROGRESS
+            session.add(schema_audit)
+
+        service = get_schema_audit_service()
+        total_input_tokens = 0
+        total_output_tokens = 0
+
+        with db_manager.sync_session_context() as session:
+            schema_audit = session.get(AuditSchemaReview, schema_audit_id)
+            if not schema_audit:
+                raise Exception("Schema audit no encontrado")
+
+            original_schema = schema_audit.original_schema_json
+            proposed_schema = schema_audit.proposed_schema_json
+            incoming_schema = schema_audit.incoming_schema_json
+
+            validations = {
+                "original": service.validate_schema_payload(original_schema, "original"),
+                "proposed": service.validate_schema_payload(proposed_schema, "proposed"),
+                "incoming": service.validate_schema_payload(incoming_schema, "incoming")
+            }
+
+            schema_audit.schema_org_validation_result = validations
+
+            if not validations["proposed"]["is_valid"]:
+                raise Exception("El esquema propuesto final no es válido o no está presente")
+            if not validations["incoming"]["is_valid"]:
+                raise Exception("El esquema nuevo recibido no cumple validación base de schema.org")
+
+            structural_result = service.build_structural_comparison(
+                original_schema=original_schema,
+                proposed_schema=proposed_schema,
+                incoming_schema=incoming_schema
+            )
+
+            schema_audit.triple_comparison_result = structural_result
+            schema_audit.progress_report = {
+                "implemented": structural_result.get("delta", {}).get("implemented_from_proposed", []),
+                "pending": structural_result.get("delta", {}).get("pending_from_proposed", []),
+                "out_of_scope": structural_result.get("delta", {}).get("new_not_in_proposed", []),
+                "original_integrity": structural_result.get("original_integrity", {})
+            }
+
+            session.add(schema_audit)
+
+        ai_triple_report = None
+        ai_cqrs_model = None
+
+        if schema_audit.include_ai_analysis:
+            ai_triple_report = await service.generate_triple_comparison_ai(
+                original_schema=schema_audit.original_schema_json,
+                proposed_schema=schema_audit.proposed_schema_json,
+                incoming_schema=schema_audit.incoming_schema_json,
+                structural_result=schema_audit.triple_comparison_result,
+                token=token
+            )
+            usage_1 = ai_triple_report.get("usage", {})
+            total_input_tokens += usage_1.get("prompt_tokens", 0)
+            total_output_tokens += usage_1.get("completion_tokens", 0)
+
+            ai_cqrs_model = await service.generate_cqrs_solid_model_ai(
+                proposed_schema=schema_audit.proposed_schema_json,
+                incoming_schema=schema_audit.incoming_schema_json,
+                programming_language=schema_audit.programming_language,
+                token=token
+            )
+            usage_2 = ai_cqrs_model.get("usage", {})
+            total_input_tokens += usage_2.get("prompt_tokens", 0)
+            total_output_tokens += usage_2.get("completion_tokens", 0)
+
+        with db_manager.sync_session_context() as session:
+            schema_audit = session.get(AuditSchemaReview, schema_audit_id)
+            if not schema_audit:
+                raise Exception("Schema audit no encontrado al finalizar")
+
+            ai_report_text = ai_triple_report.get("content", "") if ai_triple_report else ""
+            cqrs_text = ai_cqrs_model.get("content", "") if ai_cqrs_model else ""
+
+            schema_audit.cqrs_solid_model_text = cqrs_text
+            schema_audit.progress_report = {
+                **(schema_audit.progress_report or {}),
+                "ai_report": ai_report_text
+            }
+
+            # Resolver audit base para generación de reportes
+            report_audit = None
+            if schema_audit.source_type == SchemaAuditSourceType.AUDIT_PAGE:
+                report_audit = session.get(AuditReport, schema_audit.source_id)
+            elif schema_audit.source_type == SchemaAuditSourceType.AUDIT_COMPARISON:
+                comp = session.get(AuditComparison, schema_audit.source_id)
+                if comp:
+                    stmt = select(AuditReport).where(
+                        AuditReport.web_page_id == comp.base_web_page_id,
+                        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
+                    ).order_by(desc(AuditReport.created_at)).limit(1)
+                    report_audit = session.execute(stmt).scalars().first()
+
+            if report_audit:
+                report_body = "\n\n".join([
+                    "# Auditoría de Schemas",
+                    ai_report_text or "Sin reporte IA de comparación.",
+                    "# Modelo CQRS + SOLID",
+                    cqrs_text or "Sin modelo generado."
+                ])
+                report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(report_body)
+                schema_audit.report_pdf_path = report_paths.get("pdf_path")
+                schema_audit.report_word_path = report_paths.get("word_path")
+
+            schema_audit.input_tokens = total_input_tokens
+            schema_audit.output_tokens = total_output_tokens
+            schema_audit.status = SchemaAuditStatus.COMPLETED
+            schema_audit.completed_at = datetime.now(timezone.utc)
+            session.add(schema_audit)
+
+        print(f"✅ Auditoría de schemas completada: {schema_audit_id}")
+
+    except Exception as e:
+        print(f"❌ Error en auditoría de schemas {schema_audit_id}: {e}")
+        import traceback
+        traceback.print_exc()
+
+        try:
+            with db_manager.sync_session_context() as session:
+                if schema_audit is None:
+                    schema_audit = session.get(AuditSchemaReview, schema_audit_id)
+
+                if schema_audit:
+                    schema_audit.status = SchemaAuditStatus.FAILED
+                    schema_audit.error_message = str(e)
+                    schema_audit.completed_at = datetime.now(timezone.utc)
+                    session.add(schema_audit)
+        except Exception as inner_error:
+            print(f"❌ Error al guardar estado de fallo schema audit: {inner_error}")
 
 
 def _generate_overall_summary(base_audit: AuditReport, comparisons: list) -> dict:

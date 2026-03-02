@@ -11,6 +11,7 @@ from app.api.deps import get_current_user
 from app.models.user import User
 from app.models.audit import AuditReport
 from app.models.audit_comparison import AuditComparison
+from app.models.audit_schema_review import AuditSchemaReview
 from app.core.database import get_session
 from sqlmodel import select
 
@@ -181,6 +182,64 @@ async def download_comparison_excel(
     return FileResponse(
         path=str(file_path),
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=file_path.name
+    )
+
+
+@router.get("/audits/schemas/{schema_audit_id}/download/pdf")
+async def download_schema_audit_pdf(
+    schema_audit_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session=Depends(get_session)
+):
+    """Descargar el reporte PDF de una auditoría de schemas."""
+    statement = select(AuditSchemaReview).where(
+        AuditSchemaReview.id == schema_audit_id,
+        AuditSchemaReview.user_id == current_user.id
+    )
+    result = await session.execute(statement)
+    schema_audit = result.scalars().first()
+
+    if not schema_audit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auditoría de schemas no encontrada")
+
+    if not schema_audit.report_pdf_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reporte PDF no disponible")
+
+    file_path = Path(schema_audit.report_pdf_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Archivo no encontrado en el servidor")
+
+    return FileResponse(path=str(file_path), media_type="application/pdf", filename=file_path.name)
+
+
+@router.get("/audits/schemas/{schema_audit_id}/download/word")
+async def download_schema_audit_word(
+    schema_audit_id: UUID,
+    current_user: User = Depends(get_current_user),
+    session=Depends(get_session)
+):
+    """Descargar el reporte Word de una auditoría de schemas."""
+    statement = select(AuditSchemaReview).where(
+        AuditSchemaReview.id == schema_audit_id,
+        AuditSchemaReview.user_id == current_user.id
+    )
+    result = await session.execute(statement)
+    schema_audit = result.scalars().first()
+
+    if not schema_audit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auditoría de schemas no encontrada")
+
+    if not schema_audit.report_word_path:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reporte Word no disponible")
+
+    file_path = Path(schema_audit.report_word_path)
+    if not file_path.exists():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Archivo no encontrado en el servidor")
+
+    return FileResponse(
+        path=str(file_path),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         filename=file_path.name
     )
 

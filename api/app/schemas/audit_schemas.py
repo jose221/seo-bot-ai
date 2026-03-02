@@ -2,12 +2,12 @@
 Schemas para Auditorías.
 Define DTOs para crear y consultar reportes de análisis.
 """
-from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, List
+from pydantic import BaseModel, Field, field_validator
+from typing import Optional, Dict, Any, List, Literal
 from uuid import UUID
 from datetime import datetime
 
-from app.models import WebPage, ComparisonStatus
+from app.models import WebPage, ComparisonStatus, SchemaAuditStatus, SchemaAuditSourceType
 from app.models.audit import AuditStatus
 
 
@@ -275,6 +275,94 @@ class ComparisonDetailResponse(BaseModel):
     # Rutas de reporte detallado de propuesta de schema
     proposal_report_pdf_path: Optional[str] = None
     proposal_report_word_path: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+ALLOWED_PROGRAMMING_LANGUAGES = {
+    "c#", "csharp", "typescript", "javascript", "python", "java", "go", "kotlin", "php"
+}
+
+
+class AuditSchemasCreate(BaseModel):
+    """Request para iniciar auditoría de schemas"""
+    source_type: Literal["audit_page", "audit_comparison"] = Field(
+        ..., description="Origen del esquema base"
+    )
+    source_id: UUID = Field(..., description="ID del recurso origen")
+    modified_schema_json: Any = Field(..., description="Esquema modificado enviado por cliente")
+    include_ai_analysis: bool = Field(default=True)
+    programming_language: Optional[str] = Field(
+        default=None,
+        description="Lenguaje opcional para el modelo CQRS + SOLID"
+    )
+
+    @field_validator("programming_language")
+    @classmethod
+    def validate_programming_language(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip().lower()
+        if normalized not in ALLOWED_PROGRAMMING_LANGUAGES:
+            raise ValueError(f"Lenguaje no válido. Permitidos: {sorted(ALLOWED_PROGRAMMING_LANGUAGES)}")
+        return normalized
+
+
+class AuditSchemasTaskResponse(BaseModel):
+    task_id: UUID
+    status: SchemaAuditStatus
+    message: str = "Auditoría de schemas iniciada en segundo plano"
+
+
+class AuditSchemasListItem(BaseModel):
+    id: UUID
+    source_type: SchemaAuditSourceType
+    source_id: UUID
+    status: SchemaAuditStatus
+    programming_language: Optional[str]
+    created_at: datetime
+    completed_at: Optional[datetime]
+    error_message: Optional[str] = None
+    report_pdf_path: Optional[str] = None
+    report_word_path: Optional[str] = None
+
+
+class AuditSchemasListResponse(BaseModel):
+    items: List[AuditSchemasListItem]
+    total: int
+    page: int
+    page_size: Optional[int] = None
+
+
+class AuditSchemasDetailResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    source_type: SchemaAuditSourceType
+    source_id: UUID
+    status: SchemaAuditStatus
+
+    original_schema_json: Optional[Any] = None
+    proposed_schema_json: Optional[Any] = None
+    incoming_schema_json: Optional[Any] = None
+
+    schema_org_validation_result: Optional[Dict[str, Any]] = None
+    triple_comparison_result: Optional[Dict[str, Any]] = None
+    progress_report: Optional[Dict[str, Any]] = None
+    cqrs_solid_model_text: Optional[str] = None
+
+    include_ai_analysis: bool
+    programming_language: Optional[str] = None
+
+    input_tokens: Optional[int] = 0
+    output_tokens: Optional[int] = 0
+    error_message: Optional[str] = None
+
+    report_pdf_path: Optional[str] = None
+    report_word_path: Optional[str] = None
+
+    created_at: datetime
+    completed_at: Optional[datetime]
 
     class Config:
         from_attributes = True

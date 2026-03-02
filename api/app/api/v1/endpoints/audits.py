@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from app.core.database import get_session
 from app.api.deps import get_current_user
 from app.helpers import extract_domain
-from app.models import AuditComparison
+from app.models import AuditComparison, AuditSchemaReview, SchemaAuditStatus, SchemaAuditSourceType
 from app.models.user import User
 from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
@@ -25,7 +25,8 @@ from app.services.cache import Cache
 from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
-from app.services.background_tasks import run_comparison_task
+from app.services.schema_audit_service import get_schema_audit_service
+from app.services.background_tasks import run_comparison_task, run_schema_audit_task
 
 router = APIRouter()
 
@@ -516,6 +517,166 @@ async def get_comparison(
         proposal_report_pdf_path=comparison.proposal_report_pdf_path,
         proposal_report_word_path=comparison.proposal_report_word_path
     )
+
+
+@router.post("/audits/schemas", response_model=audit_schemas.AuditSchemasTaskResponse, status_code=status.HTTP_202_ACCEPTED)
+async def create_schema_audit(
+        audit_request: audit_schemas.AuditSchemasCreate,
+        background_tasks: BackgroundTasks,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+        token: str = Depends(lambda: None)
+):
+    """
+    Iniciar una auditoría de schemas (original vs propuesto vs nuevo).
+    """
+    source_obj = None
+    source_web_page_id = None
+    proposal_text = None
+    schema_audit_service = get_schema_audit_service()
+
+    if audit_request.source_type == "audit_page":
+        stmt = select(AuditReport).where(
+            AuditReport.id == audit_request.source_id,
+            AuditReport.user_id == current_user.id
+        )
+        source_obj = (await session.execute(stmt)).scalars().first()
+        if not source_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit page no encontrado")
+
+        source_web_page_id = source_obj.web_page_id
+        ai_suggestions = source_obj.ai_suggestions or {}
+        proposal_text = ai_suggestions.get("content") or ai_suggestions.get("analysis")
+
+    elif audit_request.source_type == "audit_comparison":
+        stmt = select(AuditComparison).where(
+            AuditComparison.id == audit_request.source_id,
+            AuditComparison.user_id == current_user.id
+        )
+        source_obj = (await session.execute(stmt)).scalars().first()
+        if not source_obj:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Audit comparison no encontrado")
+
+        source_web_page_id = source_obj.base_web_page_id
+        comparison_result = source_obj.comparison_result or {}
+        proposal_text = comparison_result.get("ai_schema_comparison")
+
+    latest_audit_stmt = select(AuditReport).where(
+        AuditReport.web_page_id == source_web_page_id,
+        AuditReport.user_id == current_user.id,
+        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
+    ).order_by(desc(AuditReport.created_at)).limit(1)
+
+    latest_audit = (await session.execute(latest_audit_stmt)).scalars().first()
+    if not latest_audit:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No se encontró auditoría completada para extraer schema base"
+        )
+
+    original_schema = (latest_audit.seo_analysis or {}).get("schema_markup", [])
+    proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+
+    if proposed_schema is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo extraer el esquema propuesto final desde la propuesta guardada"
+        )
+
+    schema_audit = AuditSchemaReview(
+        user_id=current_user.id,
+        source_type=SchemaAuditSourceType(audit_request.source_type),
+        source_id=audit_request.source_id,
+        original_schema_json=original_schema,
+        proposed_schema_json=proposed_schema,
+        incoming_schema_json=audit_request.modified_schema_json,
+        include_ai_analysis=audit_request.include_ai_analysis,
+        programming_language=audit_request.programming_language,
+        status=SchemaAuditStatus.PENDING
+    )
+
+    session.add(schema_audit)
+    await session.commit()
+    await session.refresh(schema_audit)
+
+    auth_token = getattr(current_user, '_token', None) or "dummy-token"
+
+    background_tasks.add_task(
+        run_schema_audit_task,
+        schema_audit_id=schema_audit.id,
+        token=auth_token
+    )
+
+    return audit_schemas.AuditSchemasTaskResponse(
+        task_id=schema_audit.id,
+        status=schema_audit.status,
+        message="Auditoría de schemas iniciada"
+    )
+
+
+@router.get("/audits/schemas", response_model=audit_schemas.AuditSchemasListResponse)
+async def list_schema_audits(
+        page: int = Query(1, ge=1, description="Número de página"),
+        page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session)
+):
+    """Listar auditorías de schemas del usuario."""
+    statement = select(AuditSchemaReview).where(
+        AuditSchemaReview.user_id == current_user.id
+    ).order_by(desc(AuditSchemaReview.created_at))
+
+    count_statement = select(func.count()).select_from(AuditSchemaReview).where(
+        AuditSchemaReview.user_id == current_user.id
+    )
+    count_result = await session.execute(count_statement)
+    total = count_result.scalar()
+
+    if page_size is not None:
+        statement = statement.offset((page - 1) * page_size).limit(page_size)
+
+    result = await session.execute(statement)
+    rows = result.scalars().all()
+
+    return audit_schemas.AuditSchemasListResponse(
+        items=[
+            audit_schemas.AuditSchemasListItem(
+                id=row.id,
+                source_type=row.source_type,
+                source_id=row.source_id,
+                status=row.status,
+                programming_language=row.programming_language,
+                created_at=row.created_at,
+                completed_at=row.completed_at,
+                error_message=row.error_message,
+                report_pdf_path=row.report_pdf_path,
+                report_word_path=row.report_word_path
+            )
+            for row in rows
+        ],
+        total=total,
+        page=page,
+        page_size=page_size
+    )
+
+
+@router.get("/audits/schemas/{schema_audit_id}", response_model=audit_schemas.AuditSchemasDetailResponse)
+async def get_schema_audit(
+        schema_audit_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session)
+):
+    """Obtener detalle de una auditoría de schemas."""
+    stmt = select(AuditSchemaReview).where(
+        AuditSchemaReview.id == schema_audit_id,
+        AuditSchemaReview.user_id == current_user.id
+    )
+    schema_audit = (await session.execute(stmt)).scalars().first()
+
+    if not schema_audit:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auditoría de schemas no encontrada")
+
+    return audit_schemas.AuditSchemasDetailResponse.model_validate(schema_audit)
 
 
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)

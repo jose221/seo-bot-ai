@@ -12,7 +12,7 @@ from contextlib import contextmanager, asynccontextmanager
 from app.core.config import get_settings
 
 # Importar todos los modelos para que SQLModel los registre
-from app.models import user, webpage, audit  # noqa: F401
+from app.models import user, webpage, audit, audit_comparison, audit_schema_review  # noqa: F401
 
 
 class DatabaseManager:

@@ -1,0 +1,324 @@
+"""
+Servicio para auditoría de schemas (original vs propuesto vs nuevo).
+"""
+import json
+import re
+from typing import Any, Dict, List, Optional, Set
+
+from app.services.ai_client import AIClient
+from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
+
+
+class SchemaAuditService:
+    """Lógica de validación y comparación de esquemas."""
+
+    def __init__(self):
+        self.ai_client = AIClient()
+
+    def validate_schema_payload(self, payload: Any, label: str) -> Dict[str, Any]:
+        """
+        Validación estructural básica para JSON-LD / schema.org.
+        """
+        errors: List[str] = []
+        warnings: List[str] = []
+
+        if payload is None:
+            return {
+                "label": label,
+                "is_valid": False,
+                "errors": [f"{label}: esquema no proporcionado"],
+                "warnings": []
+            }
+
+        items = self._normalize_to_items(payload)
+        if not items:
+            return {
+                "label": label,
+                "is_valid": False,
+                "errors": [f"{label}: el esquema debe ser un objeto o lista de objetos JSON"],
+                "warnings": []
+            }
+
+        has_schema_context = False
+        for idx, item in enumerate(items):
+            if not isinstance(item, dict):
+                errors.append(f"{label}[{idx}]: cada item debe ser objeto JSON")
+                continue
+
+            item_context = item.get("@context")
+            if isinstance(item_context, str) and "schema.org" in item_context:
+                has_schema_context = True
+
+            item_type = item.get("@type")
+            if not item_type:
+                errors.append(f"{label}[{idx}]: falta @type")
+            elif not isinstance(item_type, (str, list)):
+                errors.append(f"{label}[{idx}]: @type debe ser string o lista")
+
+            for key in item.keys():
+                if not isinstance(key, str):
+                    errors.append(f"{label}[{idx}]: hay una clave no-string")
+                elif " " in key:
+                    warnings.append(f"{label}[{idx}]: clave con espacio detectada ({key})")
+
+        if not has_schema_context:
+            warnings.append(
+                f"{label}: no se detectó @context con schema.org (se recomienda usar https://schema.org)"
+            )
+
+        return {
+            "label": label,
+            "is_valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": warnings,
+            "items_count": len(items)
+        }
+
+    def build_structural_comparison(
+        self,
+        original_schema: Any,
+        proposed_schema: Any,
+        incoming_schema: Any
+    ) -> Dict[str, Any]:
+        original_items = self._normalize_to_items(original_schema)
+        proposed_items = self._normalize_to_items(proposed_schema)
+        incoming_items = self._normalize_to_items(incoming_schema)
+
+        original_types = self._extract_types(original_items)
+        proposed_types = self._extract_types(proposed_items)
+        incoming_types = self._extract_types(incoming_items)
+
+        original_integrity = self._check_original_integrity(original_items, incoming_items)
+
+        return {
+            "types": {
+                "original": sorted(list(original_types)),
+                "proposed": sorted(list(proposed_types)),
+                "incoming": sorted(list(incoming_types)),
+            },
+            "delta": {
+                "implemented_from_proposed": sorted(list((incoming_types & proposed_types) - original_types)),
+                "pending_from_proposed": sorted(list(proposed_types - incoming_types)),
+                "new_not_in_proposed": sorted(list(incoming_types - proposed_types)),
+                "kept_from_original": sorted(list(original_types & incoming_types)),
+            },
+            "original_integrity": original_integrity
+        }
+
+    def extract_proposed_schema_from_text(self, text: Any) -> Optional[Any]:
+        """
+        Extrae propuesta de schema en formato JSON/JSON-LD desde texto de propuesta.
+        Prioriza bloques ```json.
+        """
+        if not text:
+            return None
+
+        if isinstance(text, dict):
+            text = text.get("content") or text.get("analysis") or str(text)
+
+        if not isinstance(text, str):
+            text = str(text)
+
+        # 1) Bloques explícitos json
+        json_code_blocks = re.findall(r"```json\s*([\s\S]*?)\s*```", text)
+        for raw in json_code_blocks:
+            parsed = self._safe_json_parse(raw)
+            if parsed is not None:
+                return parsed
+
+        # 2) Bloques genéricos
+        generic_blocks = re.findall(r"```\s*([\s\S]*?)\s*```", text)
+        for raw in generic_blocks:
+            parsed = self._safe_json_parse(raw)
+            if parsed is not None:
+                return parsed
+
+        # 3) Intento global (si todo el texto es json)
+        parsed = self._safe_json_parse(text)
+        if parsed is not None:
+            return parsed
+
+        return None
+
+    async def generate_triple_comparison_ai(
+        self,
+        original_schema: Any,
+        proposed_schema: Any,
+        incoming_schema: Any,
+        structural_result: Dict[str, Any],
+        token: str
+    ) -> Dict[str, Any]:
+        template = self.ai_client.jinja_env.get_template("schema_audit_comparison.jinja")
+
+        prompt_content = template.render(
+            original_schema=original_schema,
+            proposed_schema=proposed_schema,
+            incoming_schema=incoming_schema,
+            structural_result=structural_result
+        )
+
+        request = ChatCompletionRequest(
+            messages=[ChatMessage(role=MessageRole.USER, content=prompt_content)],
+            model="deepseek-chat",
+            stream=False
+        )
+
+        input_tokens = self.ai_client.count_tokens(prompt_content)
+        response = await self.ai_client.chat_completion(request, token)
+        content = response.get_content()
+        output_tokens = self.ai_client.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens
+            }
+        }
+
+    async def generate_cqrs_solid_model_ai(
+        self,
+        proposed_schema: Any,
+        incoming_schema: Any,
+        programming_language: Optional[str],
+        token: str
+    ) -> Dict[str, Any]:
+        template = self.ai_client.jinja_env.get_template("schema_cqrs_solid_model.jinja")
+
+        prompt_content = template.render(
+            proposed_schema=proposed_schema,
+            incoming_schema=incoming_schema,
+            programming_language=programming_language or "typescript"
+        )
+
+        request = ChatCompletionRequest(
+            messages=[ChatMessage(role=MessageRole.USER, content=prompt_content)],
+            model="deepseek-chat",
+            stream=False
+        )
+
+        input_tokens = self.ai_client.count_tokens(prompt_content)
+        response = await self.ai_client.chat_completion(request, token)
+        content = response.get_content()
+        output_tokens = self.ai_client.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens
+            }
+        }
+
+    def _safe_json_parse(self, raw: str) -> Optional[Any]:
+        raw = (raw or "").strip()
+        if not raw:
+            return None
+
+        if not (raw.startswith("{") or raw.startswith("[")):
+            return None
+
+        try:
+            return json.loads(raw)
+        except Exception:
+            return None
+
+    def _normalize_to_items(self, payload: Any) -> List[Dict[str, Any]]:
+        if payload is None:
+            return []
+
+        parsed = payload
+        if isinstance(payload, str):
+            try:
+                parsed = json.loads(payload)
+            except Exception:
+                return []
+
+        if isinstance(parsed, dict):
+            # Manejo de @graph
+            if "@graph" in parsed and isinstance(parsed["@graph"], list):
+                graph_items = [item for item in parsed["@graph"] if isinstance(item, dict)]
+                return graph_items if graph_items else [parsed]
+            return [parsed]
+
+        if isinstance(parsed, list):
+            return [item for item in parsed if isinstance(item, dict)]
+
+        return []
+
+    def _extract_types(self, items: List[Dict[str, Any]]) -> Set[str]:
+        types: Set[str] = set()
+        for item in items:
+            value = item.get("@type")
+            if isinstance(value, list):
+                for t in value:
+                    if isinstance(t, str) and t.strip():
+                        types.add(t.strip())
+            elif isinstance(value, str) and value.strip():
+                types.add(value.strip())
+        return types
+
+    def _check_original_integrity(
+        self,
+        original_items: List[Dict[str, Any]],
+        incoming_items: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        Verifica que los tipos y propiedades base no se rompan en el nuevo esquema.
+        """
+        original_by_type = self._index_by_type(original_items)
+        incoming_by_type = self._index_by_type(incoming_items)
+
+        missing_original_types = [t for t in original_by_type.keys() if t not in incoming_by_type]
+        changed_fields: List[Dict[str, Any]] = []
+
+        for schema_type, original_examples in original_by_type.items():
+            incoming_examples = incoming_by_type.get(schema_type, [])
+            if not incoming_examples:
+                continue
+
+            original_obj = original_examples[0]
+            incoming_obj = incoming_examples[0]
+
+            for key, original_value in original_obj.items():
+                if key.startswith("@"):
+                    continue
+
+                if key in incoming_obj and incoming_obj[key] != original_value:
+                    changed_fields.append({
+                        "type": schema_type,
+                        "field": key,
+                        "original": original_value,
+                        "incoming": incoming_obj[key]
+                    })
+
+        return {
+            "is_preserved": len(missing_original_types) == 0,
+            "missing_original_types": missing_original_types,
+            "changed_fields": changed_fields[:50]
+        }
+
+    def _index_by_type(self, items: List[Dict[str, Any]]) -> Dict[str, List[Dict[str, Any]]]:
+        indexed: Dict[str, List[Dict[str, Any]]] = {}
+        for item in items:
+            schema_type = item.get("@type")
+            if isinstance(schema_type, list):
+                schema_type = next((t for t in schema_type if isinstance(t, str)), None)
+            if not isinstance(schema_type, str) or not schema_type.strip():
+                schema_type = "Unknown"
+
+            indexed.setdefault(schema_type, []).append(item)
+
+        return indexed
+
+
+_schema_audit_service: Optional[SchemaAuditService] = None
+
+
+def get_schema_audit_service() -> SchemaAuditService:
+    global _schema_audit_service
+    if _schema_audit_service is None:
+        _schema_audit_service = SchemaAuditService()
+    return _schema_audit_service
