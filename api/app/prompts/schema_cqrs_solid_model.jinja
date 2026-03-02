@@ -1,9 +1,9 @@
 # Rol
-Actúa como Arquitecto de Software Senior.
+Actúa como Ingeniero Senior especializado en modelado de datos.
 
 # Objetivo
-Generar un modelo de implementación completo para manejar actualización y auditoría de schemas,
-usando principios CQRS y SOLID.
+Generar únicamente las clases modelo del esquema en el lenguaje solicitado,
+con buenas prácticas de modelado.
 
 # Lenguaje de programación objetivo
 {{ programming_language }}
@@ -17,9 +17,9 @@ usando principios CQRS y SOLID.
 
 # Instrucciones
 - Responde en español.
-- Incluye:
-  1. Diseño de módulos (comandos, queries, handlers, repositorios, validadores, servicios de dominio).
-  2. Flujo de casos de uso (actualizar esquema, auditar triple comparación, generar reporte).
-  3. Ejemplo de código del modelo (entidades, interfaces, casos de uso) en el lenguaje solicitado.
-  4. Checklist de validación para pruebas.
-- Mantén el enfoque práctico y aplicable a backend API.
+- NO incluyas arquitectura, CQRS, comandos, handlers, repositorios ni servicios.
+- Entrega solo modelos/clases de dominio para los nodos del schema.
+- Incluye getters y setters cuando aplique al lenguaje solicitado.
+- Incluye tipos de datos claros y propiedades opcionales/obligatorias.
+- Organiza el resultado por clase y agrega una breve nota de validación por clase.
+- Prioriza legibilidad y consistencia entre clases relacionadas.

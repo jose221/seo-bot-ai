@@ -89,6 +89,7 @@ class SchemaAuditService:
         incoming_types = self._extract_types(incoming_items)
 
         original_integrity = self._check_original_integrity(original_items, incoming_items)
+        comparison_table = self._build_schema_comparison_table(proposed_items, incoming_items)
 
         return {
             "types": {
@@ -102,6 +103,7 @@ class SchemaAuditService:
                 "new_not_in_proposed": sorted(list(incoming_types - proposed_types)),
                 "kept_from_original": sorted(list(original_types & incoming_types)),
             },
+            "comparison_table": comparison_table,
             "original_integrity": original_integrity
         }
 
@@ -259,6 +261,86 @@ class SchemaAuditService:
             elif isinstance(value, str) and value.strip():
                 types.add(value.strip())
         return types
+
+    def _build_schema_comparison_table(
+        self,
+        proposed_items: List[Dict[str, Any]],
+        incoming_items: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        proposed_by_type = self._index_by_type(proposed_items)
+        incoming_by_type = self._index_by_type(incoming_items)
+
+        all_types = sorted(set(proposed_by_type.keys()) | set(incoming_by_type.keys()))
+        rows: List[Dict[str, Any]] = []
+
+        for schema_type in all_types:
+            proposed_type_items = proposed_by_type.get(schema_type, [])
+            incoming_type_items = incoming_by_type.get(schema_type, [])
+
+            proposed_attrs = self._extract_attribute_set(proposed_type_items)
+            incoming_attrs = self._extract_attribute_set(incoming_type_items)
+
+            missing_attributes = sorted(list(proposed_attrs - incoming_attrs))
+            extra_attributes = sorted(list(incoming_attrs - proposed_attrs))
+
+            proposed_nodes = {
+                self._extract_node_identifier(item)
+                for item in proposed_type_items
+                if self._extract_node_identifier(item)
+            }
+            incoming_nodes = {
+                self._extract_node_identifier(item)
+                for item in incoming_type_items
+                if self._extract_node_identifier(item)
+            }
+
+            missing_nodes = sorted(list(proposed_nodes - incoming_nodes))
+            extra_nodes = sorted(list(incoming_nodes - proposed_nodes))
+
+            status = "ok"
+            if not incoming_type_items:
+                status = "missing_type"
+            elif missing_attributes or missing_nodes:
+                status = "partial"
+            elif extra_attributes or extra_nodes:
+                status = "updated_extra"
+
+            rows.append({
+                "schema_type": schema_type,
+                "status": status,
+                "proposed_items": len(proposed_type_items),
+                "incoming_items": len(incoming_type_items),
+                "missing_attributes": missing_attributes,
+                "extra_attributes": extra_attributes,
+                "missing_nodes": missing_nodes,
+                "extra_nodes": extra_nodes
+            })
+
+        return {
+            "rows": rows,
+            "summary": {
+                "total_types": len(all_types),
+                "ok": sum(1 for r in rows if r["status"] == "ok"),
+                "partial": sum(1 for r in rows if r["status"] == "partial"),
+                "missing_type": sum(1 for r in rows if r["status"] == "missing_type"),
+                "updated_extra": sum(1 for r in rows if r["status"] == "updated_extra")
+            }
+        }
+
+    def _extract_attribute_set(self, items: List[Dict[str, Any]]) -> Set[str]:
+        attrs: Set[str] = set()
+        for item in items:
+            for key in item.keys():
+                if isinstance(key, str):
+                    attrs.add(key)
+        return attrs
+
+    def _extract_node_identifier(self, item: Dict[str, Any]) -> Optional[str]:
+        for key in ("@id", "id", "name", "url"):
+            value = item.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        return None
 
     def _check_original_integrity(
         self,

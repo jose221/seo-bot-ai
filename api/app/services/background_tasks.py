@@ -470,6 +470,7 @@ async def run_schema_audit_task(
                 "implemented": structural_result.get("delta", {}).get("implemented_from_proposed", []),
                 "pending": structural_result.get("delta", {}).get("pending_from_proposed", []),
                 "out_of_scope": structural_result.get("delta", {}).get("new_not_in_proposed", []),
+                "comparison_table": structural_result.get("comparison_table", {}),
                 "original_integrity": structural_result.get("original_integrity", {})
             }
 
@@ -531,8 +532,8 @@ async def run_schema_audit_task(
                 report_body = "\n\n".join([
                     "# Auditoría de Schemas",
                     ai_report_text or "Sin reporte IA de comparación.",
-                    "# Modelo CQRS + SOLID",
-                    cqrs_text or "Sin modelo generado."
+                    "# Modelos de clases del esquema",
+                    cqrs_text or "Sin modelos generados."
                 ])
                 report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(report_body)
                 schema_audit.report_pdf_path = report_paths.get("pdf_path")
