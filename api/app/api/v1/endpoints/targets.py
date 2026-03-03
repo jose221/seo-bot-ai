@@ -3,9 +3,7 @@ Endpoints para gestión de Targets (WebPages).
 CRUD completo para sitios web a auditar.
 """
 from typing import Optional, List
-from sqlalchemy import or_, func, cast
-from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
-from sqlalchemy import String
+from sqlalchemy import or_, func, any_
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import joinedload
@@ -86,7 +84,7 @@ async def list_targets(
         WebPage.is_active == is_active
     ]
     if tag:
-        filters.append(WebPage.tags.contains(cast([tag], PG_ARRAY(String))))
+        filters.append(tag == any_(WebPage.tags))
     if provider:
         filters.append(WebPage.provider == provider)
 
@@ -149,7 +147,7 @@ async def search_targets(
     filters.append(WebPage.id != exclude_web_page_id)
 
   if tag:
-    filters.append(WebPage.tags.contains(cast([tag], PG_ARRAY(String))))
+    filters.append(tag == any_(WebPage.tags))
   if provider:
     filters.append(WebPage.provider == provider)
 

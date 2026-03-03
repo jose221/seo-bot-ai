@@ -67,6 +67,34 @@
                   {{ 'auditSchemas.form.sourceId.label' | translate }}
                   <span class="text-danger">*</span>
                 </label>
+
+                <!-- Filtro por Tag solo cuando es audit_page -->
+                @if (form.get('source_type')?.value === 'audit_page' && availableTags().length > 0) {
+                  <div class="mb-2">
+                    <span class="small text-muted fw-semibold"><i class="bi bi-tags me-1"></i>Filtrar por tag:</span>
+                    <div class="d-flex flex-wrap gap-1 mt-1">
+                      <button type="button"
+                        class="btn btn-xs btn-sm rounded-pill py-0 px-2"
+                        style="font-size:0.75rem;"
+                        [class.btn-primary]="selectedTag() === ''"
+                        [class.btn-outline-secondary]="selectedTag() !== ''"
+                        (click)="onTagFilter('')">
+                        Todos
+                      </button>
+                      @for (tag of availableTags(); track tag) {
+                        <button type="button"
+                          class="btn btn-xs btn-sm rounded-pill py-0 px-2"
+                          style="font-size:0.75rem;"
+                          [class.btn-primary]="selectedTag() === tag"
+                          [class.btn-outline-secondary]="selectedTag() !== tag"
+                          (click)="onTagFilter(tag)">
+                          {{ tag }}
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
+
                 <!-- Select from audits if audit_page -->
                 @if (form.get('source_type')?.value === 'audit_page') {
                   <select
