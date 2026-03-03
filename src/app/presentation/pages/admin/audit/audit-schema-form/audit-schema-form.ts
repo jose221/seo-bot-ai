@@ -2,13 +2,13 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { ValidationFormBase } from '@/app/presentation/shared/validation-form.base';
 import { FormBuilder, Validators, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { NgClass, DatePipe } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslateModule } from '@ngx-translate/core';
 import { AuditRepository } from '@/app/domain/repositories/audit/audit.repository';
 import { AuditSchemaRepository } from '@/app/domain/repositories/audit-schema/audit-schema.repository';
 import { CreateAuditSchemaRequestModel } from '@/app/domain/models/audit-schema/request/audit-schema-request.model';
 import { CreateAuditSchemaResponseModel } from '@/app/domain/models/audit-schema/response/audit-schema-response.model';
-import { SearchAuditResponseModel } from '@/app/domain/models/audit/response/audit-response.model';
+import { CompareAuditResponseModel, SearchAuditResponseModel } from '@/app/domain/models/audit/response/audit-response.model';
 import {
   DefaultModal
 } from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
@@ -27,7 +27,7 @@ const PROGRAMMING_LANGUAGES = [
   'ruby', 'go', 'rust', 'kotlin', 'swift', 'dart',
 ];
 
-const SOURCE_TYPES = ['audit_page'];
+const SOURCE_TYPES = ['audit_page', 'audit_comparison'];
 
 @Component({
   selector: 'app-audit-schema-form',
@@ -58,6 +58,10 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
   auditList = signal<SearchAuditResponseModel[]>([]);
   loadingAudits = signal<boolean>(false);
 
+  // Comparison search
+  comparisonList = signal<CompareAuditResponseModel[]>([]);
+  loadingComparisons = signal<boolean>(false);
+
   protected readonly form = inject(FormBuilder).group({
     source_type: ['audit_page', Validators.required],
     source_id: ['', Validators.required],
@@ -68,13 +72,27 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
 
   private readonly _schemaRepository = inject(AuditSchemaRepository);
   private readonly _auditRepository = inject(AuditRepository);
+  private readonly _route = inject(ActivatedRoute);
 
   constructor() {
     super();
   }
 
   async ngOnInit(): Promise<void> {
+    // Leer queryParams para prellenar el formulario
+    const sourceType = this._route.snapshot.queryParamMap.get('source_type');
+    const sourceId = this._route.snapshot.queryParamMap.get('source_id');
+
+    if (sourceType) {
+      this.form.patchValue({ source_type: sourceType });
+    }
+
     await this.loadAudits();
+    await this.loadComparisons();
+
+    if (sourceId) {
+      this.form.patchValue({ source_id: sourceId });
+    }
   }
 
   async loadAudits(): Promise<void> {
@@ -86,6 +104,18 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
       this.auditList.set([]);
     } finally {
       this.loadingAudits.set(false);
+    }
+  }
+
+  async loadComparisons(): Promise<void> {
+    this.loadingComparisons.set(true);
+    try {
+      const response = await this._auditRepository.getComparisons();
+      this.comparisonList.set(response);
+    } catch (e) {
+      this.comparisonList.set([]);
+    } finally {
+      this.loadingComparisons.set(false);
     }
   }
 

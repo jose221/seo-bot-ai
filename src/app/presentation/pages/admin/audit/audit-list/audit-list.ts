@@ -119,6 +119,15 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
         action: (item: any) => this.toShow(item)
       },
       {
+        key: 'id',
+        name: 'Schema',
+        type: 'link',
+        innerHtml: (element: any) => '<i class="bi bi-braces-asterisk me-1"></i>Schema',
+        action: (item: AuditResponseModel) => this._router.navigate(['/admin/audit/schemas/create'], {
+          queryParams: { source_type: 'audit_page', source_id: item.id }
+        })
+      },
+      {
         key: 'created_at',
         name: 'Eliminar',
         type: 'link',

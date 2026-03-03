@@ -83,6 +83,21 @@
                       </option>
                     }
                   </select>
+                } @else if (form.get('source_type')?.value === 'audit_comparison') {
+                  <select
+                    id="source_id"
+                    class="form-select form-select-lg border-2"
+                    formControlName="source_id"
+                    [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }">
+                    <option value="" disabled>
+                      @if (loadingComparisons()) { Cargando comparaciones... } @else { Selecciona una comparación... }
+                    </option>
+                    @for (comp of comparisonList(); track comp.id) {
+                      <option [value]="comp.id">
+                        {{ comp.base_url }} ({{ comp.status }})
+                      </option>
+                    }
+                  </select>
                 } @else {
                   <input
                     type="text"
