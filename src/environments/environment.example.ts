@@ -25,6 +25,9 @@ export const environment = {
       compare: '/audits/compare',
       comparisons: '/audits/comparisons',
       search: '/audits/search'
+    },
+    auditSchema:{
+      path: '/audits/schemas'
     }
   },
   settings:{

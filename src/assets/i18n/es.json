@@ -5,6 +5,7 @@
       "sites": "Listado de Sitios",
       "audits": "Auditorías",
       "comparisons": "Comparaciones",
+      "schemas": "Schemas",
       "searchPlaceholder": "Buscar...",
       "searchButton": "Buscar",
       "logout": "Cerrar Sesión",
@@ -138,8 +139,76 @@
       "successMessage": "La configuración se ha guardado correctamente."
     }
   },
+  "auditSchemas": {
+    "title": "Propuestas de Schema.org",
+    "subtitle": "Genera y gestiona propuestas de esquemas estructurados para SEO con análisis de IA",
+    "buttons": {
+      "new": "Nueva Propuesta",
+      "list": "Ver Propuestas",
+      "audits": "Auditorías"
+    },
+    "empty": {
+      "title": "No hay propuestas de schema aún",
+      "subtitle": "Crea tu primera propuesta de Schema.org para mejorar el SEO de tu sitio"
+    },
+    "deleteConfirm": {
+      "title": "Eliminar Propuesta",
+      "message": "¿Estás seguro de que deseas eliminar esta propuesta? Esta acción no se puede deshacer."
+    },
+    "form": {
+      "title": "Nueva Propuesta de Schema.org",
+      "subtitle": "Analiza y mejora los schemas estructurados de tu página con ayuda de inteligencia artificial",
+      "sourceType": {
+        "label": "Tipo de Fuente",
+        "help": "Selecciona el tipo de entidad que será la fuente del análisis"
+      },
+      "sourceId": {
+        "label": "Auditoría Base",
+        "help": "Selecciona la auditoría cuyo schema original será analizado"
+      },
+      "programmingLanguage": {
+        "label": "Lenguaje de Programación",
+        "help": "Lenguaje en que se generará el modelo de implementación CQRS/SOLID"
+      },
+      "modifiedSchemaJson": {
+        "label": "Schema JSON-LD Modificado / Propuesto",
+        "help": "Pega aquí el JSON-LD del schema propuesto o modificado para comparar con el original"
+      },
+      "includeAI": {
+        "label": "Incluir Análisis con Inteligencia Artificial",
+        "help": "Activa esta opción para obtener un reporte detallado generado por IA con recomendaciones y modelo CQRS"
+      },
+      "submitButton": "Generar Propuesta",
+      "confirmModal": {
+        "title": "¡Propuesta Creada!",
+        "message": "Tu propuesta de schema ha sido enviada correctamente",
+        "description": "El análisis se procesará en segundo plano. Puedes revisar el estado en el listado.",
+        "processingNote": "El análisis con IA puede tardar varios minutos. Puedes seguir usando la aplicación mientras se procesa.",
+        "newButton": "Crear Otra",
+        "viewListButton": "Ver Listado"
+      }
+    },
+    "modal": {
+      "title": "Detalle de Propuesta de Schema",
+      "downloadReport": "Descargar Reporte",
+      "validation": {
+        "title": "Validación Schema.org"
+      },
+      "tripleComparison": {
+        "title": "Comparación Triple (Original / Propuesto / Entrante)"
+      },
+      "progressReport": {
+        "title": "Reporte de Progreso"
+      },
+      "aiReport": {
+        "title": "Análisis de IA"
+      },
+      "cqrsModel": {
+        "title": "Modelo de Implementación CQRS / SOLID"
+      }
+    }
+  },
   "audits": {
-    "title": "Gestión de auditorias",
     "subtitle": "Administra y visualiza todas tus auditorias creadas",
     "buttons": {
       "new": "Nueva",

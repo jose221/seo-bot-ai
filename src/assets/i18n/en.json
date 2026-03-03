@@ -5,6 +5,7 @@
       "sites": "Site List",
       "audits": "Audits",
       "comparisons": "Comparisons",
+      "schemas": "Schemas",
       "searchPlaceholder": "Search...",
       "searchButton": "Search",
       "logout": "Logout",
@@ -136,6 +137,75 @@
       },
       "saveButton": "Save Configuration",
       "successMessage": "The configuration has been saved successfully."
+    }
+  },
+  "auditSchemas": {
+    "title": "Schema.org Proposals",
+    "subtitle": "Generate and manage structured schema proposals for SEO with AI analysis",
+    "buttons": {
+      "new": "New Proposal",
+      "list": "View Proposals",
+      "audits": "Audits"
+    },
+    "empty": {
+      "title": "No schema proposals yet",
+      "subtitle": "Create your first Schema.org proposal to improve your site's SEO"
+    },
+    "deleteConfirm": {
+      "title": "Delete Proposal",
+      "message": "Are you sure you want to delete this schema proposal? This action cannot be undone."
+    },
+    "form": {
+      "title": "New Schema.org Proposal",
+      "subtitle": "Analyze and improve the structured schemas of your page with AI assistance",
+      "sourceType": {
+        "label": "Source Type",
+        "help": "Select the type of entity that will be the source of the analysis"
+      },
+      "sourceId": {
+        "label": "Base Audit",
+        "help": "Select the audit whose original schema will be analyzed"
+      },
+      "programmingLanguage": {
+        "label": "Programming Language",
+        "help": "Language in which the CQRS/SOLID implementation model will be generated"
+      },
+      "modifiedSchemaJson": {
+        "label": "Modified / Proposed JSON-LD Schema",
+        "help": "Paste here the proposed or modified JSON-LD schema to compare with the original"
+      },
+      "includeAI": {
+        "label": "Include Artificial Intelligence Analysis",
+        "help": "Enable this option to get a detailed AI-generated report with recommendations and CQRS model"
+      },
+      "submitButton": "Generate Proposal",
+      "confirmModal": {
+        "title": "Proposal Created!",
+        "message": "Your schema proposal has been submitted successfully",
+        "description": "The analysis will be processed in the background. You can check the status in the list.",
+        "processingNote": "The AI analysis may take several minutes. You can continue using the application while it processes.",
+        "newButton": "Create Another",
+        "viewListButton": "View List"
+      }
+    },
+    "modal": {
+      "title": "Schema Proposal Detail",
+      "downloadReport": "Download Report",
+      "validation": {
+        "title": "Schema.org Validation"
+      },
+      "tripleComparison": {
+        "title": "Triple Comparison (Original / Proposed / Incoming)"
+      },
+      "progressReport": {
+        "title": "Progress Report"
+      },
+      "aiReport": {
+        "title": "AI Analysis"
+      },
+      "cqrsModel": {
+        "title": "CQRS / SOLID Implementation Model"
+      }
     }
   },
   "audits": {

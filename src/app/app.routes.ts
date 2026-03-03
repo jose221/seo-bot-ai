@@ -8,6 +8,8 @@ import {AuditList} from '@/app/presentation/pages/admin/audit/audit-list/audit-l
 import {AuditForm} from '@/app/presentation/pages/admin/audit/audit-form/audit-form';
 import {CompareAuditForm} from '@/app/presentation/pages/admin/audit/compare-audit-form/compare-audit-form';
 import {CompareAuditList} from '@/app/presentation/pages/admin/audit/compare-audit-list/compare-audit-list';
+import {AuditSchemaList} from '@/app/presentation/pages/admin/audit/audit-schema-list/audit-schema-list';
+import {AuditSchemaForm} from '@/app/presentation/pages/admin/audit/audit-schema-form/audit-schema-form';
 import {loginGuard} from '@/app/presentation/guards/login.guard';
 import {MetricsDashboardComponent} from '@/app/presentation/components/metrics-dashboard/metrics-dashboard.component';
 
@@ -25,6 +27,8 @@ export const routes: Routes = [
       {path: 'audit/create', component: AuditForm},
       {path: 'audit/comparisons', component: CompareAuditList},
       {path: 'audit/compare', component: CompareAuditForm},
+      {path: 'audit/schemas', component: AuditSchemaList},
+      {path: 'audit/schemas/create', component: AuditSchemaForm},
       {path: 'metrics', component: MetricsDashboardComponent},
     ]
   },

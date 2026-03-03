@@ -21,6 +21,8 @@ import {HttpClient, provideHttpClient, withFetch} from '@angular/common/http';
 import {Observable} from 'rxjs';
 import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
 import {AuditImplementationRepository} from '@/app/infrastructure/repositories/audit/audit.implementation.repository';
+import {AuditSchemaRepository} from '@/app/domain/repositories/audit-schema/audit-schema.repository';
+import {AuditSchemaImplementationRepository} from '@/app/infrastructure/repositories/audit-schema/audit-schema.implementation.repository';
 import {provideMarkdown} from 'ngx-markdown';
 
 // Custom TranslateLoader
@@ -57,6 +59,7 @@ export const appConfig: ApplicationConfig = {
     { provide: TranslationRepository, useClass: TranslationImplementationRepository },
     { provide: AuthRepository, useClass: AuthImplementationRepository },
     { provide: TargetRepository, useClass: TargetImplementationRepository },
-    { provide: AuditRepository, useClass: AuditImplementationRepository }
+    { provide: AuditRepository, useClass: AuditImplementationRepository },
+    { provide: AuditSchemaRepository, useClass: AuditSchemaImplementationRepository }
   ]
 };

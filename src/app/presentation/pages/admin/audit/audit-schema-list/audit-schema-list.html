@@ -1,0 +1,516 @@
+<!-- ===== HEADER ===== -->
+<div class="row mb-5">
+  <div class="col-12 text-center">
+    <h1 class="display-4 fw-light mb-2">
+      <i class="text-primary bi bi-braces-asterisk"></i>
+      {{ 'auditSchemas.title' | translate }}
+    </h1>
+    <p class="fs-6 text-muted">{{ 'auditSchemas.subtitle' | translate }}</p>
+  </div>
+</div>
+
+<!-- ===== MAIN CARD ===== -->
+<div class="row mb-4">
+  <div class="col-12 mx-auto">
+    <div class="card rounded-3 border-0 shadow-sm">
+      <div class="card-body p-4">
+
+        <!-- Toolbar -->
+        @if (!isLoading() && cItems().data.length > 0) {
+          <div class="row align-items-center g-3 mb-3">
+            <div class="col-12 col-lg-8">
+              <app-filter-list
+                class="w-100"
+                [data]="cItems()"
+                (dataChange)="items.set($event)"
+                [config]="configFilter()">
+              </app-filter-list>
+            </div>
+            <div class="col-12 col-lg-4">
+              <div class="d-flex gap-2">
+                <a class="btn btn-primary rounded-2 flex-fill" routerLink="/admin/audit/schemas/create">
+                  <i class="me-1 bi bi-plus-circle"></i> {{ 'auditSchemas.buttons.new' | translate }}
+                </a>
+                <a class="btn btn-outline-secondary rounded-2 flex-fill" routerLink="/admin/audit">
+                  <i class="me-1 bi bi-clipboard-check"></i>{{ 'auditSchemas.buttons.audits' | translate }}
+                </a>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Empty state -->
+        @if (!isLoading() && cItems().data.length === 0) {
+          <div class="text-center py-5">
+            <i class="bi bi-braces-asterisk text-muted" style="font-size: 3.5rem;"></i>
+            <h5 class="mt-3 text-muted fw-light">{{ 'auditSchemas.empty.title' | translate }}</h5>
+            <p class="text-muted small mb-4">{{ 'auditSchemas.empty.subtitle' | translate }}</p>
+            <a class="btn btn-primary" routerLink="/admin/audit/schemas/create">
+              <i class="me-2 bi bi-plus-circle"></i>{{ 'auditSchemas.buttons.new' | translate }}
+            </a>
+          </div>
+        }
+
+        <!-- Table -->
+        <div class="row mt-2">
+          @if (!isLoading() && items().data.length > 0) {
+            <app-table [data]="items()" [labels]="tableColumn()"></app-table>
+            <div class="mt-5">
+              <app-paginator-list [data]="items()" (dataChange)="items.set($event)"></app-paginator-list>
+            </div>
+          }
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DETAIL MODAL ===== -->
+@if (showDetail()) {
+  <app-default-modal classModalDialog="modal-xl" [expanded]="showDetail()">
+
+    <app-header-modal classModal="text-white bg-primary">
+      <h5 class="fw-bold modal-title">
+        <i class="bi bi-braces-asterisk me-2"></i>{{ 'auditSchemas.modal.title' | translate }}
+      </h5>
+      <button class="btn-close btn-close-white" aria-label="Close" (click)="closeDetail()" type="button"></button>
+    </app-header-modal>
+
+    <app-body-modal>
+
+      <!-- Loading skeleton -->
+      @if (loadingDetail()) {
+        <div class="text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+          </div>
+          <p class="text-muted mt-3">{{ 'general.messages.loading' | translate }}</p>
+        </div>
+      }
+
+      @if (!loadingDetail() && selectedItem().id) {
+        <!-- Meta info row -->
+        <div class="schema-meta-bar d-flex flex-wrap gap-3 mb-4">
+          <span class="schema-meta-item">
+            <i class="bi bi-hash me-1 text-primary"></i>
+            <strong>ID:</strong> <span class="text-muted ms-1 font-monospace small">{{ selectedItem().id }}</span>
+          </span>
+          <span class="schema-meta-item">
+            <i class="bi bi-person me-1 text-primary"></i>
+            <strong>User:</strong> <span class="text-muted ms-1 font-monospace small">{{ selectedItem().user_id }}</span>
+          </span>
+          <span class="badge rounded-pill schema-status-badge" [ngClass]="{
+            'bg-success': selectedItem().status === 'completed',
+            'bg-warning text-dark': selectedItem().status === 'pending',
+            'bg-danger': selectedItem().status === 'failed',
+            'bg-secondary': selectedItem().status === 'processing'
+          }">
+            <i class="bi me-1" [ngClass]="{
+              'bi-check-circle': selectedItem().status === 'completed',
+              'bi-clock': selectedItem().status === 'pending',
+              'bi-x-circle': selectedItem().status === 'failed',
+              'bi-arrow-repeat': selectedItem().status === 'processing'
+            }"></i>{{ selectedItem().status }}
+          </span>
+          <span class="schema-meta-item">
+            <i class="bi bi-calendar-plus me-1 text-muted"></i>
+            <span class="text-muted small">{{ selectedItem().created_at | date:'medium' }}</span>
+          </span>
+          @if (selectedItem().completed_at) {
+            <span class="schema-meta-item">
+              <i class="bi bi-calendar-check me-1 text-muted"></i>
+              <span class="text-muted small">{{ selectedItem().completed_at | date:'medium' }}</span>
+            </span>
+          }
+        </div>
+
+        <!-- Error message -->
+        @if (selectedItem().error_message) {
+          <div class="alert alert-danger d-flex gap-2 mb-4" role="alert">
+            <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+            <div>
+              <strong>Error:</strong> {{ selectedItem().error_message }}
+            </div>
+          </div>
+        }
+
+        <!-- Token usage -->
+        @if (selectedItem().input_tokens || selectedItem().output_tokens) {
+          <div class="d-flex gap-3 mb-4 flex-wrap">
+            @if (selectedItem().input_tokens) {
+              <div class="schema-token-chip">
+                <i class="bi bi-arrow-down-circle text-info me-1"></i>
+                <small><strong>Tokens entrada:</strong> {{ selectedItem().input_tokens }}</small>
+              </div>
+            }
+            @if (selectedItem().output_tokens) {
+              <div class="schema-token-chip">
+                <i class="bi bi-arrow-up-circle text-success me-1"></i>
+                <small><strong>Tokens salida:</strong> {{ selectedItem().output_tokens }}</small>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- ── Validation Results ── -->
+        @if (selectedItem().schema_org_validation_result) {
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header schema-section-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-shield-check me-2 text-primary"></i>
+                {{ 'auditSchemas.modal.validation.title' | translate }}
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+
+                @for (entry of [
+                  { key: 'original', label: 'Original', detail: selectedItem().schema_org_validation_result!.original },
+                  { key: 'proposed', label: 'Propuesto', detail: selectedItem().schema_org_validation_result!.proposed },
+                  { key: 'incoming', label: 'Entrante', detail: selectedItem().schema_org_validation_result!.incoming }
+                ]; track entry.key) {
+                  <div class="col-md-4">
+                    <div class="schema-validation-card h-100" [class.schema-valid]="entry.detail.is_valid" [class.schema-invalid]="!entry.detail.is_valid">
+                      <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="fw-semibold">{{ entry.label }}</span>
+                        <span class="badge" [class.bg-success]="entry.detail.is_valid" [class.bg-danger]="!entry.detail.is_valid">
+                          <i class="bi me-1" [class]="getValidationIcon(entry.detail.is_valid)"></i>
+                          {{ entry.detail.is_valid ? 'Válido' : 'Inválido' }}
+                        </span>
+                      </div>
+                      <div class="d-flex gap-3 mb-2">
+                        <small class="text-muted">
+                          <i class="bi bi-list-ul me-1"></i>Items: <strong>{{ entry.detail.items_count }}</strong>
+                        </small>
+                        @if (entry.detail.errors.length) {
+                          <small class="text-danger">
+                            <i class="bi bi-x-circle me-1"></i>{{ entry.detail.errors.length }} errores
+                          </small>
+                        }
+                        @if (entry.detail.warnings.length) {
+                          <small class="text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>{{ entry.detail.warnings.length }} avisos
+                          </small>
+                        }
+                      </div>
+                      @if (entry.detail.errors.length) {
+                        <div class="schema-errors-list">
+                          @for (err of entry.detail.errors.slice(0, 4); track $index) {
+                            <div class="schema-error-item">
+                              <i class="bi bi-dot text-danger"></i>
+                              <small class="text-danger">{{ err }}</small>
+                            </div>
+                          }
+                          @if (entry.detail.errors.length > 4) {
+                            <small class="text-muted fst-italic ms-2">
+                              +{{ entry.detail.errors.length - 4 }} más...
+                            </small>
+                          }
+                        </div>
+                      }
+                      @if (entry.detail.warnings.length) {
+                        @for (w of entry.detail.warnings; track $index) {
+                          <div class="schema-error-item">
+                            <i class="bi bi-dot text-warning"></i>
+                            <small class="text-warning">{{ w }}</small>
+                          </div>
+                        }
+                      }
+                    </div>
+                  </div>
+                }
+
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ── Triple Comparison ── -->
+        @if (selectedItem().triple_comparison_result) {
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header schema-section-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-diagram-3 me-2 text-primary"></i>
+                {{ 'auditSchemas.modal.tripleComparison.title' | translate }}
+              </h6>
+            </div>
+            <div class="card-body">
+
+              <!-- Types row -->
+              <div class="row g-3 mb-4">
+                @for (col of [
+                  { label: 'Original', types: selectedItem().triple_comparison_result!.types.original, color: 'secondary' },
+                  { label: 'Propuesto', types: selectedItem().triple_comparison_result!.types.proposed, color: 'primary' },
+                  { label: 'Entrante', types: selectedItem().triple_comparison_result!.types.incoming, color: 'info' }
+                ]; track col.label) {
+                  <div class="col-md-4">
+                    <div class="schema-types-card h-100">
+                      <small class="fw-semibold text-muted d-block mb-2">{{ col.label }}</small>
+                      <div class="d-flex flex-wrap gap-1">
+                        @for (t of col.types; track t) {
+                          <span class="badge bg-{{ col.color }}">{{ t }}</span>
+                        }
+                        @if (!col.types.length) {
+                          <span class="text-muted fst-italic small">Sin tipos</span>
+                        }
+                      </div>
+                    </div>
+                  </div>
+                }
+              </div>
+
+              <!-- Delta badges -->
+              <div class="row g-3">
+                <div class="col-md-6 col-lg-3">
+                  <div class="schema-delta-card schema-delta-success">
+                    <small class="fw-semibold d-block mb-2">
+                      <i class="bi bi-check2-circle me-1"></i>Implementado del Propuesto
+                    </small>
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (t of selectedItem().triple_comparison_result!.delta.implemented_from_proposed; track t) {
+                        <span class="badge bg-success">{{ t }}</span>
+                      }
+                      @if (!selectedItem().triple_comparison_result!.delta.implemented_from_proposed.length) {
+                        <span class="text-muted fst-italic small">Ninguno</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                  <div class="schema-delta-card schema-delta-warning">
+                    <small class="fw-semibold d-block mb-2">
+                      <i class="bi bi-clock-history me-1"></i>Pendiente del Propuesto
+                    </small>
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (t of selectedItem().triple_comparison_result!.delta.pending_from_proposed; track t) {
+                        <span class="badge bg-warning text-dark">{{ t }}</span>
+                      }
+                      @if (!selectedItem().triple_comparison_result!.delta.pending_from_proposed.length) {
+                        <span class="text-muted fst-italic small">Ninguno</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                  <div class="schema-delta-card schema-delta-info">
+                    <small class="fw-semibold d-block mb-2">
+                      <i class="bi bi-plus-circle me-1"></i>Nuevo (no propuesto)
+                    </small>
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (t of selectedItem().triple_comparison_result!.delta.new_not_in_proposed; track t) {
+                        <span class="badge bg-info">{{ t }}</span>
+                      }
+                      @if (!selectedItem().triple_comparison_result!.delta.new_not_in_proposed.length) {
+                        <span class="text-muted fst-italic small">Ninguno</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                  <div class="schema-delta-card schema-delta-secondary">
+                    <small class="fw-semibold d-block mb-2">
+                      <i class="bi bi-arrow-repeat me-1"></i>Conservado del Original
+                    </small>
+                    <div class="d-flex flex-wrap gap-1">
+                      @for (t of selectedItem().triple_comparison_result!.delta.kept_from_original; track t) {
+                        <span class="badge bg-secondary">{{ t }}</span>
+                      }
+                      @if (!selectedItem().triple_comparison_result!.delta.kept_from_original.length) {
+                        <span class="text-muted fst-italic small">Ninguno</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Integrity -->
+              @if (selectedItem().triple_comparison_result!.original_integrity) {
+                <div class="mt-4">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi" [ngClass]="selectedItem().triple_comparison_result!.original_integrity.is_preserved ? 'bi-shield-check text-success' : 'bi-shield-exclamation text-warning'"></i>
+                    <span class="fw-semibold small">
+                      Integridad Original:
+                      <span [ngClass]="selectedItem().triple_comparison_result!.original_integrity.is_preserved ? 'text-success' : 'text-warning'">
+                        {{ selectedItem().triple_comparison_result!.original_integrity.is_preserved ? 'Preservada' : 'Modificada' }}
+                      </span>
+                    </span>
+                  </div>
+                  @if (selectedItem().triple_comparison_result!.original_integrity.missing_original_types.length) {
+                    <div class="d-flex flex-wrap gap-1">
+                      <small class="text-muted me-1">Tipos faltantes:</small>
+                      @for (t of selectedItem().triple_comparison_result!.original_integrity.missing_original_types; track t) {
+                        <span class="badge bg-danger bg-opacity-75">{{ t }}</span>
+                      }
+                    </div>
+                  }
+                  @if (selectedItem().triple_comparison_result!.original_integrity.changed_fields?.length) {
+                    <div class="mt-3">
+                      <small class="text-muted fw-semibold d-block mb-2">
+                        <i class="bi bi-pencil me-1"></i>Campos Modificados ({{ selectedItem().triple_comparison_result!.original_integrity.changed_fields.length }})
+                      </small>
+                      <div class="schema-changed-fields">
+                        @for (cf of selectedItem().triple_comparison_result!.original_integrity.changed_fields.slice(0, 5); track $index) {
+                          <div class="schema-changed-field-item">
+                            <span class="badge bg-secondary me-2">{{ cf.type }}</span>
+                            <code class="small">{{ cf.field }}</code>
+                          </div>
+                        }
+                        @if (selectedItem().triple_comparison_result!.original_integrity.changed_fields.length > 5) {
+                          <small class="text-muted fst-italic ms-1">
+                            +{{ selectedItem().triple_comparison_result!.original_integrity.changed_fields.length - 5 }} más campos...
+                          </small>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+
+            </div>
+          </div>
+        }
+
+        <!-- ── Progress Report ── -->
+        @if (selectedItem().progress_report) {
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header schema-section-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-bar-chart-steps me-2 text-primary"></i>
+                {{ 'auditSchemas.modal.progressReport.title' | translate }}
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="row g-3">
+                <div class="col-md-4">
+                  <div class="schema-progress-col schema-progress-success">
+                    <div class="schema-progress-label">
+                      <i class="bi bi-check2-all me-1"></i>Implementados
+                      <span class="badge bg-success ms-2">{{ selectedItem().progress_report!.implemented.length }}</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                      @for (t of selectedItem().progress_report!.implemented; track t) {
+                        <span class="badge bg-success">{{ t }}</span>
+                      }
+                      @if (!selectedItem().progress_report!.implemented.length) {
+                        <span class="text-muted fst-italic small">Ninguno aún</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="schema-progress-col schema-progress-warning">
+                    <div class="schema-progress-label">
+                      <i class="bi bi-hourglass-split me-1"></i>Pendientes
+                      <span class="badge bg-warning text-dark ms-2">{{ selectedItem().progress_report!.pending.length }}</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                      @for (t of selectedItem().progress_report!.pending; track t) {
+                        <span class="badge bg-warning text-dark">{{ t }}</span>
+                      }
+                      @if (!selectedItem().progress_report!.pending.length) {
+                        <span class="text-muted fst-italic small">Ninguno</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="schema-progress-col schema-progress-secondary">
+                    <div class="schema-progress-label">
+                      <i class="bi bi-slash-circle me-1"></i>Fuera de Alcance
+                      <span class="badge bg-secondary ms-2">{{ selectedItem().progress_report!.out_of_scope.length }}</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                      @for (t of selectedItem().progress_report!.out_of_scope; track t) {
+                        <span class="badge bg-secondary">{{ t }}</span>
+                      }
+                      @if (!selectedItem().progress_report!.out_of_scope.length) {
+                        <span class="text-muted fst-italic small">Ninguno</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ── AI Report ── -->
+        @if (selectedItem().ai_report) {
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header schema-section-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-robot me-2 text-primary"></i>
+                {{ 'auditSchemas.modal.aiReport.title' | translate }}
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="schema-ai-content">
+                <markdown [data]="selectedItem().ai_report!"></markdown>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- ── CQRS/SOLID Model ── -->
+        @if (selectedItem().cqrs_solid_model_text) {
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header schema-section-header">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-diagram-2 me-2 text-primary"></i>
+                {{ 'auditSchemas.modal.cqrsModel.title' | translate }}
+              </h6>
+            </div>
+            <div class="card-body">
+              <div class="schema-ai-content">
+                <markdown [data]="selectedItem().cqrs_solid_model_text!"></markdown>
+              </div>
+            </div>
+          </div>
+        }
+
+      }<!-- end if selectedItem -->
+
+    </app-body-modal>
+
+    <app-footer-modal>
+      <button class="btn btn-outline-secondary" type="button" (click)="closeDetail()">
+        <i class="bi bi-x-lg me-1"></i>{{ 'general.actions.close' | translate }}
+      </button>
+      @if (!loadingDetail() && selectedItem().id) {
+        <div class="btn-group" role="group">
+          <button
+            type="button"
+            class="btn btn-primary dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            [disabled]="!selectedItem().report_pdf_path && !selectedItem().report_word_path">
+            <i class="bi bi-download me-1"></i>{{ 'auditSchemas.modal.downloadReport' | translate }}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            @if (selectedItem().report_pdf_path) {
+              <li>
+                <a class="dropdown-item" (click)="downloadReport('pdf')" style="cursor:pointer">
+                  <i class="bi bi-file-pdf me-2 text-danger"></i>Descargar PDF
+                </a>
+              </li>
+            }
+            @if (selectedItem().report_word_path) {
+              <li>
+                <a class="dropdown-item" (click)="downloadReport('word')" style="cursor:pointer">
+                  <i class="bi bi-file-word me-2 text-primary"></i>Descargar Word
+                </a>
+              </li>
+            }
+            @if (!selectedItem().report_pdf_path && !selectedItem().report_word_path) {
+              <li>
+                <span class="dropdown-item text-muted">No hay reportes disponibles</span>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    </app-footer-modal>
+
+  </app-default-modal>
+}

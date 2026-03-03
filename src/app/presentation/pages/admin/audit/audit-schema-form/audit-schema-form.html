@@ -1,0 +1,266 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+
+      <!-- Nav buttons -->
+      <div class="d-flex flex-wrap gap-2 mb-4">
+        <a class="btn btn-outline-primary d-flex align-items-center gap-2 flex-fill flex-sm-grow-0"
+           routerLink="/admin/audit/schemas">
+          <i class="bi bi-braces-asterisk"></i>
+          {{ 'auditSchemas.buttons.list' | translate }}
+        </a>
+        <a class="btn btn-outline-secondary d-flex align-items-center gap-2 flex-fill flex-sm-grow-0"
+           routerLink="/admin/audit">
+          <i class="bi bi-clipboard-check"></i>
+          {{ 'auditSchemas.buttons.audits' | translate }}
+        </a>
+      </div>
+
+      <!-- Form card -->
+      <div class="card rounded-4 border-0 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+
+          <!-- Title -->
+          <div class="text-center mb-5">
+            <div class="audit-schema-icon-wrap mx-auto mb-3">
+              <i class="bi bi-braces-asterisk text-primary fs-2"></i>
+            </div>
+            <h2 class="fw-bold text-primary mb-1">{{ 'auditSchemas.form.title' | translate }}</h2>
+            <p class="text-muted">{{ 'auditSchemas.form.subtitle' | translate }}</p>
+          </div>
+
+          <!-- Error alert -->
+          @if (error()) {
+            <div class="alert alert-danger d-flex gap-2 mb-4" role="alert">
+              <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
+              <span>{{ error() }}</span>
+            </div>
+          }
+
+          <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+
+            <!-- Source Type + Source ID row -->
+            <div class="row g-3 mb-4">
+              <div class="col-md-5">
+                <label class="form-label fw-semibold" for="source_type">
+                  {{ 'auditSchemas.form.sourceType.label' | translate }}
+                  <span class="text-danger">*</span>
+                </label>
+                <select
+                  id="source_type"
+                  class="form-select form-select-lg border-2"
+                  formControlName="source_type"
+                  [ngClass]="{ 'is-invalid': messages('source_type').length > 0 }">
+                  @for (st of sourceTypes; track st) {
+                    <option [value]="st">{{ st }}</option>
+                  }
+                </select>
+                @if (messages('source_type').length > 0) {
+                  <div class="invalid-feedback">{{ messages('source_type')[0] }}</div>
+                } @else {
+                  <div class="form-text">{{ 'auditSchemas.form.sourceType.help' | translate }}</div>
+                }
+              </div>
+
+              <div class="col-md-7">
+                <label class="form-label fw-semibold" for="source_id">
+                  {{ 'auditSchemas.form.sourceId.label' | translate }}
+                  <span class="text-danger">*</span>
+                </label>
+                <!-- Select from audits if audit_page -->
+                @if (form.get('source_type')?.value === 'audit_page') {
+                  <select
+                    id="source_id"
+                    class="form-select form-select-lg border-2"
+                    formControlName="source_id"
+                    [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }">
+                    <option value="" disabled>
+                      @if (loadingAudits()) { Cargando auditorías... } @else { Selecciona una auditoría... }
+                    </option>
+                    @for (audit of auditList(); track audit.id) {
+                      <option [value]="audit.id">
+                        {{ audit.web_page_name }} · {{ audit.web_page_url }} ({{ audit.status }})
+                      </option>
+                    }
+                  </select>
+                } @else {
+                  <input
+                    type="text"
+                    id="source_id"
+                    class="form-control form-control-lg border-2"
+                    formControlName="source_id"
+                    placeholder="UUID de la fuente"
+                    [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }">
+                }
+                @if (messages('source_id').length > 0) {
+                  <div class="invalid-feedback">{{ messages('source_id')[0] }}</div>
+                } @else {
+                  <div class="form-text">{{ 'auditSchemas.form.sourceId.help' | translate }}</div>
+                }
+              </div>
+            </div>
+
+            <!-- Programming Language -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="programming_language">
+                {{ 'auditSchemas.form.programmingLanguage.label' | translate }}
+                <span class="text-danger">*</span>
+              </label>
+              <div class="audit-schema-lang-grid">
+                @for (lang of languages; track lang) {
+                  <label
+                    class="audit-schema-lang-option"
+                    [class.active]="form.get('programming_language')?.value === lang">
+                    <input
+                      type="radio"
+                      class="visually-hidden"
+                      [value]="lang"
+                      formControlName="programming_language">
+                    <i class="bi bi-code-slash me-1"></i>{{ lang }}
+                  </label>
+                }
+              </div>
+              <div class="form-text">{{ 'auditSchemas.form.programmingLanguage.help' | translate }}</div>
+            </div>
+
+            <!-- Modified Schema JSON -->
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-semibold mb-0" for="modified_schema_json">
+                  {{ 'auditSchemas.form.modifiedSchemaJson.label' | translate }}
+                  <span class="text-danger">*</span>
+                </label>
+                <div class="d-flex gap-2 align-items-center">
+                  @if (form.get('modified_schema_json')?.value) {
+                    <span class="badge" [class.bg-success]="isJsonValid()" [class.bg-danger]="!isJsonValid()">
+                      <i class="bi me-1" [class.bi-check-circle]="isJsonValid()" [class.bi-x-circle]="!isJsonValid()"></i>
+                      {{ isJsonValid() ? 'JSON válido' : 'JSON inválido' }}
+                    </span>
+                  }
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="formatJson()">
+                    <i class="bi bi-braces me-1"></i>Formatear
+                  </button>
+                </div>
+              </div>
+              <div class="audit-schema-textarea-wrap" [class.is-invalid-wrap]="messages('modified_schema_json').length > 0">
+                <textarea
+                  id="modified_schema_json"
+                  class="form-control font-monospace audit-schema-textarea border-2"
+                  formControlName="modified_schema_json"
+                  rows="14"
+                  placeholder='{ "@context": "https://schema.org", "@type": "...", ... }'
+                  [ngClass]="{ 'is-invalid': messages('modified_schema_json').length > 0 }"
+                  spellcheck="false">
+                </textarea>
+              </div>
+              @if (messages('modified_schema_json').length > 0) {
+                <div class="invalid-feedback d-block">{{ messages('modified_schema_json')[0] }}</div>
+              } @else {
+                <div class="form-text">{{ 'auditSchemas.form.modifiedSchemaJson.help' | translate }}</div>
+              }
+            </div>
+
+            <!-- Include AI Analysis -->
+            <div class="mb-4">
+              <div class="audit-schema-toggle-card">
+                <div class="form-check form-switch d-flex align-items-center gap-3 p-0 m-0">
+                  <input
+                    class="form-check-input audit-schema-switch flex-shrink-0"
+                    type="checkbox"
+                    id="include_ai_analysis"
+                    formControlName="include_ai_analysis"
+                    role="switch">
+                  <label class="form-check-label flex-grow-1" for="include_ai_analysis">
+                    <span class="fw-semibold d-block">
+                      <i class="bi bi-robot me-2 text-primary"></i>
+                      {{ 'auditSchemas.form.includeAI.label' | translate }}
+                    </span>
+                    <small class="text-muted">
+                      {{ 'auditSchemas.form.includeAI.help' | translate }}
+                    </small>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-5">
+              <a class="btn btn-outline-secondary btn-lg" routerLink="/admin/audit/schemas">
+                <i class="bi bi-x-lg me-1"></i>{{ 'general.actions.cancel' | translate }}
+              </a>
+              <button
+                type="submit"
+                class="btn btn-primary btn-lg px-5"
+                [disabled]="loading()">
+                @if (loading()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  {{ 'general.messages.loading' | translate }}
+                } @else {
+                  <i class="bi bi-send me-2"></i>{{ 'auditSchemas.form.submitButton' | translate }}
+                }
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ===== Confirmation Modal ===== -->
+@if (showConfirmation()) {
+  <app-default-modal classModalDialog="modal-lg" [expanded]="showConfirmation()">
+    <app-header-modal classModal="text-white bg-success">
+      <h5 class="fw-bold modal-title">
+        <i class="bi bi-check-circle me-2"></i>{{ 'auditSchemas.form.confirmModal.title' | translate }}
+      </h5>
+      <button class="btn-close btn-close-white" type="button" (click)="showConfirmation.set(false)" aria-label="Close"></button>
+    </app-header-modal>
+
+    <app-body-modal>
+      <div class="text-center mb-4">
+        <div class="audit-schema-success-icon mx-auto mb-3">
+          <i class="bi bi-braces-asterisk text-success fs-1"></i>
+        </div>
+        <h5 class="fw-bold text-success mb-1">{{ 'auditSchemas.form.confirmModal.message' | translate }}</h5>
+        <p class="text-muted small">{{ 'auditSchemas.form.confirmModal.description' | translate }}</p>
+      </div>
+
+      <div class="list-group list-group-flush rounded-3 border mb-3">
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="text-muted small"><i class="bi bi-hash me-2"></i>ID</span>
+          <code class="small">{{ createdItem().id }}</code>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="text-muted small"><i class="bi bi-activity me-2"></i>Estado</span>
+          <span class="badge bg-warning text-dark">{{ createdItem().status }}</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="text-muted small"><i class="bi bi-calendar-plus me-2"></i>Creado</span>
+          <span class="small">{{ createdItem().created_at | date:'medium' }}</span>
+        </div>
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+          <span class="text-muted small"><i class="bi bi-code-slash me-2"></i>Lenguaje</span>
+          <span class="badge bg-primary">{{ createdItem().programming_language }}</span>
+        </div>
+      </div>
+
+      <div class="alert alert-info d-flex gap-2 mb-0" role="alert">
+        <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
+        <small>{{ 'auditSchemas.form.confirmModal.processingNote' | translate }}</small>
+      </div>
+    </app-body-modal>
+
+    <app-footer-modal>
+      <button class="btn btn-outline-secondary" type="button" (click)="showConfirmation.set(false)">
+        <i class="bi bi-plus me-1"></i>{{ 'auditSchemas.form.confirmModal.newButton' | translate }}
+      </button>
+      <a class="btn btn-primary" routerLink="/admin/audit/schemas">
+        <i class="bi bi-list-ul me-1"></i>{{ 'auditSchemas.form.confirmModal.viewListButton' | translate }}
+      </a>
+    </app-footer-modal>
+  </app-default-modal>
+}
+

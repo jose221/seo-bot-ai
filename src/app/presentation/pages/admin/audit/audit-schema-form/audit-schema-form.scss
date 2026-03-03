@@ -1,0 +1,133 @@
+// ──────────────────────────────────────────────
+// Audit Schema Form – Styles
+// ──────────────────────────────────────────────
+
+:host {
+  display: block;
+}
+
+// ── Icon wrapper ─────────────────────────────
+.audit-schema-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(13, 110, 253, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.audit-schema-success-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: rgba(25, 135, 84, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// ── Language grid ────────────────────────────
+.audit-schema-lang-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.audit-schema-lang-option {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border: 2px solid #dee2e6;
+  border-radius: 50rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+  background: #fff;
+  color: #495057;
+
+  &:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    background: rgba(13, 110, 253, 0.05);
+  }
+
+  &.active {
+    border-color: #0d6efd;
+    background: #0d6efd;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.35);
+  }
+}
+
+// ── JSON Textarea ─────────────────────────────
+.audit-schema-textarea-wrap {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 2px solid #dee2e6;
+  transition: border-color 0.2s;
+
+  &:focus-within {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.15);
+  }
+
+  &.is-invalid-wrap {
+    border-color: #dc3545;
+  }
+}
+
+.audit-schema-textarea {
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 0.825rem;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 280px;
+  background: #fafbfc;
+
+  &:focus {
+    outline: none;
+    box-shadow: none;
+    background: #fff;
+  }
+
+  // Custom scrollbar
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 4px;
+  }
+}
+
+// ── AI Toggle card ────────────────────────────
+.audit-schema-toggle-card {
+  padding: 1.1rem 1.25rem;
+  border: 2px solid #dee2e6;
+  border-radius: 0.6rem;
+  background: #fafbfc;
+  transition: border-color 0.2s, background 0.2s;
+
+  &:has(input:checked) {
+    border-color: #0d6efd;
+    background: rgba(13, 110, 253, 0.04);
+  }
+}
+
+.audit-schema-switch {
+  width: 2.75rem !important;
+  height: 1.5rem !important;
+  cursor: pointer;
+}
+
