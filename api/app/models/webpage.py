@@ -3,7 +3,7 @@ Modelo de Página Web - Targets para auditoría.
 Representa sitios web que serán analizados por el bot.
 """
 from sqlmodel import SQLModel, Field, Relationship
-from sqlalchemy import Column, Text
+from sqlalchemy import Column, Text, ARRAY, String
 from typing import Optional, List
 from uuid import UUID, uuid4
 from datetime import datetime, timezone
@@ -42,6 +42,18 @@ class WebPage(SQLModel, table=True):
     tech_stack: Optional[str] = Field(
         default=None,
         description="Tecnologías detectadas o declaradas (ej. WordPress, React)"
+    )
+
+    # Agrupadores / Filtros
+    tags: Optional[List[str]] = Field(
+        default=None,
+        sa_column=Column(ARRAY(String), nullable=True),
+        description="Etiquetas para agrupar targets (ej. 'hotel list', 'landing pages')"
+    )
+    provider: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="Proveedor o empresa asociada (ej. 'Pricetravel', 'Facebook')"
     )
 
     # Metadatos

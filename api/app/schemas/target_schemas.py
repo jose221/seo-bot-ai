@@ -17,6 +17,8 @@ class WebPageCreate(BaseModel):
   instructions: Optional[str] = Field(None, description="Instrucciones de navegación")
   tech_stack: Optional[str] = Field(None, max_length=500, description="Stack tecnológico")
   manual_html_content: Optional[str] = Field(None, description="Contenido HTML manual de la página")
+  tags: Optional[List[str]] = Field(None, description="Etiquetas para agrupar targets (ej. ['hotel list', 'landing'])")
+  provider: Optional[str] = Field(None, max_length=200, description="Proveedor o empresa asociada (ej. 'Pricetravel')")
 
   @validator('url')
   def validate_url(cls, v):
@@ -32,7 +34,9 @@ class WebPageCreate(BaseModel):
         "name": "Mi Sitio Principal",
         "instructions": "Esperar 2 segundos después de cargar",
         "tech_stack": "React + Next.js",
-        "manual_html_content": "<html>...</html>"
+        "manual_html_content": "<html>...</html>",
+        "tags": ["hotel list", "landing pages"],
+        "provider": "Pricetravel"
       }
     }
 
@@ -44,6 +48,8 @@ class WebPageUpdate(BaseModel):
   tech_stack: Optional[str] = Field(None, max_length=500)
   is_active: Optional[bool] = None
   manual_html_content: Optional[str] = None
+  tags: Optional[List[str]] = Field(None, description="Etiquetas para agrupar targets")
+  provider: Optional[str] = Field(None, max_length=200, description="Proveedor o empresa asociada")
 
 
 class WebPageResponse(BaseModel):
@@ -55,6 +61,8 @@ class WebPageResponse(BaseModel):
   instructions: Optional[str]
   tech_stack: Optional[str]
   manual_html_content: Optional[str]
+  tags: Optional[List[str]]
+  provider: Optional[str]
   is_active: bool
   audit_reports: Optional[List[AuditReport]] = None
 
@@ -70,6 +78,8 @@ class WebPageListItem(BaseModel):
   name: Optional[str]
   instructions: Optional[str]
   tech_stack: Optional[str]
+  tags: Optional[List[str]]
+  provider: Optional[str]
   is_active: bool
   audit_reports: Optional[List[AuditReport]] = None
 
@@ -89,6 +99,8 @@ class WebPageSearchItem(BaseModel):
   id: UUID
   url: str
   name: Optional[str]
+  tags: Optional[List[str]]
+  provider: Optional[str]
   is_active: bool
 
 class WebPageSearchResponse(BaseModel):
@@ -96,3 +108,10 @@ class WebPageSearchResponse(BaseModel):
   total: int
   page: int
   page_size: Optional[int] = None
+
+
+class TagsListResponse(BaseModel):
+  """Respuesta con listado de tags distintos"""
+  tags: List[str]
+  total: int
+

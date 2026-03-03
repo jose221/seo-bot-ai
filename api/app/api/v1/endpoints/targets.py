@@ -2,8 +2,10 @@
 Endpoints para gestión de Targets (WebPages).
 CRUD completo para sitios web a auditar.
 """
-from typing import Optional
-from sqlalchemy import or_, func
+from typing import Optional, List
+from sqlalchemy import or_, func, cast
+from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
+from sqlalchemy import String
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import joinedload
@@ -52,7 +54,9 @@ async def create_target(
         name=target.name or target.url,
         instructions=target.instructions,
         tech_stack=target.tech_stack,
-        manual_html_content=target.manual_html_content
+        manual_html_content=target.manual_html_content,
+        tags=target.tags or [],
+        provider=target.provider
     )
 
     session.add(db_target)
@@ -67,24 +71,30 @@ async def list_targets(
         page: int = Query(1, ge=1, description="Número de página"),
         page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
         is_active: bool = Query(True, description="Filtrar por activos/inactivos"),
+        tag: Optional[str] = Query(None, description="Filtrar por un tag específico"),
+        provider: Optional[str] = Query(None, description="Filtrar por proveedor"),
         current_user: User = Depends(get_current_user),
         session = Depends(get_session)
 ):
     """
     Listar targets del usuario autenticado.
-    Soporta paginación.
+    Soporta paginación y filtros por tag y provider.
     """
-    # Query base
-    statement = select(WebPage).where(
+    # Filtros base
+    filters = [
         WebPage.user_id == current_user.id,
         WebPage.is_active == is_active
-    ).order_by(desc(WebPage.created_at))
+    ]
+    if tag:
+        filters.append(WebPage.tags.contains(cast([tag], PG_ARRAY(String))))
+    if provider:
+        filters.append(WebPage.provider == provider)
+
+    # Query base
+    statement = select(WebPage).where(*filters).order_by(desc(WebPage.created_at))
 
     # Contar total
-    count_statement = select(WebPage).where(
-        WebPage.user_id == current_user.id,
-        WebPage.is_active == is_active
-    )
+    count_statement = select(WebPage).where(*filters)
     count_result = await session.execute(count_statement)
     total = len(count_result.scalars().all())
 
@@ -111,6 +121,8 @@ async def search_targets(
   is_active: bool = Query(True, description="Filtrar por activos/inactivos"),
   only_page_with_audits_completed: bool = Query(False, description="Mostrar solo páginas con auditorías completadas"),
   exclude_web_page_id: Optional[UUID] = Query(None, description="ID de web_page a excluir de los resultados"),
+  tag: Optional[str] = Query(None, description="Filtrar por un tag específico"),
+  provider: Optional[str] = Query(None, description="Filtrar por proveedor"),
   page: int = Query(1, ge=1, description="Número de página"),
   page_size: Optional[int] = Query(None, ge=1, le=100, description="Elementos por página (None para todos)"),
   current_user: User = Depends(get_current_user),
@@ -118,7 +130,7 @@ async def search_targets(
 ):
   """
   Buscar targets del usuario autenticado por nombre o url.
-  Soporta paginación.
+  Soporta paginación y filtros por tag y provider.
   """
   filters = [
     WebPage.user_id == current_user.id,
@@ -136,11 +148,18 @@ async def search_targets(
   if exclude_web_page_id is not None:
     filters.append(WebPage.id != exclude_web_page_id)
 
+  if tag:
+    filters.append(WebPage.tags.contains(cast([tag], PG_ARRAY(String))))
+  if provider:
+    filters.append(WebPage.provider == provider)
+
   # Solo seleccionar las columnas necesarias
   statement = select(
     WebPage.id,
     WebPage.url,
     WebPage.name,
+    WebPage.tags,
+    WebPage.provider,
     WebPage.is_active,
     WebPage.created_at
   ).where(*filters)
@@ -173,13 +192,38 @@ async def search_targets(
 
   return target_schemas.WebPageSearchResponse(
     items=[
-      target_schemas.WebPageSearchItem(id=t.id, url=t.url, name=t.name, is_active=t.is_active)
+      target_schemas.WebPageSearchItem(
+        id=t.id, url=t.url, name=t.name,
+        tags=t.tags, provider=t.provider, is_active=t.is_active
+      )
       for t in targets
     ],
     total=total,
     page=page,
     page_size=page_size
   )
+
+
+@router.get("/targets/tags", response_model=target_schemas.TagsListResponse)
+async def list_tags(
+  current_user: User = Depends(get_current_user),
+  session = Depends(get_session)
+):
+  """
+  Obtener todos los tags distintos del usuario autenticado.
+  Útil para construir filtros en el front-end.
+  """
+  from sqlalchemy import text
+  # Usamos unnest para aplanar el array de tags y obtener distintos
+  stmt = text(
+    "SELECT DISTINCT unnest(tags) AS tag FROM web_pages "
+    "WHERE user_id = :user_id AND is_active = true AND tags IS NOT NULL "
+    "ORDER BY tag"
+  )
+  result = await session.execute(stmt, {"user_id": str(current_user.id)})
+  tags = [row[0] for row in result.all()]
+
+  return target_schemas.TagsListResponse(tags=tags, total=len(tags))
 
 
 @router.get("/targets/{target_id}", response_model=target_schemas.WebPageResponse)
