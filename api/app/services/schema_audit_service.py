@@ -9,30 +9,43 @@ from app.services.ai_client import AIClient
 from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
 
 # Límites para minificación de esquemas antes de enviar a la IA
-_MAX_SCHEMA_ITEMS = 40       # máximo de objetos en una lista raíz de esquemas
-_MAX_ARRAY_ITEMS = 15        # máximo de ítems en arrays internos (reviews, offers, itemListElement…)
-# Claves cuyos valores son arrays que se deben truncar
-_TRUNCABLE_ARRAY_KEYS = {
+_MAX_SCHEMA_ITEMS = 40       # máximo de objetos en una lista raíz de esquemas (sin contar @graph)
+_MAX_ARRAY_ITEMS = 15        # máximo de ítems en arrays internos (reviews, mainEntity, containsPlace…)
+
+# Claves cuyos arrays se truncan SIEMPRE (independiente del @type del nodo padre)
+_ALWAYS_TRUNCABLE_KEYS = {
     "review", "reviews",
-    "itemListElement", "item",
-    "offers", "offer",
-    "aggregateRating", "ratingValue",
-    "contactPoint", "contactPoints",
-    "sameAs",
-    "breadcrumb",
-    "image", "images",
-    "hasPart", "isPartOf",
     "performer", "performers",
     "sponsor",
     "event", "events",
     "openingHoursSpecification",
     "amenityFeature",
     "member", "members",
-    "hasOfferCatalog",
     "publishedOn",
-    "author", "contributor",
-    "mainEntity", "about",
+    "contributor",
 }
+
+# Claves que se truncan SOLO si el @type del nodo padre NO es uno de los tipos excluidos
+# (por ejemplo, itemListElement de BreadcrumbList no debe truncarse)
+_CONDITIONAL_TRUNCABLE_KEYS = {
+    "itemListElement",   # truncar en ItemList, pero NO en BreadcrumbList
+    "mainEntity",        # truncar en FAQPage con muchas preguntas
+    "containsPlace",
+    "hasPart", "isPartOf",
+    "contactPoint", "contactPoints",
+    "sameAs",
+    "image", "images",
+    "hasOfferCatalog",
+    "author",
+    "about",
+    "item",
+}
+
+# @types cuyos itemListElement / mainEntity NO se deben truncar (son navegación crítica)
+_NO_TRUNCATE_TYPES = {"BreadcrumbList", "SiteNavigationElement"}
+
+# Clave "offers" sólo se trunca si es lista (AggregateOffer.offers puede ser un dict)
+_OFFERS_KEY = "offers"
 
 
 class SchemaAuditService:
@@ -259,51 +272,93 @@ class SchemaAuditService:
 
     def _truncate_arrays_in_node(self, node: Any, max_items: int = _MAX_ARRAY_ITEMS) -> Any:
         """
-        Recorre recursivamente un nodo y trunca los arrays de claves conocidas
-        para no exceder max_items. Mantiene la estructura intacta.
+        Recorre recursivamente un nodo y trunca arrays de claves conocidas.
+        - Arrays en _ALWAYS_TRUNCABLE_KEYS: siempre se truncan.
+        - Arrays en _CONDITIONAL_TRUNCABLE_KEYS: se truncan salvo que el @type
+          del nodo actual esté en _NO_TRUNCATE_TYPES (ej. BreadcrumbList).
+        - Nodos del @graph raíz: NUNCA se limitan en cantidad.
         """
         if isinstance(node, dict):
+            node_type = node.get("@type", "")
+            # Normalizar a string si viene como lista (ej. ["Hotel", "LodgingBusiness"])
+            if isinstance(node_type, list):
+                node_type = node_type[0] if node_type else ""
+
+            is_protected_type = node_type in _NO_TRUNCATE_TYPES
+
             result: Dict[str, Any] = {}
             for key, value in node.items():
-                if key in _TRUNCABLE_ARRAY_KEYS and isinstance(value, list) and len(value) > max_items:
-                    truncated = value[:max_items]
-                    result[key] = [self._truncate_arrays_in_node(v, max_items) for v in truncated]
+                if not isinstance(value, list):
+                    # Recursión normal para dicts anidados
+                    result[key] = self._truncate_arrays_in_node(value, max_items)
+                    continue
+
+                should_truncate = False
+                if key in _ALWAYS_TRUNCABLE_KEYS:
+                    should_truncate = True
+                elif key == _OFFERS_KEY:
+                    # offers sólo se trunca si es una lista (no un dict/objeto único)
+                    should_truncate = True
+                elif key in _CONDITIONAL_TRUNCABLE_KEYS:
+                    # Solo truncar si el nodo padre NO es un tipo protegido
+                    should_truncate = not is_protected_type
+
+                if should_truncate and len(value) > max_items:
+                    result[key] = [self._truncate_arrays_in_node(v, max_items) for v in value[:max_items]]
                     result[f"_{key}_truncated"] = f"(mostrando {max_items}/{len(value)} ítems)"
                 else:
-                    result[key] = self._truncate_arrays_in_node(value, max_items)
+                    result[key] = [self._truncate_arrays_in_node(v, max_items) for v in value]
+
             return result
+
         elif isinstance(node, list):
             return [self._truncate_arrays_in_node(item, max_items) for item in node]
+
         return node
 
     def _minify_schema_for_ai(
         self,
         schema: Any,
-        max_root_items: int = _MAX_SCHEMA_ITEMS,
         max_array_items: int = _MAX_ARRAY_ITEMS
     ) -> Any:
         """
-        Minifica un schema reduciendo arrays internos y limitando la cantidad
-        de objetos raíz, sin alterar tipos ni estructura de claves relevantes
-        para el análisis de schemas.org / Google.
+        Minifica un schema reduciendo arrays internos dentro de cada nodo.
+        Los nodos raíz (incluyendo los del @graph) NO se limitan en cantidad
+        para no perder tipos importantes (BreadcrumbList, FAQPage, etc.).
         """
         if schema is None:
             return schema
 
-        items = self._normalize_to_items(schema)
+        # Si viene como string JSON, parsear primero
+        parsed = schema
+        if isinstance(schema, str):
+            try:
+                parsed = json.loads(schema)
+            except Exception:
+                return schema
 
-        # Truncar cantidad de items raíz
-        if len(items) > max_root_items:
-            items = items[:max_root_items]
+        # Caso @graph: preservar todos los nodos raíz, solo truncar internamente
+        if isinstance(parsed, dict) and "@graph" in parsed and isinstance(parsed["@graph"], list):
+            minified_graph = [
+                self._truncate_arrays_in_node(node, max_array_items)
+                if isinstance(node, dict) else node
+                for node in parsed["@graph"]
+            ]
+            return {**parsed, "@graph": minified_graph}
 
-        # Truncar arrays internos de cada item
-        minified = [self._truncate_arrays_in_node(item, max_array_items) for item in items]
+        # Lista de nodos raíz (sin @graph): preservar todos, truncar internamente
+        if isinstance(parsed, list):
+            return [
+                self._truncate_arrays_in_node(item, max_array_items)
+                if isinstance(item, dict) else item
+                for item in parsed
+            ]
 
-        # Devolver en el mismo formato (lista o dict)
-        if isinstance(schema, dict) and not isinstance(schema, list):
-            if len(minified) == 1:
-                return minified[0]
-        return minified
+        # Dict único
+        if isinstance(parsed, dict):
+            return self._truncate_arrays_in_node(parsed, max_array_items)
+
+        return parsed
 
     def _normalize_to_items(self, payload: Any) -> List[Dict[str, Any]]:
         if payload is None:
