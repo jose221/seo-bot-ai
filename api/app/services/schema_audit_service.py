@@ -8,6 +8,32 @@ from typing import Any, Dict, List, Optional, Set
 from app.services.ai_client import AIClient
 from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
 
+# Límites para minificación de esquemas antes de enviar a la IA
+_MAX_SCHEMA_ITEMS = 40       # máximo de objetos en una lista raíz de esquemas
+_MAX_ARRAY_ITEMS = 15        # máximo de ítems en arrays internos (reviews, offers, itemListElement…)
+# Claves cuyos valores son arrays que se deben truncar
+_TRUNCABLE_ARRAY_KEYS = {
+    "review", "reviews",
+    "itemListElement", "item",
+    "offers", "offer",
+    "aggregateRating", "ratingValue",
+    "contactPoint", "contactPoints",
+    "sameAs",
+    "breadcrumb",
+    "image", "images",
+    "hasPart", "isPartOf",
+    "performer", "performers",
+    "sponsor",
+    "event", "events",
+    "openingHoursSpecification",
+    "amenityFeature",
+    "member", "members",
+    "hasOfferCatalog",
+    "publishedOn",
+    "author", "contributor",
+    "mainEntity", "about",
+}
+
 
 class SchemaAuditService:
     """Lógica de validación y comparación de esquemas."""
@@ -153,9 +179,9 @@ class SchemaAuditService:
         template = self.ai_client.jinja_env.get_template("schema_audit_comparison.jinja")
 
         prompt_content = template.render(
-            original_schema=original_schema,
-            proposed_schema=proposed_schema,
-            incoming_schema=incoming_schema,
+            original_schema=self._minify_schema_for_ai(original_schema),
+            proposed_schema=self._minify_schema_for_ai(proposed_schema),
+            incoming_schema=self._minify_schema_for_ai(incoming_schema),
             structural_result=structural_result
         )
 
@@ -189,8 +215,8 @@ class SchemaAuditService:
         template = self.ai_client.jinja_env.get_template("schema_cqrs_solid_model.jinja")
 
         prompt_content = template.render(
-            proposed_schema=proposed_schema,
-            incoming_schema=incoming_schema,
+            proposed_schema=self._minify_schema_for_ai(proposed_schema),
+            incoming_schema=self._minify_schema_for_ai(incoming_schema),
             programming_language=programming_language or "typescript"
         )
 
@@ -226,6 +252,58 @@ class SchemaAuditService:
             return json.loads(raw)
         except Exception:
             return None
+
+    # ------------------------------------------------------------------
+    # Minificación de esquemas para reducir tokens en prompts de IA
+    # ------------------------------------------------------------------
+
+    def _truncate_arrays_in_node(self, node: Any, max_items: int = _MAX_ARRAY_ITEMS) -> Any:
+        """
+        Recorre recursivamente un nodo y trunca los arrays de claves conocidas
+        para no exceder max_items. Mantiene la estructura intacta.
+        """
+        if isinstance(node, dict):
+            result: Dict[str, Any] = {}
+            for key, value in node.items():
+                if key in _TRUNCABLE_ARRAY_KEYS and isinstance(value, list) and len(value) > max_items:
+                    truncated = value[:max_items]
+                    result[key] = [self._truncate_arrays_in_node(v, max_items) for v in truncated]
+                    result[f"_{key}_truncated"] = f"(mostrando {max_items}/{len(value)} ítems)"
+                else:
+                    result[key] = self._truncate_arrays_in_node(value, max_items)
+            return result
+        elif isinstance(node, list):
+            return [self._truncate_arrays_in_node(item, max_items) for item in node]
+        return node
+
+    def _minify_schema_for_ai(
+        self,
+        schema: Any,
+        max_root_items: int = _MAX_SCHEMA_ITEMS,
+        max_array_items: int = _MAX_ARRAY_ITEMS
+    ) -> Any:
+        """
+        Minifica un schema reduciendo arrays internos y limitando la cantidad
+        de objetos raíz, sin alterar tipos ni estructura de claves relevantes
+        para el análisis de schemas.org / Google.
+        """
+        if schema is None:
+            return schema
+
+        items = self._normalize_to_items(schema)
+
+        # Truncar cantidad de items raíz
+        if len(items) > max_root_items:
+            items = items[:max_root_items]
+
+        # Truncar arrays internos de cada item
+        minified = [self._truncate_arrays_in_node(item, max_array_items) for item in items]
+
+        # Devolver en el mismo formato (lista o dict)
+        if isinstance(schema, dict) and not isinstance(schema, list):
+            if len(minified) == 1:
+                return minified[0]
+        return minified
 
     def _normalize_to_items(self, payload: Any) -> List[Dict[str, Any]]:
         if payload is None:

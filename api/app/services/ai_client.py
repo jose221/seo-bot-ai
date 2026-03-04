@@ -99,9 +99,17 @@ class AIClient:
 
                 response.raise_for_status()
 
-                # Parsear respuesta
+                # Parsear respuesta — puede venir como lista o como objeto directo
                 data = response.json()
-                obj_response = data[0]
+                if isinstance(data, list):
+                    obj_response = data[0]
+                elif isinstance(data, dict):
+                    obj_response = data
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail=f"Formato de respuesta IA inesperado: {type(data).__name__}"
+                    )
                 return ChatCompletionResponse(**obj_response)
 
         except httpx.TimeoutException:
