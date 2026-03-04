@@ -20,7 +20,8 @@ export const environment = {
     },
     target:{
       path: '/targets',
-      search: '/targets/search'
+      search: '/targets/search',
+      tags: '/targets/tags'
     },
     audit:{
       path: '/audits',

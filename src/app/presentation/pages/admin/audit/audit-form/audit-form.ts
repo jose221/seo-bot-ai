@@ -49,6 +49,11 @@ export class AuditForm extends ValidationFormBase implements OnInit {
   private readonly formRepository = inject(AuditRepository);
   private readonly targetRepository = inject(TargetRepository)
   public targetSearchList = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[])
+
+  // Tag filter
+  availableTags = signal<string[]>([]);
+  selectedTag = signal<string>('');
+
   constructor() {
     super();
   }
@@ -58,16 +63,26 @@ export class AuditForm extends ValidationFormBase implements OnInit {
     if (webPageId) {
       this.form.patchValue({ web_page_id: webPageId });
     }
+    // Cargar tags disponibles
+    try {
+      const tags = await this.targetRepository.getTags();
+      this.availableTags.set(tags);
+    } catch {
+      this.availableTags.set([]);
+    }
     await this.targetSearch()
   }
+
   messages(name: string){
     return this.formMessages(name)
   }
+
   async onSubmit() {
     this.submitted.set(true);
     if (this.form.invalid) return;
     await this.create();
   }
+
   async create(){
     this.error.set('');
     this.loading.set(true);
@@ -85,10 +100,15 @@ export class AuditForm extends ValidationFormBase implements OnInit {
     }
   }
 
+  async onTagFilter(tag: string): Promise<void> {
+    this.selectedTag.set(tag);
+    this.form.patchValue({ web_page_id: '' });
+    await this.targetSearch({ tag: tag || undefined });
+  }
+
   async targetSearch(params?: SearchTargetRequestModel): Promise<void>{
     const response = await this.targetRepository.search(params)
     this.targetSearchList.set(response);
-    console.log("this.targetSearchList", this.targetSearchList())
   }
 
 }

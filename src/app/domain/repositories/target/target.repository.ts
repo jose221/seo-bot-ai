@@ -14,4 +14,5 @@ export abstract class TargetRepository {
   abstract get(params?: FilterTargetRequestModel): Promise<TargetResponseModel[]>;
   abstract find(id: number): Promise<TargetResponseModel>;
   abstract search(params?: SearchTargetRequestModel): Promise<SearchTargetResponseModel[]>;
+  abstract getTags(): Promise<string[]>;
 }

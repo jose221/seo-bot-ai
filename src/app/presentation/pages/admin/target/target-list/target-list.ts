@@ -1,4 +1,4 @@
-import {Component, inject, signal} from '@angular/core';
+import {Component, inject, OnInit, signal} from '@angular/core';
 import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
@@ -20,7 +20,7 @@ import {RouterLink} from '@angular/router';
   templateUrl: './target-list.html',
   styleUrl: './target-list.scss',
 })
-export class TargetList extends ListDefaultBase<TargetResponseModel>{
+export class TargetList extends ListDefaultBase<TargetResponseModel> implements OnInit {
 
   configFilter  = signal<FilterListConfig>({
     limit: 6,
@@ -35,14 +35,29 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
     }
   })
   _targetRepository = inject(TargetRepository)
+
+  availableTags = signal<string[]>([]);
+  selectedTag = signal<string>('');
+
   constructor() {
     super();
+  }
+
+  override async ngOnInit() {
+    await super.ngOnInit();
+    try {
+      const tags = await this._targetRepository.getTags();
+      this.availableTags.set(tags);
+    } catch {
+      this.availableTags.set([]);
+    }
   }
 
   async init() {
     try {
       this.isLoading.set(true);
-      const data = await this._targetRepository.get();
+      const tag = this.selectedTag() || undefined;
+      const data = await this._targetRepository.get(tag ? { tag } as any : undefined);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.isLoading.set(false);
@@ -50,6 +65,11 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
       console.error('Error al cargar items:', error);
       this.isLoading.set(false);
     }
+  }
+
+  async onTagFilter(tag: string) {
+    this.selectedTag.set(tag);
+    await this.init();
   }
 
   async toUpdate(item: TargetResponseModel){
@@ -78,7 +98,6 @@ export class TargetList extends ListDefaultBase<TargetResponseModel>{
           'general.messages.success',
           'El target ha sido eliminado correctamente'
         );
-        // Recargar la lista después de eliminar
         await this.init();
       } catch (error) {
         console.error('Error al eliminar target:', error);

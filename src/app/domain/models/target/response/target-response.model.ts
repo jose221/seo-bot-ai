@@ -7,7 +7,9 @@ export class TargetResponseModel {
     public tech_stack: string,
     public url: string,
     public is_active: boolean,
-    public manual_html_content?: string
+    public manual_html_content?: string,
+    public tags?: string[],
+    public provider?: string,
   ) {}
 }
 
@@ -16,6 +18,8 @@ export class SearchTargetResponseModel {
     public id: string,
     public name: string,
     public url: string,
-    public is_active: boolean
+    public is_active: boolean,
+    public tags?: string[],
+    public provider?: string,
   ) {}
 }

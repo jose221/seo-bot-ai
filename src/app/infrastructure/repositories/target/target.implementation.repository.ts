@@ -33,4 +33,7 @@ export class TargetImplementationRepository implements TargetRepository {
   async search(params?: SearchTargetRequestModel): Promise<SearchTargetResponseModel[]> {
     return await this.primaryService.search(params);
   }
+  async getTags(): Promise<string[]> {
+    return await this.primaryService.getTags();
+  }
 }

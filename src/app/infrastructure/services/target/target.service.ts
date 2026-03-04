@@ -48,4 +48,9 @@ export class TargetService extends BaseService{
     const response = await this.httpService.get<TargetResponseDto>(`${environment.endpoints.target.path}/${id}`, {},{}, this.getToken);
     return this.itemMapper.mapResponse(response);
   }
+
+  async getTags(): Promise<string[]> {
+    const response = await this.httpService.get<{ tags: string[]; total: number }>(`${environment.endpoints.target.tags}`, {}, {}, this.getToken);
+    return response.tags ?? [];
+  }
 }

@@ -19,6 +19,34 @@
             <p class="text-muted">{{ 'audits.compare.subtitle' | translate }}</p>
           </div>
           <form id="compareForm" class="needs-validation" [formGroup]="form" (ngSubmit)="onSubmit()">
+
+            <!-- Filtro por Tag para página base -->
+            @if (availableTags().length > 0) {
+              <div class="mb-3">
+                <label class="form-label fw-semibold small text-muted mb-2">
+                  <i class="bi bi-tags me-1"></i>Filtrar páginas base por tag (opcional)
+                </label>
+                <div class="d-flex flex-wrap gap-2">
+                  <button type="button"
+                    class="btn btn-sm rounded-pill"
+                    [class.btn-primary]="selectedTagBase() === ''"
+                    [class.btn-outline-secondary]="selectedTagBase() !== ''"
+                    (click)="onTagFilterBase('')">
+                    Todos
+                  </button>
+                  @for (tag of availableTags(); track tag) {
+                    <button type="button"
+                      class="btn btn-sm rounded-pill"
+                      [class.btn-primary]="selectedTagBase() === tag"
+                      [class.btn-outline-secondary]="selectedTagBase() !== tag"
+                      (click)="onTagFilterBase(tag)">
+                      <i class="bi bi-tag me-1"></i>{{ tag }}
+                    </button>
+                  }
+                </div>
+              </div>
+            }
+
             <div class="mb-4">
               <label class="form-label fw-semibold" for="baseWebPage">
                 {{ 'audits.compare.basePage.label' | translate }} <span class="text-danger">*</span>

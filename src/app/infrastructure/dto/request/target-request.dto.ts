@@ -6,6 +6,8 @@ export interface TargetRequestDto {
   tech_stack: string
   url: string
   manual_html_content?: string
+  tags?: string[]
+  provider?: string
 }
 
 export interface CreateTargetRequestDto {
@@ -14,18 +16,25 @@ export interface CreateTargetRequestDto {
   tech_stack: string
   url: string
   manual_html_content?: string
+  tags?: string[]
+  provider?: string
 }
 
 export interface FilterTargetRequestDto {
   page: number
   page_size: number
   is_active: boolean
+  tag?: string
+  provider?: string
 }
 
 export interface SearchTargetRequestDto {
-  query: string
-  page: number
-  page_size: number
-  is_active: boolean
+  query?: string
+  page?: number
+  page_size?: number
+  is_active?: boolean
   only_page_with_audits_completed?: boolean
+  exclude_web_page_id?: string
+  tag?: string
+  provider?: string
 }

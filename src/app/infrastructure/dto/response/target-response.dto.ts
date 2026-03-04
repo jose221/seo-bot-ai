@@ -7,6 +7,8 @@ export interface TargetResponseDto {
   url: string,
   is_active: boolean
   manual_html_content?: string
+  tags?: string[]
+  provider?: string
 }
 
 export interface SearchTargetResponseDto {
@@ -14,4 +16,6 @@ export interface SearchTargetResponseDto {
   name: string
   url: string,
   is_active: boolean
+  tags?: string[]
+  provider?: string
 }

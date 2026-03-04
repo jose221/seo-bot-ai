@@ -46,6 +46,10 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   public targetSearchList = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[])
   public loadingCompareList = signal<boolean>(false);
 
+  // Tag filter
+  availableTags = signal<string[]>([]);
+  selectedTagBase = signal<string>('');
+
   constructor() {
     super();
 
@@ -61,6 +65,14 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    // Cargar tags disponibles
+    try {
+      const tags = await this.targetRepository.getTags();
+      this.availableTags.set(tags);
+    } catch {
+      this.availableTags.set([]);
+    }
+
     const response = await this.targetSearch({
       only_page_with_audits_completed: true,
     } as SearchTargetRequestModel)
@@ -114,6 +126,16 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   }
   async targetSearch(params?: SearchAuditRequestModel): Promise<SearchTargetResponseModel[]>{
     return await this.targetRepository.search(params)
+  }
+
+  async onTagFilterBase(tag: string): Promise<void> {
+    this.selectedTagBase.set(tag);
+    this.form.patchValue({ web_page_id: '' });
+    const response = await this.targetSearch({
+      only_page_with_audits_completed: true,
+      tag: tag || undefined,
+    } as SearchTargetRequestModel);
+    this.targetSearchList.set(response);
   }
 
   updateStatusFilter(value: string) {

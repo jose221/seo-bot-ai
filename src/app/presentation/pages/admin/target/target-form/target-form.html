@@ -129,6 +129,62 @@
               </div>
             }
           </div>
+
+          <!-- Provider -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="provider">
+              Proveedor
+            </label>
+            <input
+              class="border-2 form-control form-control-lg"
+              type="text"
+              id="provider"
+              placeholder="Ej: Pricetravel, Facebook, Google..."
+              formControlName="provider"
+            >
+            <div class="form-text">Empresa o proveedor asociado al target (opcional)</div>
+          </div>
+
+          <!-- Tags con autocomplete -->
+          <div class="mb-4">
+            <label class="form-label fw-semibold" for="tagInput">
+              Tags
+            </label>
+            <!-- Tags seleccionados -->
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              @for (tag of tags(); track tag) {
+                <span class="badge bg-primary d-flex align-items-center gap-1 fs-6 fw-normal px-3 py-2">
+                  <i class="bi bi-tag-fill me-1"></i>{{ tag }}
+                  <button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.6rem;" (click)="removeTag(tag)" aria-label="Eliminar tag"></button>
+                </span>
+              }
+            </div>
+            <div class="position-relative">
+              <input
+                type="text"
+                id="tagInput"
+                class="border-2 form-control form-control-lg"
+                placeholder="Escribe un tag y presiona Enter, o selecciona uno existente..."
+                [value]="tagInput()"
+                (input)="onTagInputChange($any($event.target).value)"
+                (focus)="onTagInputFocus()"
+                (blur)="showTagDropdown.set(false)"
+                (keydown)="onTagKeydown($event)"
+                autocomplete="off"
+              >
+              @if (showTagDropdown()) {
+                <div class="dropdown-menu show w-100 shadow-sm border-0" style="max-height:200px;overflow-y:auto;top:100%;z-index:1055;">
+                  @for (tag of filteredTags(); track tag) {
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2"
+                      (mousedown)="selectTag(tag)">
+                      <i class="bi bi-tag text-primary"></i>{{ tag }}
+                    </button>
+                  }
+                </div>
+              }
+            </div>
+            <div class="form-text">Escribe y presiona Enter o coma para agregar un tag nuevo. Haz clic en sugerencias para reutilizar existentes.</div>
+          </div>
           <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5">
             <button class="btn btn-outline-secondary btn-lg px-4" type="submit">
               <svg class="bi bi-arrow-counterclockwise me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"></path></svg> {{ 'general.actions.clear' | translate }} </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"><svg class="bi bi-check-circle me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"></path></svg>
