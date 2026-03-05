@@ -288,7 +288,7 @@ async def update_target(
     return target
 
 
-@router.delete("/targets/{target_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/targets/{target_id}", response_model=target_schemas.DeleteTargetResponse)
 async def delete_target(
         target_id: UUID,
         hard_delete: bool = Query(False, description="Si es True, borra físicamente"),
@@ -315,13 +315,23 @@ async def delete_target(
     try:
         if hard_delete:
             await session.delete(target)
+            message = "Target eliminado permanentemente"
+            print(f"🗑️  Target {target_id} eliminado permanentemente (hard delete)")
         else:
             target.is_active = False
             target.updated_at = datetime.utcnow()
             session.add(target)
+            message = "Target desactivado (soft delete)"
+            print(f"🔒 Target {target_id} desactivado (soft delete)")
 
         await session.commit()
-        return None
+
+        return {
+            "success": True,
+            "message": message,
+            "target_id": str(target_id),
+            "hard_delete": hard_delete
+        }
     except Exception as e:
         await session.rollback()
         print(f"❌ Error en DELETE target {target_id}: {e}")

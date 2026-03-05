@@ -119,3 +119,11 @@ class TagsListResponse(BaseModel):
   tags: List[str]
   total: int
 
+
+class DeleteTargetResponse(BaseModel):
+  """Respuesta para eliminación de target"""
+  success: bool
+  message: str
+  target_id: str
+  hard_delete: bool
+
