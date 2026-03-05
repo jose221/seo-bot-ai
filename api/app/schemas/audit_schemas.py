@@ -63,8 +63,23 @@ class AuditTaskResponse(BaseModel):
         }
 
 
+class WebPageSimpleResponse(BaseModel):
+    """WebPage simplificada para listados: omite manual_html_content que es muy pesado."""
+    id: UUID
+    url: str
+    name: Optional[str]
+    instructions: Optional[str]
+    tech_stack: Optional[str]
+    tags: Optional[List[str]]
+    provider: Optional[str]
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
 class AuditResponse(BaseModel):
-    """Respuesta completa de una auditoría"""
+    """Respuesta completa de una auditoría individual (find). Incluye web_page completa."""
     id: UUID
     web_page_id: UUID
     user_id: UUID
@@ -93,15 +108,51 @@ class AuditResponse(BaseModel):
     error_message: Optional[str]
     created_at: datetime
     completed_at: Optional[datetime]
-    web_page: Optional[WebPage] = None
+    web_page: Optional[WebPage] = None  # Modelo completo: incluye manual_html_content
+
+    class Config:
+        from_attributes = True
+
+
+class AuditListItem(BaseModel):
+    """Item de auditoría para listados. Omite manual_html_content de web_page para aligerar la respuesta."""
+    id: UUID
+    web_page_id: UUID
+    user_id: UUID
+    status: AuditStatus
+
+    # Scores
+    performance_score: Optional[float]
+    seo_score: Optional[float]
+    accessibility_score: Optional[float]
+    best_practices_score: Optional[float]
+
+    # Core Web Vitals
+    lcp: Optional[float]
+    fid: Optional[float]
+    cls: Optional[float]
+
+    # Datos completos
+    lighthouse_data: Optional[Dict[str, Any]]
+    ai_suggestions: Optional[Dict[str, Any]]
+
+    # Rutas de reportes generados
+    report_pdf_path: Optional[str] = None
+    report_excel_path: Optional[str] = None
+    report_word_path: Optional[str] = None
+
+    error_message: Optional[str]
+    created_at: datetime
+    completed_at: Optional[datetime]
+    web_page: Optional[WebPageSimpleResponse] = None  # Sin manual_html_content
 
     class Config:
         from_attributes = True
 
 
 class AuditListResponse(BaseModel):
-    """Lista de auditorías con paginación"""
-    items: list[AuditResponse]
+    """Lista de auditorías con paginación (sin manual_html_content en web_page)"""
+    items: list[AuditListItem]
     total: int
     page: int
     page_size: Optional[int] = None

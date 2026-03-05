@@ -779,7 +779,7 @@ async def list_audits(
         await session.commit()
 
     return audit_schemas.AuditListResponse(
-        items=[audit_schemas.AuditResponse.model_validate(a) for a in audits],
+        items=[audit_schemas.AuditListItem.model_validate(a) for a in audits],
         total=total,
         page=page,
         page_size=page_size
