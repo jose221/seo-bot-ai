@@ -210,6 +210,8 @@
   },
   "audits": {
     "title": "Audit Management",
+    "list": "Audit List",
+    "filter": "Filter Audits",
     "subtitle": "Manage and view all your created audits",
     "buttons": {
       "new": "New",
@@ -386,4 +388,3 @@
     }
   }
 }
-

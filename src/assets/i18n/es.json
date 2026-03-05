@@ -209,6 +209,7 @@
     }
   },
   "audits": {
+    "title": "Gestión de Auditorías",
     "subtitle": "Administra y visualiza todas tus auditorias creadas",
     "buttons": {
       "new": "Nueva",
@@ -385,4 +386,3 @@
     }
   }
 }
-
