@@ -7,7 +7,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import datetime
 
-from app.models import AuditReport
+from app.models.audit import AuditStatus
 
 
 class WebPageCreate(BaseModel):
@@ -64,10 +64,12 @@ class WebPageResponse(BaseModel):
   tags: Optional[List[str]]
   provider: Optional[str]
   is_active: bool
-  audit_reports: Optional[List[AuditReport]] = None
+  created_at: datetime
+  updated_at: datetime
 
   class Config:
     from_attributes = True
+    exclude = {'audit_reports'}
 
 
 class WebPageListItem(BaseModel):
@@ -81,10 +83,12 @@ class WebPageListItem(BaseModel):
   tags: Optional[List[str]]
   provider: Optional[str]
   is_active: bool
-  audit_reports: Optional[List[AuditReport]] = None
+  created_at: datetime
+  updated_at: datetime
 
   class Config:
     from_attributes = True
+    exclude = {'audit_reports'}
 
 
 class WebPageListResponse(BaseModel):
