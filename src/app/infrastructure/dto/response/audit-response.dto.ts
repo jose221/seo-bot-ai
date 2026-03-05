@@ -19,6 +19,9 @@ export interface AuditResponseDto {
   error_message: string
   created_at: string
   completed_at: string
+  report_pdf_path?: string | null
+  report_excel_path?: string | null
+  report_word_path?: string | null
 }
 export interface CreateAuditResponseDto {
   message: string

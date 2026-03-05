@@ -307,7 +307,11 @@
       },
       "buttons": {
         "close": "Close",
-        "download": "Download Report"
+        "download": "Download Report",
+        "downloadPdf": "Download PDF",
+        "downloadExcel": "Download Excel",
+        "downloadWord": "Download Word",
+        "noReports": "No reports available"
       }
     },
     "compare": {

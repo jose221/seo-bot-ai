@@ -371,8 +371,43 @@
     <button class="btn btn-secondary rounded-pill px-4" (click)="showItem.set({})" type="button">
       <i class="me-2 bi bi-x-circle"></i>{{ 'audits.modal.buttons.close' | translate }}
     </button>
-    <button class="btn btn-primary rounded-pill px-4" type="button">
-      <i class="me-2 bi bi-download"></i>{{ 'audits.modal.buttons.download' | translate }}
-    </button>
+    <div class="btn-group" role="group">
+      <button
+        type="button"
+        class="btn btn-primary rounded-pill px-3 dropdown-toggle"
+        data-bs-toggle="dropdown"
+        aria-expanded="false"
+        [disabled]="!showItem()?.report_pdf_path && !showItem()?.report_excel_path && !showItem()?.report_word_path">
+        <i class="bi bi-download me-1"></i>{{ 'audits.modal.buttons.download' | translate }}
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end">
+        @if (showItem()?.report_pdf_path) {
+          <li>
+            <a class="dropdown-item" (click)="downloadReport('pdf')" style="cursor:pointer;">
+              <i class="bi bi-file-pdf text-danger me-2"></i>{{ 'audits.modal.buttons.downloadPdf' | translate }}
+            </a>
+          </li>
+        }
+        @if (showItem()?.report_excel_path) {
+          <li>
+            <a class="dropdown-item" (click)="downloadReport('excel')" style="cursor:pointer;">
+              <i class="bi bi-file-excel text-success me-2"></i>{{ 'audits.modal.buttons.downloadExcel' | translate }}
+            </a>
+          </li>
+        }
+        @if (showItem()?.report_word_path) {
+          <li>
+            <a class="dropdown-item" (click)="downloadReport('word')" style="cursor:pointer;">
+              <i class="bi bi-file-word text-primary me-2"></i>{{ 'audits.modal.buttons.downloadWord' | translate }}
+            </a>
+          </li>
+        }
+        @if (!showItem()?.report_pdf_path && !showItem()?.report_excel_path && !showItem()?.report_word_path) {
+          <li>
+            <span class="dropdown-item text-muted">{{ 'audits.modal.buttons.noReports' | translate }}</span>
+          </li>
+        }
+      </ul>
+    </div>
   </app-footer-modal>
 </app-default-modal>

@@ -24,6 +24,7 @@ import {
 import {DateFormatPipe} from '@/app/pipes/date-format-pipe';
 import {NgClass} from '@angular/common';
 import {MarkdownComponent} from 'ngx-markdown';
+import {environment} from '@/environments/environment';
 
 @Component({
   selector: 'app-audit-list',
@@ -192,6 +193,25 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
   async toShow(item: AuditResponseModel){
     console.log('item:', item);
     this.showItem.set(item);
+  }
+
+  downloadReport(type: 'pdf' | 'excel' | 'word') {
+    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
+    let reportPath: string | null | undefined;
+
+    if (type === 'pdf') {
+      reportPath = this.showItem().report_pdf_path;
+    } else if (type === 'excel') {
+      reportPath = this.showItem().report_excel_path;
+    } else {
+      reportPath = this.showItem().report_word_path;
+    }
+
+    if (!reportPath) {
+      this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
+      return;
+    }
+    window.open(`${baseUrl}/${reportPath}`, '_blank');
   }
   async toDelete(item: AuditResponseModel){
     const result = await this._sweetAlertUtil.fire({

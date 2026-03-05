@@ -27,7 +27,10 @@ export class AuditResponseModel {
     public completed_at: string,
     public lighthouse_data?: object|any,
     public ai_suggestions?: object|any,
-    public web_page?: TargetResponseModel
+    public web_page?: TargetResponseModel,
+    public report_pdf_path?: string | null,
+    public report_excel_path?: string | null,
+    public report_word_path?: string | null
   ) {}
 }
 

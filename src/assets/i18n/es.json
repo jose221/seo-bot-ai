@@ -305,7 +305,11 @@
       },
       "buttons": {
         "close": "Cerrar",
-        "download": "Descargar Reporte"
+        "download": "Descargar Reporte",
+        "downloadPdf": "Descargar PDF",
+        "downloadExcel": "Descargar Excel",
+        "downloadWord": "Descargar Word",
+        "noReports": "No hay reportes disponibles"
       }
     },
     "compare": {
