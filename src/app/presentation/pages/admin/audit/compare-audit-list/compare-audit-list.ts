@@ -52,6 +52,8 @@ import {environment} from '@/environments/environment';
 export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel> implements OnInit, OnDestroy{
   public statusAuditUtil = inject(StatusAuditUtil);
   private intervalId: any;
+  autoReload = signal<boolean>(true);
+  readonly RELOAD_INTERVAL = 10000;
   configFilter  = signal<FilterListConfig>({
     limit: 6,
     search: {
@@ -135,15 +137,29 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
 
   override async ngOnInit() {
     await super.ngOnInit();
-    this.intervalId = setInterval(() => {
-      this.init(true);
-    }, 10000);
+    this.startAutoReload();
   }
 
   ngOnDestroy() {
+    this.stopAutoReload();
+  }
+
+  startAutoReload() {
+    this.stopAutoReload();
+    this.intervalId = setInterval(() => {
+      if (this.autoReload()) this.init(true);
+    }, this.RELOAD_INTERVAL);
+  }
+
+  stopAutoReload() {
     if (this.intervalId) {
       clearInterval(this.intervalId);
+      this.intervalId = null;
     }
+  }
+
+  toggleAutoReload() {
+    this.autoReload.update(v => !v);
   }
 
   async init(silent: boolean = false) {
@@ -172,8 +188,35 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     console.log('response:', response);
   }
   async toDelete(item: CompareAuditResponseModel){
-    if(item.id) await this._auditRepository.deleteComparisons(item.id)
-    this.init()
+    const result = await this._sweetAlertUtil.fire({
+      title: 'general.messages.confirmDelete',
+      text: `¿Estás seguro de eliminar esta comparación? Esta acción no se puede deshacer.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#6c757d',
+      confirmButtonText: 'general.actions.delete',
+      cancelButtonText: 'general.actions.cancel'
+    }, ['title', 'confirmButtonText', 'cancelButtonText']);
+
+    if (result.isConfirmed) {
+      try {
+        this.isLoading.set(true);
+        if(item.id) await this._auditRepository.deleteComparisons(item.id);
+        await this._sweetAlertUtil.success(
+          'general.messages.success',
+          'La comparación ha sido eliminada correctamente'
+        );
+      } catch (error) {
+        console.error('Error al eliminar comparación:', error);
+        await this._sweetAlertUtil.error(
+          'general.messages.error',
+          'Ocurrió un error al eliminar la comparación. Por favor, inténtalo de nuevo.'
+        );
+      } finally {
+        await this.init();
+      }
+    }
   }
 
   downloadReport(type: 'pdf' | 'excel' | 'word') {

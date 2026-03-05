@@ -48,6 +48,8 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
   public statusUtil = inject(StatusAuditUtil);
   private readonly _auditSchemaRepository = inject(AuditSchemaRepository);
   private intervalId: any;
+  autoReload = signal<boolean>(true);
+  readonly RELOAD_INTERVAL = 12000;
 
   public showDetail = signal<boolean>(false);
   public selectedItem = signal<FindAuditSchemaResponseModel>({} as FindAuditSchemaResponseModel);
@@ -124,13 +126,29 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
 
   override async ngOnInit() {
     await super.ngOnInit();
-    this.intervalId = setInterval(() => {
-      this.init(true);
-    }, 12000);
+    this.startAutoReload();
   }
 
   ngOnDestroy() {
-    if (this.intervalId) clearInterval(this.intervalId);
+    this.stopAutoReload();
+  }
+
+  startAutoReload() {
+    this.stopAutoReload();
+    this.intervalId = setInterval(() => {
+      if (this.autoReload()) this.init(true);
+    }, this.RELOAD_INTERVAL);
+  }
+
+  stopAutoReload() {
+    if (this.intervalId) {
+      clearInterval(this.intervalId);
+      this.intervalId = null;
+    }
+  }
+
+  toggleAutoReload() {
+    this.autoReload.update(v => !v);
   }
 
   async init(silent = false) {
@@ -173,10 +191,20 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     });
     if (!result.isConfirmed) return;
     try {
+      this.isLoading.set(true);
       await this._auditSchemaRepository.delete(item.id);
-      await this.init();
+      await this._sweetAlertUtil.success(
+        'general.messages.success',
+        'La propuesta ha sido eliminada correctamente'
+      );
     } catch (e) {
       console.error(e);
+      await this._sweetAlertUtil.error(
+        'general.messages.error',
+        'Ocurrió un error al eliminar la propuesta. Por favor, inténtalo de nuevo.'
+      );
+    } finally {
+      await this.init();
     }
   }
 

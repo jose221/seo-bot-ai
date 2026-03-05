@@ -10,17 +10,27 @@
       <div class="card-body p-4">
         @if (!isLoading() && cItems().data.length > 0) {
           <div class="row align-items-center g-3">
-            <div class="col-12 col-lg-8">
+            <div class="col-12 col-lg-7">
               <app-filter-list class="w-100" [data]="cItems()" (dataChange)="items.set($event)" [config]="configFilter()" ></app-filter-list>
             </div>
-            <div class="col-12 col-lg-4">
-              <div class="d-flex gap-2">
+            <div class="col-12 col-lg-5">
+              <div class="d-flex gap-2 flex-wrap">
                 <a class="btn btn-primary rounded-2 flex-fill" routerLink="/admin/audit/compare">
                   <i class="me-1 bi bi-plus-circle"></i> {{ 'audits.buttons.new' | translate }}
                 </a>
                 <a class="btn btn-outline-secondary rounded-2 flex-fill" routerLink="/admin/audit">
                   <i class="me-1 bi bi-clipboard-check"></i>{{ 'audits.buttons.audits' | translate }}
                 </a>
+                <button
+                  class="btn rounded-2 flex-shrink-0"
+                  [class.btn-success]="autoReload()"
+                  [class.btn-outline-secondary]="!autoReload()"
+                  (click)="toggleAutoReload()"
+                  [title]="autoReload() ? 'Auto-recarga activa (cada 10s). Click para pausar' : 'Auto-recarga pausada. Click para activar'"
+                >
+                  <i class="bi" [class.bi-arrow-repeat]="autoReload()" [class.bi-pause-circle]="!autoReload()"></i>
+                  <span class="ms-1 d-none d-xl-inline">{{ autoReload() ? 'Auto' : 'Pausado' }}</span>
+                </button>
               </div>
             </div>
           </div>

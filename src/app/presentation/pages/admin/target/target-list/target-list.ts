@@ -98,14 +98,14 @@ export class TargetList extends ListDefaultBase<TargetResponseModel> implements 
           'general.messages.success',
           'El target ha sido eliminado correctamente'
         );
-        await this.init();
       } catch (error) {
         console.error('Error al eliminar target:', error);
         await this._sweetAlertUtil.error(
           'general.messages.error',
           'Ocurrió un error al eliminar el target. Por favor, inténtalo de nuevo.'
         );
-        this.isLoading.set(false);
+      } finally {
+        await this.init();
       }
     }
   }
