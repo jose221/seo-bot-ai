@@ -6,7 +6,7 @@ from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, Text, ARRAY, String
 from typing import Optional, List
 from uuid import UUID, uuid4
-from datetime import datetime, timezone
+from datetime import datetime
 
 
 class WebPage(SQLModel, table=True):
@@ -59,8 +59,6 @@ class WebPage(SQLModel, table=True):
     # Metadatos
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    #created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    #updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     is_active: bool = Field(default=True)
     audit_reports: List["AuditReport"] = Relationship(back_populates="web_page")
     class Config:

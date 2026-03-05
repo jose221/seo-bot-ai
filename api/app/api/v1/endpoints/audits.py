@@ -8,7 +8,7 @@ from sqlmodel import select, desc
 from sqlalchemy import String, cast as sql_cast, func, or_
 from typing import Optional, Dict, Any
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.core.database import get_session
 from app.api.deps import get_current_user
@@ -110,7 +110,7 @@ async def run_audit_task(
                 ai_analysis_data = {
                     'content': content,
                     'usage': usage,
-                    'generated_at': datetime.now(timezone.utc).isoformat(),
+                    'generated_at': datetime.utcnow().isoformat(),
                     'model': 'deepseek-chat'
                 }
             except Exception as ai_error:
@@ -151,7 +151,7 @@ async def run_audit_task(
                         audit.output_tokens = usage_data.get('completion_tokens', 0)
 
                 audit.status = AuditStatus.COMPLETED
-                audit.completed_at = datetime.now(timezone.utc)
+                audit.completed_at = datetime.utcnow()
                 audit.seo_analysis = seo_analysis
 
                 #genera el reporte
@@ -179,7 +179,7 @@ async def run_audit_task(
                 if audit:
                     audit.status = AuditStatus.FAILED
                     audit.error_message = str(e)
-                    audit.completed_at = datetime.now(timezone.utc)
+                    audit.completed_at = datetime.utcnow()
                     session.add(audit)
                     # No llamar commit aquí, el context manager lo hace automáticamente
         except Exception as inner_error:

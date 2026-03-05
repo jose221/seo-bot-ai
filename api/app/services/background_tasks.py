@@ -3,7 +3,7 @@ Servicio centralizado para tareas en segundo plano.
 Maneja la ejecución de auditorías y comparaciones.
 """
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import List
 
 from app.core.database import db_manager
@@ -105,7 +105,7 @@ async def run_audit_task(
 
                 ai_analysis_data = {
                     'analysis': ai_analysis_content, # GUARDAR SOLO EL TEXTO
-                    'generated_at': datetime.now(timezone.utc).isoformat(),
+                    'generated_at': datetime.utcnow().isoformat(),
                     'model': 'deepseek-chat'
                 }
             except Exception as ai_error:
@@ -145,7 +145,7 @@ async def run_audit_task(
                      audit.output_tokens = ai_analysis['usage'].get('completion_tokens', 0)
 
                 audit.status = AuditStatus.COMPLETED
-                audit.completed_at = datetime.now(timezone.utc)
+                audit.completed_at = datetime.utcnow()
                 audit.seo_analysis = seo_analysis
 
                 # Generar reporte
@@ -175,7 +175,7 @@ async def run_audit_task(
                 if audit:
                     audit.status = AuditStatus.FAILED
                     audit.error_message = str(e)
-                    audit.completed_at = datetime.now(timezone.utc)
+                    audit.completed_at = datetime.utcnow()
                     session.add(audit)
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo: {inner_error}")
@@ -375,7 +375,7 @@ async def run_comparison_task(
             if comparison:
                 comparison.status = ComparisonStatus.COMPLETED
                 comparison.comparison_result = comparison_result
-                comparison.completed_at = datetime.now(timezone.utc)
+                comparison.completed_at = datetime.utcnow()
 
                 # Guardar tokens
                 comparison.input_tokens = total_input_tokens
@@ -408,7 +408,7 @@ async def run_comparison_task(
                 if comparison:
                     comparison.status = ComparisonStatus.FAILED
                     comparison.error_message = str(e)
-                    comparison.completed_at = datetime.now(timezone.utc)
+                    comparison.completed_at = datetime.utcnow()
                     session.add(comparison)
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo: {inner_error}")
@@ -542,7 +542,7 @@ async def run_schema_audit_task(
             schema_audit.input_tokens = total_input_tokens
             schema_audit.output_tokens = total_output_tokens
             schema_audit.status = SchemaAuditStatus.COMPLETED
-            schema_audit.completed_at = datetime.now(timezone.utc)
+            schema_audit.completed_at = datetime.utcnow()
             session.add(schema_audit)
 
         print(f"✅ Auditoría de schemas completada: {schema_audit_id}")
@@ -560,7 +560,7 @@ async def run_schema_audit_task(
                 if schema_audit:
                     schema_audit.status = SchemaAuditStatus.FAILED
                     schema_audit.error_message = str(e)
-                    schema_audit.completed_at = datetime.now(timezone.utc)
+                    schema_audit.completed_at = datetime.utcnow()
                     session.add(schema_audit)
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo schema audit: {inner_error}")

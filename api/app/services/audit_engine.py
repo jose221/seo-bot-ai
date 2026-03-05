@@ -3,7 +3,7 @@ import sys
 import os
 import random
 from typing import Dict, Any, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 import logging
 import traceback
 
@@ -298,7 +298,7 @@ class AuditEngine:
                     if not os.path.exists(debug_dir):
                         os.makedirs(debug_dir, exist_ok=True)
 
-                    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+                    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 
                     # Save screenshot
                     screenshot_filename = f"BLOCK_DEBUG_{timestamp}.png"
@@ -365,7 +365,7 @@ class AuditEngine:
 
             return {
                 'url': url,
-                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'timestamp': datetime.utcnow().isoformat(),
                 'status_code': 200, # Nodriver handles connection errors via exception
                 'html_content': content[:15000],
                 'html_content_raw': content,
@@ -458,7 +458,7 @@ class AuditEngine:
 
                 return {
                     'url': url,
-                    'timestamp': datetime.now(timezone.utc).isoformat(),
+                    'timestamp': datetime.utcnow().isoformat(),
                     'status_code': 200,
                     'html_content': html_content,
                     'html_content_raw': html_content,
@@ -542,7 +542,7 @@ class AuditEngine:
 
             return {
                 'url': url,
-                'timestamp': datetime.now(timezone.utc).isoformat(),
+                'timestamp': datetime.utcnow().isoformat(),
                 'status_code': response.status if response else 0,
                 'html_content': html_content,
                 'html_content_raw': html_content,

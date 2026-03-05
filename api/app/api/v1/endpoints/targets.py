@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import joinedload
 from sqlmodel import select, desc
 from uuid import UUID
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.core.database import get_session
 from app.api.deps import get_current_user
@@ -279,7 +279,7 @@ async def update_target(
     for key, value in update_data.items():
         setattr(target, key, value)
 
-    target.updated_at = datetime.now(timezone.utc)
+    target.updated_at = datetime.utcnow()
 
     session.add(target)
     await session.commit()
@@ -312,13 +312,23 @@ async def delete_target(
             detail="Target no encontrado"
         )
 
-    if hard_delete:
-        await session.delete(target)
-    else:
-        target.is_active = False
-        target.updated_at = datetime.now(timezone.utc)
-        session.add(target)
+    try:
+        if hard_delete:
+            await session.delete(target)
+        else:
+            target.is_active = False
+            target.updated_at = datetime.utcnow()
+            session.add(target)
 
-    await session.commit()
-    return None
+        await session.commit()
+        return None
+    except Exception as e:
+        await session.rollback()
+        print(f"❌ Error en DELETE target {target_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno al eliminar target: {str(e)}"
+        )
 
