@@ -402,6 +402,71 @@ class AuditEngine:
                 except:
                     pass
 
+    async def fetch_html(self, url: str, timeout_ms: int = 30_000) -> str:
+        """
+        Obtiene el HTML crudo de una URL usando Playwright (primer intento)
+        con fallback a Nodriver si es bloqueado.
+
+        Args:
+            url: URL a visitar.
+            timeout_ms: Timeout máximo en milisegundos para la navegación.
+
+        Returns:
+            HTML crudo de la página.
+
+        Raises:
+            Exception: Si no se pudo obtener el HTML por ningún método.
+        """
+        await self._init_browser()
+        context = None
+
+        try:
+            context = await self.browser.new_context(
+                viewport={'width': 1920, 'height': 1080},
+                locale='es-MX',
+                timezone_id='America/Mexico_City',
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            )
+
+            page = await context.new_page()
+            await self._apply_playwright_stealth(page)
+
+            logger.info(f"🌐 [fetch_html] Navigating to: {url}")
+
+            try:
+                await page.goto(url, wait_until='networkidle', timeout=timeout_ms)
+            except Exception:
+                pass
+
+            await asyncio.sleep(1)
+            content = await page.content()
+
+            # Block detection
+            if "captcha-delivery" in content or "DataDome" in content:
+                logger.warning(f"🚨 [fetch_html] Block detected for {url}, trying nodriver fallback...")
+                await context.close()
+                context = None
+                await self._close_browser()
+
+                nodriver_result = await self._execute_nodriver_audit(url)
+                if nodriver_result.get("error"):
+                    raise Exception(nodriver_result.get("message", "Blocked by anti-bot"))
+                return nodriver_result.get("html_content_raw", nodriver_result.get("html_content", ""))
+
+            logger.info(f"✅ [fetch_html] Got {len(content)} chars from {url}")
+            return content
+
+        except Exception as e:
+            logger.error(f"❌ [fetch_html] Error for {url}: {e}")
+            raise
+        finally:
+            if context:
+                try:
+                    await context.close()
+                except:
+                    pass
+            await self._close_browser()
+
     async def run_lighthouse_audit(
             self,
             url: str,

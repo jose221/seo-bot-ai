@@ -4,13 +4,14 @@ Maneja la ejecución de auditorías y comparaciones.
 """
 from uuid import UUID
 from datetime import datetime
-from typing import List
+from typing import List, Any
 
 from app.core.database import db_manager
 from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
 from app.models.audit_comparison import AuditComparison, ComparisonStatus
 from app.models.audit_schema_review import AuditSchemaReview, SchemaAuditStatus, SchemaAuditSourceType
+from app.models.audit_url_validation import AuditUrlValidation, UrlValidationStatus, UrlValidationSourceType
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
@@ -564,6 +565,208 @@ async def run_schema_audit_task(
                     session.add(schema_audit)
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo schema audit: {inner_error}")
+
+
+async def run_url_validation_task(
+    validation_id: UUID,
+    urls: List[str],
+    proposed_schema: Any,
+    name_validation: str,
+    description_validation: str,
+    ai_instruction: str,
+    token: str,
+):
+    """
+    Ejecutar validación de schemas por URL en segundo plano.
+    Procesa cada URL individualmente con lapsos aleatorios.
+    Si una URL falla, continúa con las siguientes.
+    """
+    import asyncio
+    import random
+    from app.services.url_validation_service import get_url_validation_service
+
+    validation = None
+
+    try:
+        # Actualizar estado a IN_PROGRESS
+        with db_manager.sync_session_context() as session:
+            validation = session.get(AuditUrlValidation, validation_id)
+            if not validation:
+                print(f"❌ No se encontró url_validation {validation_id}")
+                return
+            validation.status = UrlValidationStatus.IN_PROGRESS
+            session.add(validation)
+
+        service = get_url_validation_service()
+        total_input_tokens = 0
+        total_output_tokens = 0
+        results = []
+
+        print(f"🚀 Iniciando validación de {len(urls)} URLs — {name_validation}")
+
+        for idx, url in enumerate(urls, 1):
+            print(f"    → [{idx}/{len(urls)}] Procesando: {url}")
+            result_entry = {"url": url}
+
+            try:
+                # 1. Extraer schemas de la URL (con timeout 30s)
+                url_schemas = await service.fetch_schema_for_url(url, timeout_ms=30_000)
+
+                if not url_schemas:
+                    result_entry["schema_types_found"] = []
+                    result_entry["validation_errors"] = {"errors": ["No se detectaron schemas en la URL"]}
+                    result_entry["severity"] = "warning"
+                    result_entry["ai_report"] = ""
+                    result_entry["comparison_table"] = {}
+                    results.append(result_entry)
+                    print(f"    ⚠️  Sin schemas en {url}")
+                    # Delay antes de la siguiente URL
+                    if idx < len(urls):
+                        delay = random.uniform(2, 6)
+                        print(f"    ⏳ Esperando {delay:.1f}s...")
+                        await asyncio.sleep(delay)
+                    continue
+
+                # 2. Extraer tipos encontrados
+                types_found = []
+                for schema in url_schemas:
+                    if isinstance(schema, dict):
+                        stype = schema.get("@type")
+                        if isinstance(stype, str):
+                            types_found.append(stype)
+                        elif isinstance(stype, list):
+                            types_found.extend([t for t in stype if isinstance(t, str)])
+                        # Buscar en @graph
+                        graph = schema.get("@graph", [])
+                        if isinstance(graph, list):
+                            for node in graph:
+                                if isinstance(node, dict):
+                                    ntype = node.get("@type")
+                                    if isinstance(ntype, str):
+                                        types_found.append(ntype)
+                                    elif isinstance(ntype, list):
+                                        types_found.extend([t for t in ntype if isinstance(t, str)])
+
+                result_entry["schema_types_found"] = sorted(set(types_found))
+
+                # 3. Validación estructural
+                validation_result = service.validate_url_schema(url_schemas, url)
+                result_entry["validation_errors"] = validation_result
+
+                # 4. Análisis IA
+                try:
+                    ai_result = await service.generate_url_analysis_ai(
+                        url=url,
+                        url_schema=url_schemas,
+                        proposed_schema=proposed_schema,
+                        validation_errors=validation_result,
+                        name_validation=name_validation,
+                        description_validation=description_validation,
+                        ai_instruction=ai_instruction,
+                        token=token,
+                    )
+
+                    ai_content = ai_result.get("content", "")
+                    usage = ai_result.get("usage", {})
+                    total_input_tokens += usage.get("prompt_tokens", 0)
+                    total_output_tokens += usage.get("completion_tokens", 0)
+
+                    result_entry["ai_report"] = ai_content
+                    result_entry["severity"] = service.extract_severity_from_ai(ai_content)
+
+                except Exception as ai_err:
+                    print(f"    ⚠️  Error IA para {url}: {ai_err}")
+                    result_entry["ai_report"] = f"Error en análisis IA: {ai_err}"
+                    result_entry["severity"] = "warning"
+
+            except Exception as url_err:
+                print(f"    ❌ Error procesando {url}: {url_err}")
+                result_entry["error"] = str(url_err)
+                result_entry["severity"] = "warning"
+
+            results.append(result_entry)
+
+            # Delay aleatorio entre URLs (excepto la última)
+            if idx < len(urls):
+                delay = random.uniform(2, 6)
+                print(f"    ⏳ Esperando {delay:.1f}s...")
+                await asyncio.sleep(delay)
+
+        # Calcular severidad global
+        global_severity = service.compute_global_severity(results)
+
+        # Generar Markdown consolidado
+        markdown_report = service.build_consolidated_markdown(
+            results=results,
+            name_validation=name_validation,
+            description_validation=description_validation,
+            global_severity=global_severity,
+        )
+
+        # Generar reportes PDF/Word
+        report_paths = {}
+        try:
+            # Necesitamos un AuditReport para ReportGenerator — resolver desde el source
+            with db_manager.sync_session_context() as session:
+                validation = session.get(AuditUrlValidation, validation_id)
+                if not validation:
+                    raise Exception("Validación no encontrada al generar reportes")
+
+                report_audit = None
+                if validation.source_type == UrlValidationSourceType.AUDIT_PAGE:
+                    report_audit = session.get(AuditReport, validation.source_id)
+                elif validation.source_type == UrlValidationSourceType.AUDIT_COMPARISON:
+                    comp = session.get(AuditComparison, validation.source_id)
+                    if comp:
+                        stmt = select(AuditReport).where(
+                            AuditReport.web_page_id == comp.base_web_page_id,
+                            sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
+                        ).order_by(desc(AuditReport.created_at)).limit(1)
+                        report_audit = session.execute(stmt).scalars().first()
+
+                if report_audit:
+                    report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(
+                        markdown_report
+                    )
+                    print(f"📄 Reportes de validación generados: {report_paths}")
+                else:
+                    print("⚠️  No se encontró audit para generar reportes PDF/Word")
+
+        except Exception as rpt_err:
+            print(f"⚠️  Error generando reportes de validación: {rpt_err}")
+
+        # Guardar resultados finales
+        with db_manager.sync_session_context() as session:
+            validation = session.get(AuditUrlValidation, validation_id)
+            if validation:
+                validation.status = UrlValidationStatus.COMPLETED
+                validation.results_json = results
+                validation.global_severity = global_severity
+                validation.input_tokens = total_input_tokens
+                validation.output_tokens = total_output_tokens
+                validation.report_pdf_path = report_paths.get("pdf_path")
+                validation.report_word_path = report_paths.get("word_path")
+                validation.completed_at = datetime.utcnow()
+                session.add(validation)
+
+        print(f"✅ Validación de URLs completada: {validation_id} — Severidad global: {global_severity}")
+
+    except Exception as e:
+        print(f"❌ Error en validación de URLs {validation_id}: {e}")
+        import traceback
+        traceback.print_exc()
+
+        try:
+            with db_manager.sync_session_context() as session:
+                if validation is None:
+                    validation = session.get(AuditUrlValidation, validation_id)
+                if validation:
+                    validation.status = UrlValidationStatus.FAILED
+                    validation.error_message = str(e)
+                    validation.completed_at = datetime.utcnow()
+                    session.add(validation)
+        except Exception as inner_error:
+            print(f"❌ Error al guardar estado de fallo url_validation: {inner_error}")
 
 
 def _generate_overall_summary(base_audit: AuditReport, comparisons: list) -> dict:

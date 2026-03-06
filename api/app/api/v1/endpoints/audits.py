@@ -14,6 +14,7 @@ from app.core.database import get_session
 from app.api.deps import get_current_user
 from app.helpers import extract_domain
 from app.models import AuditComparison, AuditSchemaReview, SchemaAuditStatus, SchemaAuditSourceType
+from app.models import AuditUrlValidation, UrlValidationStatus, UrlValidationSourceType
 from app.models.user import User
 from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
@@ -26,7 +27,8 @@ from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
-from app.services.background_tasks import run_comparison_task, run_schema_audit_task
+from app.services.url_validation_service import get_url_validation_service
+from app.services.background_tasks import run_comparison_task, run_schema_audit_task, run_url_validation_task
 
 router = APIRouter()
 
@@ -677,6 +679,203 @@ async def get_schema_audit(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Auditoría de schemas no encontrada")
 
     return audit_schemas.AuditSchemasDetailResponse.model_validate(schema_audit)
+
+
+# ---------------------------------------------------------------------------
+# URL Validations Endpoints
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/audits/url-validations",
+    response_model=audit_schemas.AuditUrlValidationTaskResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def create_url_validation(
+        request_body: audit_schemas.AuditUrlValidationCreate,
+        background_tasks: BackgroundTasks,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+        token: str = Depends(lambda: None),
+):
+    """
+    Iniciar validación batch de schemas por URLs.
+    Procesa N URLs individualmente en segundo plano.
+    """
+    # 1. Parsear URLs
+    url_service = get_url_validation_service()
+    urls = url_service.parse_urls(request_body.urls)
+
+    if not urls:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se encontraron URLs válidas en el campo 'urls'"
+        )
+
+    # 2. Resolver source y extraer proposed_schema
+    schema_audit_service = get_schema_audit_service()
+    proposed_schema = None
+
+    if request_body.source_type == "audit_page":
+        stmt = select(AuditReport).where(
+            AuditReport.id == request_body.source_id,
+            AuditReport.user_id == current_user.id,
+        )
+        source_obj = (await session.execute(stmt)).scalars().first()
+        if not source_obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Audit page no encontrado",
+            )
+        ai_suggestions = source_obj.ai_suggestions or {}
+        proposal_text = ai_suggestions.get("content") or ai_suggestions.get("analysis")
+        proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+
+        # Fallback: usar schema_markup original si no hay propuesta
+        if proposed_schema is None:
+            proposed_schema = (source_obj.seo_analysis or {}).get("schema_markup", [])
+
+    elif request_body.source_type == "audit_comparison":
+        stmt = select(AuditComparison).where(
+            AuditComparison.id == request_body.source_id,
+            AuditComparison.user_id == current_user.id,
+        )
+        source_obj = (await session.execute(stmt)).scalars().first()
+        if not source_obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Audit comparison no encontrado",
+            )
+        comparison_result = source_obj.comparison_result or {}
+        proposal_text = comparison_result.get("ai_schema_comparison")
+        proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+
+        # Fallback: usar raw_schemas del base
+        if proposed_schema is None:
+            proposed_schema = comparison_result.get("raw_schemas", {}).get("base", [])
+
+    if not proposed_schema:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo obtener un esquema propuesto desde el source indicado",
+        )
+
+    # 3. Crear registro
+    validation = AuditUrlValidation(
+        user_id=current_user.id,
+        source_type=UrlValidationSourceType(request_body.source_type),
+        source_id=request_body.source_id,
+        name_validation=request_body.name_validation,
+        description_validation=request_body.description_validation,
+        ai_instruction=request_body.ai_instruction,
+        urls_raw=request_body.urls,
+        status=UrlValidationStatus.PENDING,
+    )
+
+    session.add(validation)
+    await session.commit()
+    await session.refresh(validation)
+
+    # 4. Lanzar tarea en segundo plano
+    auth_token = getattr(current_user, "_token", None) or "dummy-token"
+
+    background_tasks.add_task(
+        run_url_validation_task,
+        validation_id=validation.id,
+        urls=urls,
+        proposed_schema=proposed_schema,
+        name_validation=request_body.name_validation,
+        description_validation=request_body.description_validation or "",
+        ai_instruction=request_body.ai_instruction or "",
+        token=auth_token,
+    )
+
+    return audit_schemas.AuditUrlValidationTaskResponse(
+        task_id=validation.id,
+        status=validation.status,
+        total_urls=len(urls),
+        message=f"Validación iniciada para {len(urls)} URLs — {request_body.name_validation}",
+    )
+
+
+@router.get(
+    "/audits/url-validations",
+    response_model=audit_schemas.AuditUrlValidationListResponse,
+)
+async def list_url_validations(
+        page: int = Query(1, ge=1, description="Número de página"),
+        page_size: Optional[int] = Query(
+            None, ge=1, le=100, description="Elementos por página (None para todos)"
+        ),
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """Listar validaciones de URLs del usuario con paginación."""
+    statement = select(AuditUrlValidation).where(
+        AuditUrlValidation.user_id == current_user.id
+    ).order_by(desc(AuditUrlValidation.created_at))
+
+    # Contar total
+    count_stmt = select(func.count()).select_from(AuditUrlValidation).where(
+        AuditUrlValidation.user_id == current_user.id
+    )
+    total = (await session.execute(count_stmt)).scalar()
+
+    # Paginación
+    if page_size is not None:
+        statement = statement.offset((page - 1) * page_size).limit(page_size)
+
+    result = await session.execute(statement)
+    rows = result.scalars().all()
+
+    return audit_schemas.AuditUrlValidationListResponse(
+        items=[
+            audit_schemas.AuditUrlValidationListItem(
+                id=row.id,
+                source_type=row.source_type,
+                source_id=row.source_id,
+                name_validation=row.name_validation,
+                description_validation=row.description_validation,
+                status=row.status,
+                global_severity=row.global_severity,
+                input_tokens=row.input_tokens,
+                output_tokens=row.output_tokens,
+                error_message=row.error_message,
+                report_pdf_path=row.report_pdf_path,
+                report_word_path=row.report_word_path,
+                created_at=row.created_at,
+                completed_at=row.completed_at,
+            )
+            for row in rows
+        ],
+        total=total,
+        page=page,
+        page_size=page_size,
+    )
+
+
+@router.get(
+    "/audits/url-validations/{validation_id}",
+    response_model=audit_schemas.AuditUrlValidationDetailResponse,
+)
+async def get_url_validation(
+        validation_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """Obtener detalle completo de una validación de URLs (incluye results_json)."""
+    stmt = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt)).scalars().first()
+
+    if not validation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Validación de URLs no encontrada",
+        )
+
+    return audit_schemas.AuditUrlValidationDetailResponse.model_validate(validation)
 
 
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)

@@ -163,26 +163,32 @@ class SEOAnalyzer:
         link = self.soup.find('link', rel='canonical')
         return link['href'] if link else None
 
-    def analyze_structured_data(self) -> List[Dict[str, Any]]:
+    @staticmethod
+    def extract_schemas_from_html(html: str, url: str) -> List[Dict[str, Any]]:
         """
-        Busca y extrae bloques de JSON-LD, Microdata y RDFa.
-        Usa la librería extruct para detectar esquemas definidos como atributos HTML o scripts.
+        Extrae bloques JSON-LD, Microdata y RDFa de un HTML crudo.
+        Método estático reutilizable sin necesidad de instanciar SEOAnalyzer completo.
+
+        Args:
+            html: HTML crudo de la página.
+            url: URL base para resolver URLs relativas.
+
+        Returns:
+            Lista de esquemas encontrados como diccionarios.
         """
-        if not self.html:
+        if not html:
             return []
 
-        extracted_schemas = []
+        extracted_schemas: List[Dict[str, Any]] = []
 
         try:
-            # Usar extruct para extraer todos los tipos de metadatos (JSON-LD, Microdata, RDFa)
             data = extruct.extract(
-                self.html,
-                base_url=self.url,
+                html,
+                base_url=url,
                 syntaxes=['json-ld', 'microdata', 'rdfa'],
-                uniform=True  # Normaliza la salida a formato dict estandar
+                uniform=True
             )
 
-            # Combinar todos los formatos encontrados en una sola lista
             if 'json-ld' in data:
                 extracted_schemas.extend(data['json-ld'])
             if 'microdata' in data:
@@ -192,19 +198,29 @@ class SEOAnalyzer:
 
         except Exception as e:
             print(f"⚠️ Error en extracción avanzada de schemas: {e}")
-            # Fallback basico: extracción manual de JSON-LD si extruct falla
-            if self.soup:
-                scripts = self.soup.find_all('script', type='application/ld+json')
+            # Fallback básico: extracción manual de JSON-LD
+            try:
+                soup = BeautifulSoup(html, 'lxml')
+                scripts = soup.find_all('script', type='application/ld+json')
                 for script in scripts:
                     try:
                         content = script.string
                         if content:
-                            data = json.loads(content.strip())
-                            extracted_schemas.append(data)
-                    except:
+                            parsed = json.loads(content.strip())
+                            extracted_schemas.append(parsed)
+                    except Exception:
                         pass
+            except Exception:
+                pass
 
         return extracted_schemas
+
+    def analyze_structured_data(self) -> List[Dict[str, Any]]:
+        """
+        Busca y extrae bloques de JSON-LD, Microdata y RDFa.
+        Delega al método estático extract_schemas_from_html.
+        """
+        return SEOAnalyzer.extract_schemas_from_html(self.html or "", self.url)
 
     def run_full_analysis(self) -> Dict[str, Any]:
         return {

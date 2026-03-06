@@ -9,6 +9,7 @@ from datetime import datetime
 
 from app.models import WebPage, ComparisonStatus, SchemaAuditStatus, SchemaAuditSourceType
 from app.models.audit import AuditStatus
+from app.models.audit_url_validation import UrlValidationStatus, UrlValidationSourceType
 
 
 class AuditCreate(BaseModel):
@@ -418,3 +419,98 @@ class AuditSchemasDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
+# ---------------------------------------------------------------------------
+# URL Validation Schemas
+# ---------------------------------------------------------------------------
+
+class AuditUrlValidationCreate(BaseModel):
+    """Request para iniciar validación de schemas por URL"""
+    urls: str = Field(
+        ...,
+        description="URLs separadas por salto de línea, coma o espacio"
+    )
+    source_type: Literal["audit_page", "audit_comparison"] = Field(
+        ..., description="Origen del esquema propuesto"
+    )
+    source_id: UUID = Field(..., description="ID del recurso origen")
+    name_validation: str = Field(
+        ..., max_length=255, description="Nombre del flujo de validación"
+    )
+    description_validation: Optional[str] = Field(
+        default=None, description="Descripción de la validación"
+    )
+    ai_instruction: Optional[str] = Field(
+        default=None,
+        description="Instrucción adicional para la IA (ej. 'Valida si tienen checkin')"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "urls": "https://example.com/hotel-1\nhttps://example.com/hotel-2",
+                "source_type": "audit_comparison",
+                "source_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "name_validation": "Validación hoteles Cancún",
+                "description_validation": "Validar schemas de hoteles contra propuesta",
+                "ai_instruction": "Enfócate en validar si tienen checkinTime y checkoutTime"
+            }
+        }
+
+
+class AuditUrlValidationTaskResponse(BaseModel):
+    """Respuesta inmediata al iniciar validación de URLs"""
+    task_id: UUID
+    status: UrlValidationStatus
+    total_urls: int
+    message: str = "Validación de URLs iniciada en segundo plano"
+
+
+class AuditUrlValidationListItem(BaseModel):
+    """Item de validación para listados"""
+    id: UUID
+    source_type: UrlValidationSourceType
+    source_id: UUID
+    name_validation: str
+    description_validation: Optional[str] = None
+    status: UrlValidationStatus
+    global_severity: Optional[str] = None
+    input_tokens: Optional[int] = 0
+    output_tokens: Optional[int] = 0
+    error_message: Optional[str] = None
+    report_pdf_path: Optional[str] = None
+    report_word_path: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+
+class AuditUrlValidationListResponse(BaseModel):
+    """Respuesta de listado de validaciones con paginación"""
+    items: List[AuditUrlValidationListItem]
+    total: int
+    page: int
+    page_size: Optional[int] = None
+
+
+class AuditUrlValidationDetailResponse(BaseModel):
+    """Respuesta detallada con results_json completo"""
+    id: UUID
+    user_id: UUID
+    source_type: UrlValidationSourceType
+    source_id: UUID
+    name_validation: str
+    description_validation: Optional[str] = None
+    ai_instruction: Optional[str] = None
+    status: UrlValidationStatus
+    global_severity: Optional[str] = None
+    results_json: Optional[Any] = None
+    input_tokens: Optional[int] = 0
+    output_tokens: Optional[int] = 0
+    error_message: Optional[str] = None
+    report_pdf_path: Optional[str] = None
+    report_word_path: Optional[str] = None
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
