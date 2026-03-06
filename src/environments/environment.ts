@@ -30,6 +30,9 @@ export const environment = {
     },
     auditSchema:{
       path: '/audits/schemas'
+    },
+    auditUrlValidation:{
+      path: '/audits/url-validations'
     }
   },
   settings:{

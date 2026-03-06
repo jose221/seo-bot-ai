@@ -120,6 +120,15 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
         })
       },
       {
+        key: 'id',
+        name: 'Validar URLs',
+        type: 'link',
+        innerHtml: (element: any) => '<i class="bi bi-link-45deg me-1"></i>Validar',
+        action: (item: CompareAuditResponseModel) => this._router.navigate(['/admin/audit/url-validations/create'], {
+          queryParams: { source_type: 'audit_comparison', source_id: item.id }
+        })
+      },
+      {
         key: 'created_at',
         name: 'Eliminar',
         type: 'link',

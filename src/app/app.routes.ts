@@ -10,6 +10,8 @@ import {CompareAuditForm} from '@/app/presentation/pages/admin/audit/compare-aud
 import {CompareAuditList} from '@/app/presentation/pages/admin/audit/compare-audit-list/compare-audit-list';
 import {AuditSchemaList} from '@/app/presentation/pages/admin/audit/audit-schema-list/audit-schema-list';
 import {AuditSchemaForm} from '@/app/presentation/pages/admin/audit/audit-schema-form/audit-schema-form';
+import {AuditUrlValidationList} from '@/app/presentation/pages/admin/audit/audit-url-validation-list/audit-url-validation-list';
+import {AuditUrlValidationForm} from '@/app/presentation/pages/admin/audit/audit-url-validation-form/audit-url-validation-form';
 import {loginGuard} from '@/app/presentation/guards/login.guard';
 import {MetricsDashboardComponent} from '@/app/presentation/components/metrics-dashboard/metrics-dashboard.component';
 
@@ -29,6 +31,8 @@ export const routes: Routes = [
       {path: 'audit/compare', component: CompareAuditForm},
       {path: 'audit/schemas', component: AuditSchemaList},
       {path: 'audit/schemas/create', component: AuditSchemaForm},
+      {path: 'audit/url-validations', component: AuditUrlValidationList},
+      {path: 'audit/url-validations/create', component: AuditUrlValidationForm},
       {path: 'metrics', component: MetricsDashboardComponent},
     ]
   },

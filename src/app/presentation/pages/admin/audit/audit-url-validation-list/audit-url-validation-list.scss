@@ -1,0 +1,28 @@
+.uv-meta-bar {
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e9ecef;
+}
+
+.uv-meta-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.uv-section-header {
+  background: linear-gradient(135deg, rgba(var(--bs-primary-rgb), 0.06), rgba(var(--bs-primary-rgb), 0.02));
+  border-bottom: 2px solid rgba(var(--bs-primary-rgb), 0.12);
+  padding: 0.75rem 1.25rem;
+}
+
+.uv-token-chip {
+  background: #f0f4ff;
+  border: 1px solid #c7d7ff;
+  border-radius: 2rem;
+  padding: 0.25rem 0.75rem;
+  display: inline-flex;
+  align-items: center;
+}
+

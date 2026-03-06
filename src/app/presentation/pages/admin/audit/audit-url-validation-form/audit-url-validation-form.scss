@@ -1,0 +1,15 @@
+.url-validation-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(var(--bs-primary-rgb), 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-control.font-monospace,
+.form-control.font-monospace::placeholder {
+  font-size: 0.875rem;
+}
+

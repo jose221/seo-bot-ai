@@ -6,6 +6,7 @@
       "audits": "Audits",
       "comparisons": "Comparisons",
       "schemas": "Schemas",
+      "urlValidations": "URL Validations",
       "searchPlaceholder": "Search...",
       "searchButton": "Search",
       "logout": "Logout",
@@ -137,6 +138,83 @@
       },
       "saveButton": "Save Configuration",
       "successMessage": "The configuration has been saved successfully."
+    }
+  },
+  "auditUrlValidations": {
+    "title": "URL Validations",
+    "subtitle": "Validate schemas from multiple URLs in batch with AI analysis",
+    "buttons": {
+      "new": "New Validation",
+      "list": "View Validations",
+      "audits": "Audits",
+      "nav": "URL Validations"
+    },
+    "empty": {
+      "title": "No URL validations yet",
+      "subtitle": "Create your first validation to analyze schemas across multiple URLs"
+    },
+    "form": {
+      "title": "New URL Validation",
+      "subtitle": "Validate structured schemas from multiple URLs in batch with AI assistance",
+      "nameValidation": {
+        "label": "Validation Name",
+        "placeholder": "E.g.: Cancun Hotels Validation",
+        "help": "Descriptive name to identify this validation"
+      },
+      "descriptionValidation": {
+        "label": "Description",
+        "placeholder": "E.g.: Validate hotel schemas against proposal",
+        "help": "Detailed description of the validation objective"
+      },
+      "sourceType": {
+        "label": "Source Type",
+        "help": "Select the type of entity that will be the reference source"
+      },
+      "sourceId": {
+        "label": "Reference Source",
+        "help": "Select the audit or comparison as reference"
+      },
+      "filterByTag": "Filter by tag",
+      "allTags": "All",
+      "loadingAudits": "Loading audits...",
+      "selectAudit": "Select an audit...",
+      "loadingComparisons": "Loading comparisons...",
+      "selectComparison": "Select a comparison...",
+      "urls": {
+        "label": "URLs to Validate",
+        "placeholder": "https://example.com/hotel-1\nhttps://example.com/hotel-2",
+        "help": "Enter one URL per line. The structured schema of each URL will be validated.",
+        "count": "URLs"
+      },
+      "aiInstruction": {
+        "label": "AI Instruction (optional)",
+        "placeholder": "E.g.: Focus on validating if they have checkinTime and checkoutTime",
+        "help": "Specific instruction to guide the AI analysis"
+      },
+      "submitButton": "Start Validation",
+      "submitting": "Processing...",
+      "confirmModal": {
+        "title": "Validation Created!",
+        "message": "Your URL validation has been submitted successfully",
+        "description": "The analysis will be processed in the background. You can check the status in the list.",
+        "processingNote": "AI analysis may take several minutes depending on the number of URLs.",
+        "name": "Name",
+        "status": "Status",
+        "newButton": "Create Another",
+        "viewListButton": "View List"
+      }
+    },
+    "modal": {
+      "title": "URL Validation Detail",
+      "info": "General Information",
+      "name": "Name",
+      "description": "Description",
+      "aiInstruction": "AI Instruction",
+      "results": "Validation Results",
+      "result": "Result",
+      "downloadPdf": "Download PDF",
+      "downloadWord": "Download Word",
+      "close": "Close"
     }
   },
   "auditSchemas": {

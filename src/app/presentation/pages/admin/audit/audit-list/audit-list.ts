@@ -131,6 +131,15 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
         })
       },
       {
+        key: 'id',
+        name: 'Validar URLs',
+        type: 'link',
+        innerHtml: (element: any) => '<i class="bi bi-link-45deg me-1"></i>Validar',
+        action: (item: AuditResponseModel) => this._router.navigate(['/admin/audit/url-validations/create'], {
+          queryParams: { source_type: 'audit_page', source_id: item.id }
+        })
+      },
+      {
         key: 'created_at',
         name: 'Eliminar',
         type: 'link',

@@ -6,6 +6,7 @@
       "audits": "Auditorías",
       "comparisons": "Comparaciones",
       "schemas": "Schemas",
+      "urlValidations": "Validaciones URL",
       "searchPlaceholder": "Buscar...",
       "searchButton": "Buscar",
       "logout": "Cerrar Sesión",
@@ -139,8 +140,84 @@
       "successMessage": "La configuración se ha guardado correctamente."
     }
   },
+  "auditUrlValidations": {
+    "title": "Validaciones de URL",
+    "subtitle": "Valida schemas de múltiples URLs en batch con análisis de IA",
+    "buttons": {
+      "new": "Nueva Validación",
+      "list": "Ver Validaciones",
+      "audits": "Auditorías",
+      "nav": "Validaciones URL"
+    },
+    "empty": {
+      "title": "No hay validaciones de URL aún",
+      "subtitle": "Crea tu primera validación para analizar schemas en múltiples URLs"
+    },
+    "form": {
+      "title": "Nueva Validación de URLs",
+      "subtitle": "Valida el schema estructurado de múltiples URLs en batch con ayuda de IA",
+      "nameValidation": {
+        "label": "Nombre de la Validación",
+        "placeholder": "Ej: Validación hoteles Cancún",
+        "help": "Nombre descriptivo para identificar esta validación"
+      },
+      "descriptionValidation": {
+        "label": "Descripción",
+        "placeholder": "Ej: Validar schemas de hoteles contra propuesta",
+        "help": "Descripción detallada del objetivo de la validación"
+      },
+      "sourceType": {
+        "label": "Tipo de Fuente",
+        "help": "Selecciona el tipo de entidad que será la fuente de referencia"
+      },
+      "sourceId": {
+        "label": "Fuente de Referencia",
+        "help": "Selecciona la auditoría o comparación de referencia"
+      },
+      "filterByTag": "Filtrar por tag",
+      "allTags": "Todos",
+      "loadingAudits": "Cargando auditorías...",
+      "selectAudit": "Selecciona una auditoría...",
+      "loadingComparisons": "Cargando comparaciones...",
+      "selectComparison": "Selecciona una comparación...",
+      "urls": {
+        "label": "URLs a Validar",
+        "placeholder": "https://example.com/hotel-1\nhttps://example.com/hotel-2",
+        "help": "Ingresa una URL por línea. Se validará el schema estructurado de cada URL.",
+        "count": "URLs"
+      },
+      "aiInstruction": {
+        "label": "Instrucción para IA (opcional)",
+        "placeholder": "Ej: Enfócate en validar si tienen checkinTime y checkoutTime",
+        "help": "Instrucción específica para guiar el análisis de inteligencia artificial"
+      },
+      "submitButton": "Iniciar Validación",
+      "submitting": "Procesando...",
+      "confirmModal": {
+        "title": "¡Validación Creada!",
+        "message": "Tu validación de URLs ha sido enviada correctamente",
+        "description": "El análisis se procesará en segundo plano. Puedes revisar el estado en el listado.",
+        "processingNote": "El análisis con IA puede tardar varios minutos dependiendo del número de URLs.",
+        "name": "Nombre",
+        "status": "Estado",
+        "newButton": "Crear Otra",
+        "viewListButton": "Ver Listado"
+      }
+    },
+    "modal": {
+      "title": "Detalle de Validación de URLs",
+      "info": "Información General",
+      "name": "Nombre",
+      "description": "Descripción",
+      "aiInstruction": "Instrucción de IA",
+      "results": "Resultados de Validación",
+      "result": "Resultado",
+      "downloadPdf": "Descargar PDF",
+      "downloadWord": "Descargar Word",
+      "close": "Cerrar"
+    }
+  },
   "auditSchemas": {
-    "title": "Propuestas de Schema.org",
     "subtitle": "Genera y gestiona propuestas de esquemas estructurados para SEO con análisis de IA",
     "buttons": {
       "new": "Nueva Propuesta",

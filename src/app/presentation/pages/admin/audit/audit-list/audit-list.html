@@ -24,6 +24,9 @@
                 <a class="btn btn-outline-secondary rounded-2 flex-fill" role="button" routerLink="/admin/audit/comparisons">
                   {{ 'audits.compare.buttons.sites_compare' | translate }}
                 </a>
+                <a class="btn btn-outline-info rounded-2 flex-fill" routerLink="/admin/audit/url-validations">
+                  <i class="me-1 bi bi-link-45deg"></i>{{ 'auditUrlValidations.buttons.nav' | translate }}
+                </a>
                 <button
                   class="btn rounded-2 flex-shrink-0"
                   [class.btn-success]="autoReload()"

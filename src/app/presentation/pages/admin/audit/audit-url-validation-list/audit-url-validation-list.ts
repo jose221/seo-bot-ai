@@ -8,8 +8,11 @@ import { RouterLink } from '@angular/router';
 import { DatePipe, NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { MarkdownModule } from 'ngx-markdown';
-import { AuditSchemaRepository } from '@/app/domain/repositories/audit-schema/audit-schema.repository';
-import { AuditSchemaItemResponseModel, FindAuditSchemaResponseModel } from '@/app/domain/models/audit-schema/response/audit-schema-response.model';
+import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
+import {
+  AuditUrlValidationItemResponseModel,
+  FindAuditUrlValidationResponseModel,
+} from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import { environment } from '@/environments/environment';
 import {
   BodyModalComponent
@@ -26,7 +29,7 @@ import { PaginatorList } from '@/app/presentation/components/general/paginator-l
 import { TableComponent } from '@/app/presentation/components/general/table/table.component';
 
 @Component({
-  selector: 'app-audit-schema-list',
+  selector: 'app-audit-url-validation-list',
   imports: [
     BodyModalComponent,
     DefaultModal,
@@ -41,18 +44,23 @@ import { TableComponent } from '@/app/presentation/components/general/table/tabl
     DatePipe,
     MarkdownModule,
   ],
-  templateUrl: './audit-schema-list.html',
-  styleUrl: './audit-schema-list.scss',
+  templateUrl: './audit-url-validation-list.html',
+  styleUrl: './audit-url-validation-list.scss',
 })
-export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseModel> implements OnInit, OnDestroy {
+export class AuditUrlValidationList
+  extends ListDefaultBase<AuditUrlValidationItemResponseModel>
+  implements OnInit, OnDestroy
+{
   public statusUtil = inject(StatusAuditUtil);
-  private readonly _auditSchemaRepository = inject(AuditSchemaRepository);
+  private readonly _repository = inject(AuditUrlValidationRepository);
   private intervalId: any;
   autoReload = signal<boolean>(true);
   readonly RELOAD_INTERVAL = 12000;
 
   public showDetail = signal<boolean>(false);
-  public selectedItem = signal<FindAuditSchemaResponseModel>({} as FindAuditSchemaResponseModel);
+  public selectedItem = signal<FindAuditUrlValidationResponseModel>(
+    {} as FindAuditUrlValidationResponseModel
+  );
   public loadingDetail = signal<boolean>(false);
 
   configFilter = signal<FilterListConfig>({
@@ -60,8 +68,8 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     search: {
       label: 'Buscar',
       value: '',
-      placeholder: 'Buscar por ID o fuente...',
-      attributes: ['id', 'source_id', 'source_type'],
+      placeholder: 'Buscar por nombre o ID...',
+      attributes: ['id', 'name_validation', 'source_type', 'source_id'],
       key: 'id',
       defaultValue: '',
       type: 'text',
@@ -70,29 +78,40 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
 
   tableColumn = signal<TableColumn[]>([
     {
-      key: 'source_type',
-      name: 'Tipo de Fuente',
+      key: 'name_validation',
+      name: 'Nombre',
       type: 'text',
     },
     {
-      key: 'source_id',
-      name: 'ID de Fuente',
+      key: 'source_type',
+      name: 'Tipo de Fuente',
       type: 'text',
     },
     {
       key: 'status',
       name: 'Estado',
       type: 'text',
-      innerHtml: (element: AuditSchemaItemResponseModel) => {
+      innerHtml: (element: AuditUrlValidationItemResponseModel) => {
         const cls = this.statusUtil.getStatusClass(element.status as any);
         const txt = this.statusUtil.getStatusText(element.status as any);
         return `<span class="badge ${cls}"><span class="status-text">${txt}</span></span>`;
       },
     },
     {
-      key: 'programming_language',
-      name: 'Lenguaje',
+      key: 'global_severity',
+      name: 'Severidad',
       type: 'text',
+      innerHtml: (element: AuditUrlValidationItemResponseModel) => {
+        if (!element.global_severity) return '<span class="text-muted">—</span>';
+        const map: Record<string, string> = {
+          critical: 'bg-danger',
+          high: 'bg-warning text-dark',
+          medium: 'bg-info text-dark',
+          low: 'bg-success',
+        };
+        const cls = map[element.global_severity.toLowerCase()] ?? 'bg-secondary';
+        return `<span class="badge ${cls}">${element.global_severity}</span>`;
+      },
     },
     {
       key: 'created_at',
@@ -109,23 +128,14 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
       name: 'Ver',
       type: 'link',
       innerHtml: () => 'Ver',
-      action: (item: AuditSchemaItemResponseModel) => this.toShow(item),
-    },
-    {
-      key: 'id',
-      name: 'Validar URLs',
-      type: 'link',
-      innerHtml: () => '<i class="bi bi-link-45deg me-1"></i>Validar',
-      action: (item: AuditSchemaItemResponseModel) => this._router.navigate(['/admin/audit/url-validations/create'], {
-        queryParams: { source_type: item.source_type, source_id: item.source_id }
-      }),
+      action: (item: AuditUrlValidationItemResponseModel) => this.toShow(item),
     },
     {
       key: 'id',
       name: 'Eliminar',
       type: 'link',
       innerHtml: () => 'Eliminar',
-      action: (item: AuditSchemaItemResponseModel) => this.toDelete(item),
+      action: (item: AuditUrlValidationItemResponseModel) => this.toDelete(item),
     },
   ]);
 
@@ -157,28 +167,28 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
   }
 
   toggleAutoReload() {
-    this.autoReload.update(v => !v);
+    this.autoReload.update((v) => !v);
   }
 
   async init(silent = false) {
     try {
       if (!silent) this.isLoading.set(true);
-      const data = await this._auditSchemaRepository.getAll({ page: 1 });
+      const data = await this._repository.getAll({ page: 1 });
       const list = data.items;
       this.cItems.set(new PaginatorHelper(list, this.configFilter().limit ?? 8));
       this.items.set(new PaginatorHelper(list, this.configFilter().limit ?? 8));
       if (!silent) this.isLoading.set(false);
     } catch (error) {
-      console.error('Error al cargar audit schemas:', error);
+      console.error('Error al cargar validaciones de URL:', error);
       if (!silent) this.isLoading.set(false);
     }
   }
 
-  async toShow(item: AuditSchemaItemResponseModel) {
+  async toShow(item: AuditUrlValidationItemResponseModel) {
     this.loadingDetail.set(true);
     this.showDetail.set(true);
     try {
-      const response = await this._auditSchemaRepository.find(item.id);
+      const response = await this._repository.find(item.id);
       this.selectedItem.set(response);
     } catch (e) {
       console.error(e);
@@ -187,10 +197,10 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     }
   }
 
-  async toDelete(item: AuditSchemaItemResponseModel) {
+  async toDelete(item: AuditUrlValidationItemResponseModel) {
     const result = await this._sweetAlertUtil.fire({
-      title: 'Eliminar Propuesta',
-      text: '¿Estás seguro de que deseas eliminar esta propuesta? Esta acción no se puede deshacer.',
+      title: 'Eliminar Validación',
+      text: '¿Estás seguro de que deseas eliminar esta validación? Esta acción no se puede deshacer.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#dc3545',
@@ -201,67 +211,74 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     if (!result.isConfirmed) return;
     try {
       this.isLoading.set(true);
-      await this._auditSchemaRepository.delete(item.id);
+      await this._repository.delete(item.id);
       await this._sweetAlertUtil.success(
         'general.messages.success',
-        'La propuesta ha sido eliminada correctamente'
+        'La validación ha sido eliminada correctamente'
       );
     } catch (e) {
       console.error(e);
       await this._sweetAlertUtil.error(
         'general.messages.error',
-        'Ocurrió un error al eliminar la propuesta. Por favor, inténtalo de nuevo.'
+        'Ocurrió un error al eliminar la validación.'
       );
     } finally {
       await this.init();
     }
   }
 
-  downloadReport(itemOrType: AuditSchemaItemResponseModel | 'pdf' | 'word', type?: 'pdf' | 'word') {
+  downloadReport(type: 'pdf' | 'word') {
     const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    let path: string | null | undefined;
-
-    if (typeof itemOrType === 'string') {
-      // Called from modal: downloadReport('pdf')
-      const t = itemOrType;
-      path = t === 'pdf' ? this.selectedItem().report_pdf_path : this.selectedItem().report_word_path;
-    } else {
-      // Called from card: downloadReport(item, 'pdf')
-      path = type === 'pdf' ? itemOrType.report_pdf_path : itemOrType.report_word_path;
-    }
-
+    const path =
+      type === 'pdf'
+        ? this.selectedItem().report_pdf_path
+        : this.selectedItem().report_word_path;
     if (!path) {
-      this._sweetAlertUtil.error('general.messages.error', `El reporte no está disponible`);
+      this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
       return;
     }
     window.open(`${baseUrl}/${path}`, '_blank');
+  }
+
+  getSeverityClass(severity: string | null): string {
+    if (!severity) return 'bg-secondary';
+    const map: Record<string, string> = {
+      critical: 'bg-danger',
+      high: 'bg-warning text-dark',
+      medium: 'bg-info text-dark',
+      low: 'bg-success',
+    };
+    return map[severity.toLowerCase()] ?? 'bg-secondary';
   }
 
   getStatusClass(status: string): string {
     return this.statusUtil.getStatusClass(status as any);
   }
 
-  getStatusIcon(status: string): string {
-    const icons: Record<string, string> = {
-      completed: 'bi-check-circle',
-      pending: 'bi-clock',
-      failed: 'bi-x-circle',
-      processing: 'bi-arrow-repeat',
-    };
-    return icons[status] ?? 'bi-circle';
-  }
-
-  getValidationStatusClass(isValid: boolean): string {
-    return isValid ? 'text-success' : 'text-danger';
-  }
-
-  getValidationIcon(isValid: boolean): string {
-    return isValid ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
-  }
-
   closeDetail() {
     this.showDetail.set(false);
-    this.selectedItem.set({} as FindAuditSchemaResponseModel);
+    this.selectedItem.set({} as FindAuditUrlValidationResponseModel);
+  }
+
+  parseResultsJson(raw: any): any[] {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    try {
+      const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return [];
+    }
+  }
+
+  formatJson(raw: any): string {
+    if (!raw) return '';
+    try {
+      const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
+      return JSON.stringify(obj, null, 2);
+    } catch {
+      return String(raw);
+    }
   }
 }
 

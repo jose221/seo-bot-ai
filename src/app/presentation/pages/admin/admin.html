@@ -42,6 +42,15 @@
             {{ 'admin.navbar.schemas' | translate }}
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link text-primary"
+             routerLink="/admin/audit/url-validations"
+             routerLinkActive="active fw-semibold"
+             [routerLinkActiveOptions]="{exact: false}"
+             [attr.aria-current]="isActive('/admin/audit/url-validations') ? 'page' : null">
+            {{ 'admin.navbar.urlValidations' | translate }}
+          </a>
+        </li>
       </ul>
       <div class="d-flex align-items-center gap-3">
         <form class="d-flex">
