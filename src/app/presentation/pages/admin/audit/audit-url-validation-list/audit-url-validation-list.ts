@@ -260,6 +260,10 @@ export class AuditUrlValidationList
     this.selectedItem.set({} as FindAuditUrlValidationResponseModel);
   }
 
+  getResultsWithErrors(results: any[]): number {
+    return results.filter(r => r.validation_errors && !r.validation_errors.is_valid).length;
+  }
+
   parseResultsJson(raw: any): any[] {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
