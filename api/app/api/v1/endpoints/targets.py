@@ -88,26 +88,44 @@ async def list_targets(
     if provider:
         filters.append(WebPage.provider == provider)
 
-    # Query base
-    statement = select(WebPage).where(*filters).order_by(desc(WebPage.created_at))
+    # Solo seleccionar columnas necesarias para el listado (evita manual_html_content y audit_reports pesados)
+    statement = select(
+        WebPage.id,
+        WebPage.user_id,
+        WebPage.url,
+        WebPage.name,
+        WebPage.instructions,
+        WebPage.tech_stack,
+        WebPage.tags,
+        WebPage.provider,
+        WebPage.is_active,
+        WebPage.created_at,
+        WebPage.updated_at,
+    ).where(*filters).order_by(desc(WebPage.created_at))
 
-    # Contar total
-    count_statement = select(WebPage).where(*filters)
+    # Contar total usando COUNT() en la BD (evita cargar todo en memoria)
+    count_statement = select(func.count()).select_from(WebPage).where(*filters)
     count_result = await session.execute(count_statement)
-    total = len(count_result.scalars().all())
+    total = count_result.scalar()
 
     # Paginación
     if page_size is not None:
         offset = (page - 1) * page_size
-        statement = statement.options(joinedload(WebPage.audit_reports)).offset(offset).limit(page_size)
-    else:
-        statement = statement.options(joinedload(WebPage.audit_reports))
+        statement = statement.offset(offset).limit(page_size)
 
     result = await session.execute(statement)
-    targets = result.unique().scalars().all()
+    targets = result.all()
 
     return target_schemas.WebPageListResponse(
-        items=targets,
+        items=[
+            target_schemas.WebPageListItem(
+                id=t.id, user_id=t.user_id, url=t.url, name=t.name,
+                instructions=t.instructions, tech_stack=t.tech_stack,
+                tags=t.tags, provider=t.provider, is_active=t.is_active,
+                created_at=t.created_at, updated_at=t.updated_at,
+            )
+            for t in targets
+        ],
         total=total,
         page=page,
         page_size=page_size

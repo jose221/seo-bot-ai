@@ -159,6 +159,49 @@ class AuditListResponse(BaseModel):
     page_size: Optional[int] = None
 
 
+class AuditListItemLite(BaseModel):
+    """Item liviano para el listado de auditorías.
+    Solo incluye las columnas visibles en la tabla del frontend.
+    NO incluye lighthouse_data, ai_suggestions ni seo_analysis (JSONB pesados).
+    """
+    id: UUID
+    web_page_id: UUID
+    user_id: UUID
+    status: AuditStatus
+
+    # Scores visibles en la tabla
+    performance_score: Optional[float] = None
+    accessibility_score: Optional[float] = None
+    best_practices_score: Optional[float] = None
+
+    # Core Web Vitals visibles en la tabla
+    fid: Optional[float] = None
+    cls: Optional[float] = None
+
+    # Rutas de reportes (botones Ver / Schema / Validar URLs)
+    report_pdf_path: Optional[str] = None
+    report_excel_path: Optional[str] = None
+    report_word_path: Optional[str] = None
+
+    # Fechas
+    created_at: datetime
+    completed_at: Optional[datetime] = None
+
+    # Solo la url de la web_page (columna "Página Web")
+    web_page_url: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class AuditListLiteResponse(BaseModel):
+    """Lista liviana de auditorías para la tabla principal."""
+    items: list[AuditListItemLite]
+    total: int
+    page: int
+    page_size: Optional[int] = None
+
+
 class SchemaComparisonResult(BaseModel):
     """Resultado de comparación de schemas"""
     base_schemas: list[str]

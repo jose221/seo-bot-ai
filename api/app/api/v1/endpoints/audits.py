@@ -407,8 +407,18 @@ async def list_comparisons(
 ):
     """
     Listar comparaciones del usuario con paginación.
+    Solo columnas necesarias para la tabla (sin comparison_result JSONB enorme).
+    La URL de la página base se obtiene via JOIN con web_pages.
+    El total de competidores se obtiene de competitor_web_page_ids (array ligero).
     """
-    # Query base
+    # Contar total
+    count_statement = select(func.count()).select_from(AuditComparison).where(
+        AuditComparison.user_id == current_user.id
+    )
+    count_result = await session.execute(count_statement)
+    total = count_result.scalar()
+
+    # Solo columnas necesarias + URL de web_page via JOIN (sin comparison_result pesado)
     statement = select(
         AuditComparison.id,
         AuditComparison.base_web_page_id,
@@ -416,22 +426,16 @@ async def list_comparisons(
         AuditComparison.created_at,
         AuditComparison.completed_at,
         AuditComparison.error_message,
-        AuditComparison.comparison_result,
+        AuditComparison.competitor_web_page_ids,  # array ligero para contar competidores
         AuditComparison.report_pdf_path,
         AuditComparison.report_excel_path,
         AuditComparison.report_word_path,
         AuditComparison.proposal_report_pdf_path,
-        AuditComparison.proposal_report_word_path
-    ).where(
+        AuditComparison.proposal_report_word_path,
+        WebPage.url.label("base_url"),
+    ).join(WebPage, AuditComparison.base_web_page_id == WebPage.id, isouter=True).where(
         AuditComparison.user_id == current_user.id
     ).order_by(desc(AuditComparison.created_at))
-
-    # Contar total
-    count_statement = select(func.count()).select_from(AuditComparison).where(
-        AuditComparison.user_id == current_user.id
-    )
-    count_result = await session.execute(count_statement)
-    total = count_result.scalar()
 
     # Paginación
     if page_size is not None:
@@ -441,31 +445,24 @@ async def list_comparisons(
     result = await session.execute(statement)
     comparisons = result.all()
 
-    # Construir items de respuesta
-    items = []
-    for comp in comparisons:
-        base_url = None
-        total_competitors = None
-
-        if comp.comparison_result:
-            base_url = comp.comparison_result.get('base_url')
-            total_competitors = len(comp.comparison_result.get('comparisons', []))
-
-        items.append(audit_schemas.ComparisonListItem(
+    items = [
+        audit_schemas.ComparisonListItem(
             id=comp.id,
             base_web_page_id=comp.base_web_page_id,
             status=comp.status,
             created_at=comp.created_at,
             completed_at=comp.completed_at,
-            base_url=base_url,
-            total_competitors=total_competitors,
+            base_url=comp.base_url,
+            total_competitors=len(comp.competitor_web_page_ids) if comp.competitor_web_page_ids else 0,
             error_message=comp.error_message,
             report_pdf_path=comp.report_pdf_path,
             report_excel_path=comp.report_excel_path,
             report_word_path=comp.report_word_path,
             proposal_report_pdf_path=comp.proposal_report_pdf_path,
-            proposal_report_word_path=comp.proposal_report_word_path
-        ))
+            proposal_report_word_path=comp.proposal_report_word_path,
+        )
+        for comp in comparisons
+    ]
 
     return audit_schemas.ComparisonListResponse(
         items=items,
@@ -624,7 +621,19 @@ async def list_schema_audits(
         session=Depends(get_session)
 ):
     """Listar auditorías de schemas del usuario."""
-    statement = select(AuditSchemaReview).where(
+    # Solo columnas necesarias para la tabla (sin JSON/texto pesados)
+    statement = select(
+        AuditSchemaReview.id,
+        AuditSchemaReview.source_type,
+        AuditSchemaReview.source_id,
+        AuditSchemaReview.status,
+        AuditSchemaReview.programming_language,
+        AuditSchemaReview.created_at,
+        AuditSchemaReview.completed_at,
+        AuditSchemaReview.error_message,
+        AuditSchemaReview.report_pdf_path,
+        AuditSchemaReview.report_word_path,
+    ).where(
         AuditSchemaReview.user_id == current_user.id
     ).order_by(desc(AuditSchemaReview.created_at))
 
@@ -638,7 +647,7 @@ async def list_schema_audits(
         statement = statement.offset((page - 1) * page_size).limit(page_size)
 
     result = await session.execute(statement)
-    rows = result.scalars().all()
+    rows = result.all()
 
     return audit_schemas.AuditSchemasListResponse(
         items=[
@@ -652,7 +661,7 @@ async def list_schema_audits(
                 completed_at=row.completed_at,
                 error_message=row.error_message,
                 report_pdf_path=row.report_pdf_path,
-                report_word_path=row.report_word_path
+                report_word_path=row.report_word_path,
             )
             for row in rows
         ],
@@ -929,23 +938,52 @@ async def list_audits(
 ):
     """
     Listar auditorías del usuario con filtros opcionales.
+    Devuelve la misma estructura que antes pero con SELECT optimizado (sin JSONB pesados).
     """
-    # Query base
-    statement = select(AuditReport).where(
-        AuditReport.user_id == current_user.id
-    )
-
-    # Aplicar filtros
+    # Filtros base
+    filters = [AuditReport.user_id == current_user.id]
     if web_page_id:
-        statement = statement.where(AuditReport.web_page_id == web_page_id)
+        filters.append(AuditReport.web_page_id == web_page_id)
     if status_filter:
-        statement = statement.where(sql_cast(AuditReport.status, String) == status_filter.value)
+        filters.append(sql_cast(AuditReport.status, String) == status_filter.value)
 
-    statement = statement.options(joinedload(AuditReport.web_page)).order_by(desc(AuditReport.created_at))
+    # Contar total con COUNT() en la BD (evita cargar todo en memoria)
+    count_statement = select(func.count()).select_from(AuditReport).where(*filters)
+    count_result = await session.execute(count_statement)
+    total = count_result.scalar()
 
-    # Contar total
-    count_result = await session.execute(statement)
-    total = len(count_result.unique().scalars().all())
+    # Solo las columnas necesarias para la tabla + columnas ligeras de web_page via JOIN
+    # Se excluyen: lighthouse_data, ai_suggestions, seo_analysis (JSONB muy pesados)
+    statement = select(
+        AuditReport.id,
+        AuditReport.web_page_id,
+        AuditReport.user_id,
+        AuditReport.status,
+        AuditReport.performance_score,
+        AuditReport.seo_score,
+        AuditReport.accessibility_score,
+        AuditReport.best_practices_score,
+        AuditReport.lcp,
+        AuditReport.fid,
+        AuditReport.cls,
+        AuditReport.report_pdf_path,
+        AuditReport.report_excel_path,
+        AuditReport.report_word_path,
+        AuditReport.error_message,
+        AuditReport.created_at,
+        AuditReport.completed_at,
+        # Columnas ligeras de web_page (sin manual_html_content)
+        WebPage.id.label("wp_id"),
+        WebPage.url.label("wp_url"),
+        WebPage.name.label("wp_name"),
+        WebPage.instructions.label("wp_instructions"),
+        WebPage.tech_stack.label("wp_tech_stack"),
+        WebPage.tags.label("wp_tags"),
+        WebPage.provider.label("wp_provider"),
+        WebPage.is_active.label("wp_is_active"),
+    ).join(WebPage, AuditReport.web_page_id == WebPage.id, isouter=True).where(
+        *filters
+    ).order_by(desc(AuditReport.created_at))
 
     # Paginación
     if page_size is not None:
@@ -953,32 +991,74 @@ async def list_audits(
         statement = statement.offset(offset).limit(page_size)
 
     result = await session.execute(statement)
-    audits = result.unique().scalars().all()
+    rows = result.all()
 
-    # Verificar reportes faltantes para los items devueltos (solo si status=completed)
-    # Esto asegura que el frontend reciba URLs válidas aunque sea la primera vez que se piden
-    audits_modified = False
-    for audit in audits:
-        if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_excel_path or not audit.report_word_path):
+    # Verificar y generar reportes faltantes para auditorías completadas
+    audits_to_update = []
+    items = []
+    for row in rows:
+        pdf_path = row.report_pdf_path
+        excel_path = row.report_excel_path
+        word_path = row.report_word_path
+
+        if row.status == AuditStatus.COMPLETED and (not pdf_path or not excel_path or not word_path):
             try:
-                # Generar reportes
-                # Nota: Esto es bloqueante, pero necesario para cumplir requerimiento de devolver URLs
-                # Para paginación grande esto podría ser lento la primera vez
-                report_paths = ReportGenerator(audit=audit).generate_all()
-                audit.report_pdf_path = report_paths.get('pdf_path')
-                audit.report_excel_path = report_paths.get('xlsx_path')
-                audit.report_word_path = report_paths.get('word_path')
-                session.add(audit)
-                audits_modified = True
+                audit_obj = await session.get(AuditReport, row.id)
+                if audit_obj:
+                    report_paths = ReportGenerator(audit=audit_obj).generate_all()
+                    audit_obj.report_pdf_path = report_paths.get('pdf_path')
+                    audit_obj.report_excel_path = report_paths.get('xlsx_path')
+                    audit_obj.report_word_path = report_paths.get('word_path')
+                    session.add(audit_obj)
+                    audits_to_update.append(audit_obj)
+                    pdf_path = audit_obj.report_pdf_path
+                    excel_path = audit_obj.report_excel_path
+                    word_path = audit_obj.report_word_path
             except Exception as e:
-                print(f"⚠️ Error generando reportes en listado para audit {audit.id}: {e}")
+                print(f"⚠️ Error generando reportes en listado para audit {row.id}: {e}")
 
-    if audits_modified:
-        # Hacer commit si se generaron reportes para algún audit
+        # Construir web_page anidado con la misma estructura que espera el frontend
+        web_page_data = None
+        if row.wp_id:
+            web_page_data = audit_schemas.WebPageSimpleResponse(
+                id=row.wp_id,
+                url=row.wp_url,
+                name=row.wp_name,
+                instructions=row.wp_instructions,
+                tech_stack=row.wp_tech_stack,
+                tags=row.wp_tags,
+                provider=row.wp_provider,
+                is_active=row.wp_is_active,
+            )
+
+        items.append(audit_schemas.AuditListItem(
+            id=row.id,
+            web_page_id=row.web_page_id,
+            user_id=row.user_id,
+            status=row.status,
+            performance_score=row.performance_score,
+            seo_score=row.seo_score,
+            accessibility_score=row.accessibility_score,
+            best_practices_score=row.best_practices_score,
+            lcp=row.lcp,
+            fid=row.fid,
+            cls=row.cls,
+            lighthouse_data=None,
+            ai_suggestions=None,
+            report_pdf_path=pdf_path,
+            report_excel_path=excel_path,
+            report_word_path=word_path,
+            error_message=row.error_message,
+            created_at=row.created_at,
+            completed_at=row.completed_at,
+            web_page=web_page_data,
+        ))
+
+    if audits_to_update:
         await session.commit()
 
     return audit_schemas.AuditListResponse(
-        items=[audit_schemas.AuditListItem.model_validate(a) for a in audits],
+        items=items,
         total=total,
         page=page,
         page_size=page_size
