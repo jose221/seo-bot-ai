@@ -81,9 +81,18 @@ class AuditUrlValidation(SQLModel, table=True):
         description="Lista de resultados por URL"
     )
 
-    # Reportes
+    # Reportes individuales
     report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
     report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+
+    # Reporte global (resumen consolidado de todas las URLs)
+    global_report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+    global_report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
+    global_report_ai_text: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String, nullable=True),
+        description="Texto/respuesta de la IA del reporte global consolidado"
+    )
 
     # Tokens
     input_tokens: Optional[int] = Field(default=0)

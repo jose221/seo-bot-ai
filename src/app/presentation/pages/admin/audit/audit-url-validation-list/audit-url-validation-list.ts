@@ -227,12 +227,25 @@ export class AuditUrlValidationList
     }
   }
 
-  downloadReport(type: 'pdf' | 'word') {
+  downloadReport(type: 'pdf' | 'word' | 'global_pdf' | 'global_word') {
     const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    const path =
-      type === 'pdf'
-        ? this.selectedItem().report_pdf_path
-        : this.selectedItem().report_word_path;
+    let path: string | null = null;
+
+    switch (type) {
+      case 'pdf':
+        path = this.selectedItem().report_pdf_path;
+        break;
+      case 'word':
+        path = this.selectedItem().report_word_path;
+        break;
+      case 'global_pdf':
+        path = this.selectedItem().global_report_pdf_path;
+        break;
+      case 'global_word':
+        path = this.selectedItem().global_report_word_path;
+        break;
+    }
+
     if (!path) {
       this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
       return;

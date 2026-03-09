@@ -706,7 +706,7 @@ async def run_url_validation_task(
             global_severity=global_severity,
         )
 
-        # Generar reportes PDF/Word
+        # Generar reportes PDF/Word individuales
         report_paths = {}
         try:
             # Necesitamos un AuditReport para ReportGenerator — resolver desde el source
@@ -738,6 +738,66 @@ async def run_url_validation_task(
         except Exception as rpt_err:
             print(f"⚠️  Error generando reportes de validación: {rpt_err}")
 
+        # ------------------------------------------------------------------
+        # Generar REPORTE GLOBAL consolidado (IA + PDF + Word)
+        # ------------------------------------------------------------------
+        global_report_ai_text = ""
+        global_report_paths = {}
+        try:
+            print(f"🌐 Generando reporte global con IA para {len(results)} URLs...")
+            global_ai_result = await service.generate_global_report_ai(
+                results=results,
+                name_validation=name_validation,
+                description_validation=description_validation,
+                global_severity=global_severity,
+                token=token,
+            )
+
+            global_report_ai_text = global_ai_result.get("content", "")
+            global_usage = global_ai_result.get("usage", {})
+            total_input_tokens += global_usage.get("prompt_tokens", 0)
+            total_output_tokens += global_usage.get("completion_tokens", 0)
+
+            # Construir Markdown del reporte global
+            global_markdown = service.build_global_report_markdown(
+                ai_global_text=global_report_ai_text,
+                results=results,
+                name_validation=name_validation,
+                description_validation=description_validation,
+                global_severity=global_severity,
+            )
+
+            # Generar PDF/Word del reporte global
+            with db_manager.sync_session_context() as session:
+                validation = session.get(AuditUrlValidation, validation_id)
+                if not validation:
+                    raise Exception("Validación no encontrada al generar reporte global")
+
+                report_audit = None
+                if validation.source_type == UrlValidationSourceType.AUDIT_PAGE:
+                    report_audit = session.get(AuditReport, validation.source_id)
+                elif validation.source_type == UrlValidationSourceType.AUDIT_COMPARISON:
+                    comp = session.get(AuditComparison, validation.source_id)
+                    if comp:
+                        stmt = select(AuditReport).where(
+                            AuditReport.web_page_id == comp.base_web_page_id,
+                            sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
+                        ).order_by(desc(AuditReport.created_at)).limit(1)
+                        report_audit = session.execute(stmt).scalars().first()
+
+                if report_audit:
+                    global_report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(
+                        global_markdown
+                    )
+                    print(f"📄 Reporte global generado: {global_report_paths}")
+                else:
+                    print("⚠️  No se encontró audit para generar reporte global PDF/Word")
+
+        except Exception as global_err:
+            print(f"⚠️  Error generando reporte global: {global_err}")
+            import traceback
+            traceback.print_exc()
+
         # Guardar resultados finales
         with db_manager.sync_session_context() as session:
             validation = session.get(AuditUrlValidation, validation_id)
@@ -747,8 +807,13 @@ async def run_url_validation_task(
                 validation.global_severity = global_severity
                 validation.input_tokens = total_input_tokens
                 validation.output_tokens = total_output_tokens
+                # Reportes individuales
                 validation.report_pdf_path = report_paths.get("pdf_path")
                 validation.report_word_path = report_paths.get("word_path")
+                # Reporte global
+                validation.global_report_pdf_path = global_report_paths.get("pdf_path")
+                validation.global_report_word_path = global_report_paths.get("word_path")
+                validation.global_report_ai_text = global_report_ai_text
                 validation.completed_at = datetime.utcnow()
                 session.add(validation)
 

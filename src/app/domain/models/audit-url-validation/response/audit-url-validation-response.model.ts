@@ -13,6 +13,8 @@ export class AuditUrlValidationItemResponseModel {
     public error_message: string | null,
     public report_pdf_path: string | null,
     public report_word_path: string | null,
+    public global_report_pdf_path: string | null,
+    public global_report_word_path: string | null,
     public created_at: string,
     public completed_at: string | null
   ) {}
@@ -59,6 +61,9 @@ export class FindAuditUrlValidationResponseModel {
     public error_message: string | null,
     public report_pdf_path: string | null,
     public report_word_path: string | null,
+    public global_report_pdf_path: string | null,
+    public global_report_word_path: string | null,
+    public global_report_ai_text: string | null,
     public created_at: string,
     public completed_at: string | null
   ) {}

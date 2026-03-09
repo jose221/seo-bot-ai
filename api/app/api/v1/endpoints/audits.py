@@ -819,9 +819,7 @@ async def list_url_validations(
         session=Depends(get_session),
 ):
     """Listar validaciones de URLs del usuario con paginación."""
-    statement = select(AuditUrlValidation).where(
-        AuditUrlValidation.user_id == current_user.id
-    ).order_by(desc(AuditUrlValidation.created_at))
+    from sqlalchemy import text as sa_text
 
     # Contar total
     count_stmt = select(func.count()).select_from(AuditUrlValidation).where(
@@ -829,30 +827,57 @@ async def list_url_validations(
     )
     total = (await session.execute(count_stmt)).scalar()
 
-    # Paginación
-    if page_size is not None:
-        statement = statement.offset((page - 1) * page_size).limit(page_size)
+    # SELECT explícito — excluye results_json, global_report_ai_text y urls_raw (campos muy pesados)
+    offset = (page - 1) * page_size if page_size is not None else 0
+    limit_clause = f"LIMIT {page_size}" if page_size is not None else ""
 
-    result = await session.execute(statement)
-    rows = result.scalars().all()
+    raw_sql = sa_text(f"""
+        SELECT
+            id,
+            source_type,
+            source_id,
+            name_validation,
+            description_validation,
+            status,
+            global_severity,
+            input_tokens,
+            output_tokens,
+            error_message,
+            report_pdf_path,
+            report_word_path,
+            global_report_pdf_path,
+            global_report_word_path,
+            created_at,
+            completed_at
+        FROM audit_url_validations
+        WHERE user_id = :user_id
+        ORDER BY created_at DESC
+        {limit_clause}
+        OFFSET :offset
+    """)
+
+    result = await session.execute(raw_sql, {"user_id": str(current_user.id), "offset": offset})
+    rows = result.mappings().all()
 
     return audit_schemas.AuditUrlValidationListResponse(
         items=[
             audit_schemas.AuditUrlValidationListItem(
-                id=row.id,
-                source_type=row.source_type,
-                source_id=row.source_id,
-                name_validation=row.name_validation,
-                description_validation=row.description_validation,
-                status=row.status,
-                global_severity=row.global_severity,
-                input_tokens=row.input_tokens,
-                output_tokens=row.output_tokens,
-                error_message=row.error_message,
-                report_pdf_path=row.report_pdf_path,
-                report_word_path=row.report_word_path,
-                created_at=row.created_at,
-                completed_at=row.completed_at,
+                id=row["id"],
+                source_type=row["source_type"],
+                source_id=row["source_id"],
+                name_validation=row["name_validation"],
+                description_validation=row["description_validation"],
+                status=row["status"],
+                global_severity=row["global_severity"],
+                input_tokens=row["input_tokens"],
+                output_tokens=row["output_tokens"],
+                error_message=row["error_message"],
+                report_pdf_path=row["report_pdf_path"],
+                report_word_path=row["report_word_path"],
+                global_report_pdf_path=row["global_report_pdf_path"],
+                global_report_word_path=row["global_report_word_path"],
+                created_at=row["created_at"],
+                completed_at=row["completed_at"],
             )
             for row in rows
         ],

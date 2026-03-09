@@ -523,6 +523,9 @@ class AuditUrlValidationListItem(BaseModel):
     error_message: Optional[str] = None
     report_pdf_path: Optional[str] = None
     report_word_path: Optional[str] = None
+    global_report_pdf_path: Optional[str] = None
+    global_report_word_path: Optional[str] = None
+    # global_report_ai_text se omite intencionalmente — solo disponible en el detalle por ID
     created_at: datetime
     completed_at: Optional[datetime] = None
 
@@ -552,6 +555,9 @@ class AuditUrlValidationDetailResponse(BaseModel):
     error_message: Optional[str] = None
     report_pdf_path: Optional[str] = None
     report_word_path: Optional[str] = None
+    global_report_pdf_path: Optional[str] = None
+    global_report_word_path: Optional[str] = None
+    global_report_ai_text: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime] = None
 

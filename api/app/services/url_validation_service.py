@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 from app.services.ai_client import AIClient
 from app.services.audit_engine import get_audit_engine
-from app.services.seo_analyzer import SEOAnalyzer
+from app.services.seo_analyzer import SEOAnalyzer, filter_open_graph_schemas
 from app.services.schema_audit_service import get_schema_audit_service
 from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
 
@@ -322,6 +322,203 @@ class UrlValidationService:
             lines.append("")
             lines.append("---")
             lines.append("")
+
+        return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    # Reporte Global consolidado (IA + Markdown)
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _build_global_report_context(
+        results: List[Dict[str, Any]],
+        name_validation: str,
+        description_validation: Optional[str],
+        global_severity: str,
+    ) -> Dict[str, Any]:
+        """
+        Construye el contexto necesario para el prompt Jinja del reporte global.
+        Agrupa schemas faltantes, clasifica URLs por severidad, etc.
+        """
+        ok_urls: List[str] = []
+        warning_items: List[Dict[str, str]] = []
+        critical_items: List[Dict[str, str]] = []
+        url_type_details: List[Dict[str, Any]] = []
+        error_count = 0
+
+        # Mapa: tipo_faltante → lista de URLs donde falta
+        # Para detectar tipos faltantes, revisamos validation_errors
+        missing_types: Dict[str, List[str]] = {}
+
+        for result in results:
+            url = result.get("url", "URL desconocida")
+            severity = result.get("severity", "ok")
+            types_found = result.get("schema_types_found", [])
+            ai_report = result.get("ai_report", "")
+
+            if result.get("error"):
+                error_count += 1
+                continue
+
+            # Resumen corto para warning/critical
+            summary = ""
+            if not types_found:
+                summary = "Sin schemas detectados"
+            else:
+                # Buscar en el ai_report patrones de tipos faltantes
+                summary = f"Tipos: {', '.join(types_found[:5])}"
+                if len(types_found) > 5:
+                    summary += f" (+{len(types_found) - 5} más)"
+
+            url_type_details.append({
+                "url": url,
+                "severity": severity,
+                "types": types_found,
+            })
+
+            if severity == "ok":
+                ok_urls.append(url)
+            elif severity == "critical":
+                critical_items.append({"url": url, "summary": summary})
+            else:
+                warning_items.append({"url": url, "summary": summary})
+
+            # Detectar tipos faltantes desde validation_errors
+            val_errors = result.get("validation_errors", {})
+            if isinstance(val_errors, dict):
+                errors_list = val_errors.get("errors", [])
+                for err in errors_list:
+                    if isinstance(err, str) and "falta @type" in err.lower():
+                        missing_types.setdefault("(item sin @type)", []).append(url)
+
+            # Detectar tipos faltantes mencionados en el AI report
+            if ai_report and isinstance(ai_report, str):
+                import re as _re
+                # Buscar patrones como "falta Organization", "missing BreadcrumbList"
+                falta_matches = _re.findall(
+                    r'(?:falta|missing|no.*(?:detecta|tiene|incluye))\s+([A-Z][A-Za-z]+(?:List|Page|Action|Event|Offer|Rating|Review)?)',
+                    ai_report, _re.IGNORECASE
+                )
+                for match in falta_matches:
+                    clean = match.strip()
+                    if len(clean) > 2:
+                        missing_types.setdefault(clean, []).append(url)
+
+        total_urls = len(results)
+        ok_count = len(ok_urls)
+        warning_count = len(warning_items)
+        critical_count = len(critical_items)
+
+        return {
+            "total_urls": total_urls,
+            "name_validation": name_validation,
+            "description_validation": description_validation or "",
+            "global_severity": global_severity,
+            "ok_count": ok_count,
+            "warning_count": warning_count,
+            "critical_count": critical_count,
+            "error_count": error_count,
+            "ok_urls": ok_urls,
+            "warning_items": warning_items,
+            "critical_items": critical_items,
+            "missing_types": missing_types,
+            "url_type_details": url_type_details,
+        }
+
+    async def generate_global_report_ai(
+        self,
+        results: List[Dict[str, Any]],
+        name_validation: str,
+        description_validation: Optional[str],
+        global_severity: str,
+        token: str,
+    ) -> Dict[str, Any]:
+        """
+        Genera el análisis IA global consolidado de todas las URLs.
+
+        Returns:
+            Dict con 'content' (texto IA) y 'usage' (tokens).
+        """
+        context = self._build_global_report_context(
+            results=results,
+            name_validation=name_validation,
+            description_validation=description_validation,
+            global_severity=global_severity,
+        )
+
+        template = self.ai_client.jinja_env.get_template("url_validation_global_report.jinja")
+        prompt_content = template.render(**context)
+
+        request = ChatCompletionRequest(
+            messages=[ChatMessage(role=MessageRole.USER, content=prompt_content)],
+            model="deepseek-chat",
+            stream=False,
+        )
+
+        input_tokens = self.ai_client.count_tokens(prompt_content)
+        response = await self.ai_client.chat_completion(request, token)
+        content = response.get_content()
+        output_tokens = self.ai_client.count_tokens(content)
+
+        return {
+            "content": content,
+            "usage": {
+                "prompt_tokens": input_tokens,
+                "completion_tokens": output_tokens,
+                "total_tokens": input_tokens + output_tokens,
+            },
+        }
+
+    @staticmethod
+    def build_global_report_markdown(
+        ai_global_text: str,
+        results: List[Dict[str, Any]],
+        name_validation: str,
+        description_validation: Optional[str],
+        global_severity: str,
+    ) -> str:
+        """
+        Construye el Markdown final del reporte global para PDF/Word.
+        Combina el análisis IA con cabecera informativa.
+        """
+        lines: List[str] = []
+
+        lines.append(f"# Reporte Global: {name_validation}")
+        lines.append("")
+
+        if description_validation:
+            lines.append(f"**Descripción:** {description_validation}")
+            lines.append("")
+
+        lines.append(f"**Severidad Global:** {global_severity.upper()}")
+        lines.append(f"**Total URLs analizadas:** {len(results)}")
+        lines.append("")
+
+        ok_count = sum(1 for r in results if r.get("severity") == "ok" and not r.get("error"))
+        warn_count = sum(1 for r in results if r.get("severity") == "warning" and not r.get("error"))
+        crit_count = sum(1 for r in results if r.get("severity") == "critical" and not r.get("error"))
+        err_count = sum(1 for r in results if r.get("error"))
+
+        lines.append("## Estadísticas")
+        lines.append("")
+        lines.append("| Estado | Cantidad |")
+        lines.append("|--------|----------|")
+        lines.append(f"| Ok | {ok_count} |")
+        lines.append(f"| Warning | {warn_count} |")
+        lines.append(f"| Critical | {crit_count} |")
+        lines.append(f"| Error (no procesadas) | {err_count} |")
+        lines.append("")
+
+        lines.append("---")
+        lines.append("")
+
+        # Análisis IA global
+        if ai_global_text:
+            lines.append(ai_global_text)
+        else:
+            lines.append("*No se generó análisis global.*")
+
+        lines.append("")
 
         return "\n".join(lines)
 
