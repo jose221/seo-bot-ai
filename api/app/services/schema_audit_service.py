@@ -88,9 +88,20 @@ class SchemaAuditService:
             if isinstance(item_context, str) and "schema.org" in item_context:
                 has_schema_context = True
 
+            is_open_graph = any(
+              isinstance(k, str) and "http://ogp.me/ns#" in k
+              for k in item.keys()
+            )
+
             item_type = item.get("@type")
+            # Nueva lógica: solo agregar error si no tiene @type y tampoco contiene clave con 'http://www.w3.org/1999'
             if not item_type:
-                errors.append(f"{label}[{idx}]: falta @type")
+                has_w3c_key = any(
+                    isinstance(k, str) and "http://www.w3.org/1999" in k
+                    for k in item.keys()
+                )
+                if not has_w3c_key and not is_open_graph:
+                    errors.append(f"{label}[{idx}]: falta @type al item: {json.dumps(item, ensure_ascii=False)}")
             elif not isinstance(item_type, (str, list)):
                 errors.append(f"{label}[{idx}]: @type debe ser string o lista")
 
