@@ -16,7 +16,7 @@ from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
 from app.services.report_generator import ReportGenerator
-from app.services.seo_analyzer import SEOAnalyzer
+from app.services.seo_analyzer import SEOAnalyzer, filter_open_graph_schemas
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
 from app.helpers import extract_domain
@@ -629,6 +629,9 @@ async def run_url_validation_task(
 
                 # 2. Extraer tipos encontrados
                 types_found = []
+
+                url_schemas = filter_open_graph_schemas(url_schemas)
+
                 for schema in url_schemas:
                     if isinstance(schema, dict):
                         stype = schema.get("@type")

@@ -8,6 +8,49 @@ from collections import Counter
 from string import punctuation
 from typing import Dict, Any, List, Optional
 from urllib.parse import urlparse
+
+
+# ---------------------------------------------------------------------------
+# Helper global reutilizable: filtro de schemas Open Graph
+# ---------------------------------------------------------------------------
+
+def is_open_graph_schema(item: Any) -> bool:
+    """
+    Devuelve True si el esquema debe ser omitido por ser metadata no-schema.org.
+    Detección:
+      - Claves con prefijo 'http://ogp.me/ns#'  (RDFa Open Graph extraído por extruct)
+      - @context string o dict que referencie 'ogp.me'
+      - Claves con prefijo 'http://www.w3.org/1999' (W3C RDFa vocab, ej. xhtml/vocab#role)
+        Ejemplo: {'@id': '...', 'http://www.w3.org/1999/xhtml/vocab#role': [...]}
+    Uso:
+        from app.services.seo_analyzer import is_open_graph_schema
+        schemas = [s for s in raw_schemas if not is_open_graph_schema(s)]
+    """
+    if not isinstance(item, dict):
+        return False
+    # Open Graph (ogp.me)
+    if any(isinstance(k, str) and "http://ogp.me/ns#" in k for k in item.keys()):
+        return True
+    # W3C RDFa vocab (http://www.w3.org/1999/...)
+    if any(isinstance(k, str) and "http://www.w3.org/1999" in k for k in item.keys()):
+        return True
+    # @context que referencie ogp.me
+    ctx = item.get("@context", "")
+    if isinstance(ctx, str) and "ogp.me" in ctx:
+        return True
+    if isinstance(ctx, dict) and any("ogp.me" in str(v) for v in ctx.values()):
+        return True
+    return False
+
+
+def filter_open_graph_schemas(schemas: List[Any]) -> List[Any]:
+    """
+    Filtra una lista de schemas eliminando los que pertenecen a Open Graph.
+    Uso:
+        from app.services.seo_analyzer import filter_open_graph_schemas
+        clean = filter_open_graph_schemas(raw_schemas)
+    """
+    return [s for s in schemas if not is_open_graph_schema(s)]
 import extruct
 
 
@@ -214,26 +257,18 @@ class SEOAnalyzer:
                 pass
 
         # Filtrar esquemas de Open Graph (http://ogp.me/ns# y variantes og:)
-        def _is_open_graph(item: Any) -> bool:
-            if not isinstance(item, dict):
-                return False
-            # Detectar por claves con prefijo ogp.me
-            if any(
-                isinstance(k, str) and "http://ogp.me/ns#" in k
-                for k in item.keys()
-            ):
-                return True
-            # Detectar por @type o @context que contengan ogp.me
-            ctx = item.get("@context", "")
-            if isinstance(ctx, str) and "ogp.me" in ctx:
-                return True
-            if isinstance(ctx, dict) and any("ogp.me" in str(v) for v in ctx.values()):
-                return True
-            return False
-
-        extracted_schemas = [s for s in extracted_schemas if not _is_open_graph(s)]
+        extracted_schemas = [
+            s for s in extracted_schemas
+            if not SEOAnalyzer._is_open_graph_schema(s)
+        ]
 
         return extracted_schemas
+
+    @staticmethod
+    def _is_open_graph_schema(item: Any) -> bool:
+        """Delegación al helper global is_open_graph_schema (retrocompatibilidad)."""
+        return is_open_graph_schema(item)
+
 
     def analyze_structured_data(self) -> List[Dict[str, Any]]:
         """
