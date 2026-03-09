@@ -213,6 +213,26 @@ class SEOAnalyzer:
             except Exception:
                 pass
 
+        # Filtrar esquemas de Open Graph (http://ogp.me/ns# y variantes og:)
+        def _is_open_graph(item: Any) -> bool:
+            if not isinstance(item, dict):
+                return False
+            # Detectar por claves con prefijo ogp.me
+            if any(
+                isinstance(k, str) and "http://ogp.me/ns#" in k
+                for k in item.keys()
+            ):
+                return True
+            # Detectar por @type o @context que contengan ogp.me
+            ctx = item.get("@context", "")
+            if isinstance(ctx, str) and "ogp.me" in ctx:
+                return True
+            if isinstance(ctx, dict) and any("ogp.me" in str(v) for v in ctx.values()):
+                return True
+            return False
+
+        extracted_schemas = [s for s in extracted_schemas if not _is_open_graph(s)]
+
         return extracted_schemas
 
     def analyze_structured_data(self) -> List[Dict[str, Any]]:
