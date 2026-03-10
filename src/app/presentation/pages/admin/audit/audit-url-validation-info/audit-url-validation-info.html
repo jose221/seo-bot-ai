@@ -1,0 +1,218 @@
+<!-- ===== HEADER ===== -->
+<div class="row mb-4">
+  <div class="col-12 d-flex align-items-center justify-content-between">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-1">
+          <li class="breadcrumb-item"><a routerLink="/admin/audit/url-validations">Validaciones</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Esquemas</li>
+        </ol>
+      </nav>
+      <h1 class="h3 fw-bold mb-0">
+        <i class="bi bi-braces text-primary me-2"></i>
+        Esquemas Extraídos
+      </h1>
+    </div>
+    <a routerLink="/admin/audit/url-validations" class="btn btn-outline-secondary">
+      <i class="bi bi-arrow-left me-1"></i> Volver al listado
+    </a>
+  </div>
+</div>
+
+@if (isLoading()) {
+  <div class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Cargando...</span>
+    </div>
+    <p class="mt-3 text-muted">Cargando detalles de los esquemas...</p>
+  </div>
+} @else if (data()) {
+  @let info = data()!;
+
+  <!-- ===== RESUMEN INFO ===== -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card border-0 shadow-sm overflow-hidden">
+        <div class="card-body p-4">
+          <div class="row align-items-center">
+            <div class="col-lg-8">
+              <h4 class="fw-bold mb-2">{{ info.name_validation }}</h4>
+              <div class="d-flex flex-wrap gap-3">
+                <span class="badge rounded-pill" [ngClass]="getSeverityClass(info.global_severity)">
+                  <i class="bi bi-exclamation-triangle me-1"></i>
+                  {{ info.global_severity || 'OK' }}
+                </span>
+                <span class="badge rounded-pill" [ngClass]="{
+                  'bg-success': info.status === 'completed',
+                  'bg-warning text-dark': info.status === 'pending',
+                  'bg-danger': info.status === 'failed',
+                  'bg-info text-dark': info.status === 'processing'
+                }">
+                  {{ info.status }}
+                </span>
+                <span class="text-muted">
+                  <i class="bi bi-link-45deg me-1"></i>
+                  {{ info.total }} URL(s)
+                </span>
+              </div>
+            </div>
+            <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+              <small class="text-muted d-block mb-1">ID de Validación:</small>
+              <code class="small">{{ info.validation_id }}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== LISTADO DE URLS ===== -->
+  <div class="row g-4">
+    @for (schema of info.schemas; track $index) {
+      <div class="col-12">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white border-bottom p-3">
+            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+              <div class="d-flex align-items-center gap-2">
+                <span class="badge" [ngClass]="getSeverityClass(schema.severity)">{{ schema.severity }}</span>
+                <h5 class="mb-0 text-break fw-semibold small">
+                  <a [href]="schema.url" target="_blank" class="text-decoration-none">{{ schema.url }}</a>
+                </h5>
+              </div>
+              <div class="d-flex gap-2">
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="bi bi-shield-check me-1"></i> Validar URL
+                  </button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                    <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'schema')">Schema.org Validator</a></li>
+                    <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'google')">Google Rich Results Test</a></li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="row g-0">
+              <!-- Sidebar Info -->
+              <div class="col-lg-3 border-end bg-light bg-opacity-50 p-3">
+                <h6 class="fw-bold mb-3 small text-uppercase text-muted">Resumen de Datos</h6>
+
+                @if (schema.schema_types_found?.length) {
+                  <p class="mb-1 small fw-bold">Tipos detectados:</p>
+                  <div class="d-flex flex-wrap gap-1 mb-3">
+                    @for (type of schema.schema_types_found; track type) {
+                      <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25" style="font-size: 0.7rem;">{{ type }}</span>
+                    }
+                  </div>
+                }
+
+                @if (schema.validation_errors) {
+                  @let vErrors = schema.validation_errors;
+                  <div class="p-2 rounded-2 mb-3" [ngClass]="vErrors.is_valid ? 'bg-success bg-opacity-10' : 'bg-danger bg-opacity-10'">
+                    <p class="mb-0 small fw-bold" [ngClass]="vErrors.is_valid ? 'text-success' : 'text-danger'">
+                      <i class="bi" [ngClass]="vErrors.is_valid ? 'bi-check-circle-fill' : 'bi-x-circle-fill'"></i>
+                      {{ vErrors.is_valid ? 'Estructura Válida' : 'Errores de Validación' }}
+                    </p>
+                    @if (vErrors.items_count) {
+                      <span class="text-muted x-small">{{ vErrors.items_count }} items encontrados</span>
+                    }
+                  </div>
+                }
+
+                @if (schema.error) {
+                  <div class="alert alert-danger py-2 px-3 small mb-0">
+                    <i class="bi bi-exclamation-octagon-fill me-1"></i>
+                    {{ schema.error }}
+                  </div>
+                }
+              </div>
+
+              <!-- Main Content -->
+              <div class="col-lg-9 p-3">
+                <ul class="nav nav-tabs nav-tabs-bordered mb-3" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" [id]="'schemas-tab-' + $index" data-bs-toggle="tab" [attr.data-bs-target]="'#schemas-pane-' + $index" type="button" role="tab">
+                      <i class="bi bi-code-square me-1"></i> Esquemas Extraídos
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" [id]="'report-tab-' + $index" data-bs-toggle="tab" [attr.data-bs-target]="'#report-pane-' + $index" type="button" role="tab">
+                      <i class="bi bi-robot me-1"></i> Reporte IA
+                    </button>
+                  </li>
+                </ul>
+                <div class="tab-content pt-2">
+                  <div class="tab-pane fade show active" [id]="'schemas-pane-' + $index" role="tabpanel">
+                    <div class="position-relative">
+                      <div class="d-flex gap-2 position-absolute top-0 end-0 mt-2 me-2" style="z-index: 10;">
+                        <button class="btn btn-sm btn-dark opacity-75" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar JSON-LD">
+                          <i class="bi bi-clipboard"></i>
+                        </button>
+                        <div class="dropdown">
+                          <button class="btn btn-sm btn-dark opacity-75 dropdown-toggle no-caret" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-shield-check"></i>
+                          </button>
+                          <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <li><a class="dropdown-item small" href="javascript:void(0)" (click)="openValidatorWithCode(schema.extracted_schemas, 'schema')">Validar Código en Schema.org</a></li>
+                            <li><a class="dropdown-item small" href="javascript:void(0)" (click)="openValidatorWithCode(schema.extracted_schemas, 'google')">Validar Código en Google</a></li>
+                          </ul>
+                        </div>
+                      </div>
+                      <pre class="bg-dark text-light p-3 rounded-3 small mb-0" style="max-height: 400px; overflow-y: auto;"><code>{{ formatJson(schema.extracted_schemas) }}</code></pre>
+                    </div>
+                  </div>
+                  <div class="tab-pane fade" [id]="'report-pane-' + $index" role="tabpanel">
+                    <div class="p-3 bg-light rounded-3 border">
+                      @if (schema.ai_report) {
+                        <markdown [data]="schema.ai_report"></markdown>
+                      } @else {
+                        <p class="text-muted italic mb-0 text-center py-4">No se generó reporte de IA para esta URL.</p>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="text-center py-5">
+    <i class="bi bi-search text-muted" style="font-size: 3rem;"></i>
+    <h4 class="mt-3">No se encontraron datos</h4>
+    <p class="text-muted">No pudimos recuperar la información de los esquemas para esta validación.</p>
+    <a routerLink="/admin/audit/url-validations" class="btn btn-primary">Volver al listado</a>
+  </div>
+}
+
+<style>
+  .nav-tabs-bordered {
+    border-bottom: 2px solid #f4f4f4;
+  }
+  .nav-tabs-bordered .nav-link {
+    margin-bottom: -2px;
+    border: none;
+    color: #6c757d;
+  }
+  .nav-tabs-bordered .nav-link.active {
+    color: #0d6efd;
+    background-color: transparent;
+    border-bottom: 2px solid #0d6efd;
+  }
+  .x-small {
+    font-size: 0.7rem;
+  }
+  .no-caret::after {
+    display: none;
+  }
+  pre::-webkit-scrollbar {
+    width: 8px;
+  }
+  pre::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 4px;
+  }
+</style>

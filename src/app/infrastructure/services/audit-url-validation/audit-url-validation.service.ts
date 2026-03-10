@@ -11,11 +11,13 @@ import {
   AuditUrlValidationListResponseModel,
   CreateAuditUrlValidationResponseModel,
   FindAuditUrlValidationResponseModel,
+  AuditUrlValidationSchemasResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   AuditUrlValidationListResponseDto,
   CreateAuditUrlValidationResponseDto,
   FindAuditUrlValidationResponseDto,
+  AuditUrlValidationSchemasResponseDto,
 } from '@/app/infrastructure/dto/response/audit-url-validation-response.dto';
 
 @Injectable({
@@ -67,6 +69,16 @@ export class AuditUrlValidationService extends BaseService {
       {},
       this.getToken
     );
+  }
+
+  async getSchemas(id: string): Promise<AuditUrlValidationSchemasResponseModel> {
+    const response = await this.httpService.get<AuditUrlValidationSchemasResponseDto>(
+      `${this.endpoint}/${id}/schemas`,
+      {},
+      {},
+      this.getToken
+    );
+    return this.mapper.mapResponseSchemas(response);
   }
 }
 

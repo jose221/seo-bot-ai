@@ -33,6 +33,7 @@ export const routes: Routes = [
       {path: 'audit/schemas/create', component: AuditSchemaForm},
       {path: 'audit/url-validations', component: AuditUrlValidationList},
       {path: 'audit/url-validations/create', component: AuditUrlValidationForm},
+      {path: 'audit/url-validations/:id/info', loadComponent: () => import('@/app/presentation/pages/admin/audit/audit-url-validation-info/audit-url-validation-info')},
       {path: 'metrics', component: MetricsDashboardComponent},
     ]
   },

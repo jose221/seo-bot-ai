@@ -56,3 +56,24 @@ export interface FindAuditUrlValidationResponseDto {
   completed_at: string | null;
 }
 
+// ============ SCHEMAS DTO ============
+export interface AuditUrlValidationSchemaItemDto {
+  url: string;
+  schema_types_found: string[] | null;
+  extracted_schemas: any[] | null;
+  validation_errors: any | null;
+  severity: string | null;
+  ai_report: string | null;
+  error: string | null;
+  comparison_table: any | null;
+}
+
+export interface AuditUrlValidationSchemasResponseDto {
+  validation_id: string;
+  name_validation: string;
+  status: string;
+  global_severity: string | null;
+  total: number;
+  schemas: AuditUrlValidationSchemaItemDto[];
+}
+

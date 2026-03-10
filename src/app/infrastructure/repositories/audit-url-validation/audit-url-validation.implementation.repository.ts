@@ -9,6 +9,7 @@ import {
   AuditUrlValidationListResponseModel,
   CreateAuditUrlValidationResponseModel,
   FindAuditUrlValidationResponseModel,
+  AuditUrlValidationSchemasResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 
 @Injectable({
@@ -31,6 +32,10 @@ export class AuditUrlValidationImplementationRepository implements AuditUrlValid
 
   async delete(id: string): Promise<any> {
     return await this.primaryService.delete(id);
+  }
+
+  async getSchemas(id: string): Promise<AuditUrlValidationSchemasResponseModel> {
+    return await this.primaryService.getSchemas(id);
   }
 }
 

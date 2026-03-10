@@ -4,7 +4,7 @@ import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
 import { FilterListConfig } from '@/app/domain/models/general/filter-list.model';
 import { TableColumn } from '@/app/domain/models/general/table-column.model';
 import { PaginatorHelper } from '@/app/helper/paginator.helper';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { DatePipe, NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { MarkdownModule } from 'ngx-markdown';
@@ -122,6 +122,13 @@ export class AuditUrlValidationList
       key: 'completed_at',
       name: 'Completado el',
       type: 'datetime',
+    },
+    {
+      key: 'id',
+      name: 'Schemas',
+      type: 'link',
+      innerHtml: () => 'Info Schemas',
+      action: (item: AuditUrlValidationItemResponseModel) => this._router.navigate(['/admin/audit/url-validations', item.id, 'info']),
     },
     {
       key: 'id',

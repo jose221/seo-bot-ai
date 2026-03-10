@@ -69,3 +69,28 @@ export class FindAuditUrlValidationResponseModel {
   ) {}
 }
 
+// ============ SCHEMAS MODEL ============
+export class AuditUrlValidationSchemaItemModel {
+  constructor(
+    public url: string,
+    public schema_types_found: string[] | null,
+    public extracted_schemas: any[] | null,
+    public validation_errors: any | null,
+    public severity: string | null,
+    public ai_report: string | null,
+    public error: string | null,
+    public comparison_table: any | null
+  ) {}
+}
+
+export class AuditUrlValidationSchemasResponseModel {
+  constructor(
+    public validation_id: string,
+    public name_validation: string,
+    public status: string,
+    public global_severity: string | null,
+    public total: number,
+    public schemas: AuditUrlValidationSchemaItemModel[]
+  ) {}
+}
+

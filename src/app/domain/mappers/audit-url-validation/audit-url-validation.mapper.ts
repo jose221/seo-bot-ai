@@ -12,12 +12,14 @@ import {
   AuditUrlValidationListResponseModel,
   CreateAuditUrlValidationResponseModel,
   FindAuditUrlValidationResponseModel,
+  AuditUrlValidationSchemasResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   AuditUrlValidationItemResponseDto,
   AuditUrlValidationListResponseDto,
   CreateAuditUrlValidationResponseDto,
   FindAuditUrlValidationResponseDto,
+  AuditUrlValidationSchemasResponseDto,
 } from '@/app/infrastructure/dto/response/audit-url-validation-response.dto';
 
 export class AuditUrlValidationMapper extends AppMapper {
@@ -62,6 +64,10 @@ export class AuditUrlValidationMapper extends AppMapper {
       dto.page,
       dto.page_size
     );
+  }
+
+  mapResponseSchemas(dto: AuditUrlValidationSchemasResponseDto): AuditUrlValidationSchemasResponseModel {
+    return this.autoMap<AuditUrlValidationSchemasResponseDto, AuditUrlValidationSchemasResponseModel>(dto, { except: [] });
   }
 }
 
