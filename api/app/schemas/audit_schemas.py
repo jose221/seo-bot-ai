@@ -538,6 +538,28 @@ class AuditUrlValidationListResponse(BaseModel):
     page_size: Optional[int] = None
 
 
+class AuditUrlValidationSchemaItem(BaseModel):
+    """Resultado de un esquema escaneado por URL"""
+    url: str
+    schema_types_found: Optional[List[str]] = None
+    extracted_schemas: Optional[List[Any]] = None
+    validation_errors: Optional[Any] = None
+    severity: Optional[str] = None
+    ai_report: Optional[str] = None
+    error: Optional[str] = None
+    comparison_table: Optional[Any] = None
+
+
+class AuditUrlValidationSchemasResponse(BaseModel):
+    """Respuesta con todos los esquemas escaneados de una validación"""
+    validation_id: UUID
+    name_validation: str
+    status: UrlValidationStatus
+    global_severity: Optional[str] = None
+    total: int
+    schemas: List[AuditUrlValidationSchemaItem]
+
+
 class AuditUrlValidationDetailResponse(BaseModel):
     """Respuesta detallada con results_json completo"""
     id: UUID

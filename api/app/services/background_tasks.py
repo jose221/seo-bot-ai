@@ -602,11 +602,18 @@ async def run_url_validation_task(
         total_output_tokens = 0
         results = []
 
-        print(f"🚀 Iniciando validación de {len(urls)} URLs — {name_validation}")
+        BATCH_SIZE = 5
+        total_urls = len(urls)
+        chunks = [urls[i:i + BATCH_SIZE] for i in range(0, total_urls, BATCH_SIZE)]
 
-        for idx, url in enumerate(urls, 1):
-            print(f"    → [{idx}/{len(urls)}] Procesando: {url}")
+        print(f"🚀 Iniciando validación de {total_urls} URLs en {len(chunks)} grupos de {BATCH_SIZE} — {name_validation}")
+
+        async def _process_single_url(url: str, idx: int) -> tuple:
+            """Procesa una URL y devuelve (result_entry, input_tokens, output_tokens)."""
+            print(f"    → [{idx}/{total_urls}] Procesando: {url}")
             result_entry = {"url": url}
+            in_tok = 0
+            out_tok = 0
 
             try:
                 # 1. Extraer schemas de la URL (con timeout 30s)
@@ -618,18 +625,11 @@ async def run_url_validation_task(
                     result_entry["severity"] = "warning"
                     result_entry["ai_report"] = ""
                     result_entry["comparison_table"] = {}
-                    results.append(result_entry)
                     print(f"    ⚠️  Sin schemas en {url}")
-                    # Delay antes de la siguiente URL
-                    if idx < len(urls):
-                        delay = random.uniform(2, 6)
-                        print(f"    ⏳ Esperando {delay:.1f}s...")
-                        await asyncio.sleep(delay)
-                    continue
+                    return result_entry, in_tok, out_tok
 
                 # 2. Extraer tipos encontrados
                 types_found = []
-
                 url_schemas = filter_open_graph_schemas(url_schemas)
 
                 for schema in url_schemas:
@@ -651,6 +651,7 @@ async def run_url_validation_task(
                                         types_found.extend([t for t in ntype if isinstance(t, str)])
 
                 result_entry["schema_types_found"] = sorted(set(types_found))
+                result_entry["extracted_schemas"] = url_schemas
 
                 # 3. Validación estructural
                 validation_result = service.validate_url_schema(url_schemas, url)
@@ -671,8 +672,8 @@ async def run_url_validation_task(
 
                     ai_content = ai_result.get("content", "")
                     usage = ai_result.get("usage", {})
-                    total_input_tokens += usage.get("prompt_tokens", 0)
-                    total_output_tokens += usage.get("completion_tokens", 0)
+                    in_tok += usage.get("prompt_tokens", 0)
+                    out_tok += usage.get("completion_tokens", 0)
 
                     result_entry["ai_report"] = ai_content
                     result_entry["severity"] = service.extract_severity_from_ai(ai_content)
@@ -687,12 +688,27 @@ async def run_url_validation_task(
                 result_entry["error"] = str(url_err)
                 result_entry["severity"] = "warning"
 
-            results.append(result_entry)
+            return result_entry, in_tok, out_tok
 
-            # Delay aleatorio entre URLs (excepto la última)
-            if idx < len(urls):
-                delay = random.uniform(2, 6)
-                print(f"    ⏳ Esperando {delay:.1f}s...")
+        # Procesar URLs en grupos de BATCH_SIZE en paralelo
+        processed = 0
+        for batch_num, chunk in enumerate(chunks, 1):
+            print(f"  🔄 Grupo {batch_num}/{len(chunks)}: {len(chunk)} URLs en paralelo")
+            tasks = [
+                _process_single_url(url, processed + i + 1)
+                for i, url in enumerate(chunk)
+            ]
+            batch_results = await asyncio.gather(*tasks)
+            for entry, in_tok, out_tok in batch_results:
+                results.append(entry)
+                total_input_tokens += in_tok
+                total_output_tokens += out_tok
+            processed += len(chunk)
+
+            # Delay entre grupos (no dentro del grupo)
+            if batch_num < len(chunks):
+                delay = random.uniform(2, 5)
+                print(f"  ⏳ Esperando {delay:.1f}s antes del siguiente grupo...")
                 await asyncio.sleep(delay)
 
         # Calcular severidad global

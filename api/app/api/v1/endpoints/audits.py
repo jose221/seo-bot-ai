@@ -912,6 +912,54 @@ async def get_url_validation(
     return audit_schemas.AuditUrlValidationDetailResponse.model_validate(validation)
 
 
+@router.get(
+    "/audits/url-validations/{validation_id}/schemas",
+    response_model=audit_schemas.AuditUrlValidationSchemasResponse,
+)
+async def list_url_validation_schemas(
+        validation_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """Devuelve todos los esquemas escaneados de una validación de URLs en un arreglo por ID."""
+    stmt = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt)).scalars().first()
+
+    if not validation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Validación de URLs no encontrada",
+        )
+
+    raw_results = validation.results_json or []
+    schemas = [
+        audit_schemas.AuditUrlValidationSchemaItem(
+            url=item.get("url", ""),
+            schema_types_found=item.get("schema_types_found"),
+            extracted_schemas=item.get("extracted_schemas"),
+            validation_errors=item.get("validation_errors"),
+            severity=item.get("severity"),
+            ai_report=item.get("ai_report"),
+            error=item.get("error"),
+            comparison_table=item.get("comparison_table"),
+        )
+        for item in raw_results
+        if isinstance(item, dict)
+    ]
+
+    return audit_schemas.AuditUrlValidationSchemasResponse(
+        validation_id=validation.id,
+        name_validation=validation.name_validation,
+        status=validation.status,
+        global_severity=validation.global_severity,
+        total=len(schemas),
+        schemas=schemas,
+    )
+
+
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)
 async def get_audit(
         audit_id: UUID,
