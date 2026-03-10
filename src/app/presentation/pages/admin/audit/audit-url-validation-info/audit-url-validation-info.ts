@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit } from '@angular/core';
+import { Component, inject, signal, OnInit, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
@@ -6,6 +6,7 @@ import { AuditUrlValidationSchemasResponseModel, AuditUrlValidationSchemaItemMod
 import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 import { MarkdownModule } from 'ngx-markdown';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-audit-url-validation-info',
@@ -14,7 +15,8 @@ import { MarkdownModule } from 'ngx-markdown';
     CommonModule,
     RouterLink,
     TranslateModule,
-    MarkdownModule
+    MarkdownModule,
+    FormsModule
   ],
   templateUrl: './audit-url-validation-info.html',
   styleUrl: './audit-url-validation-info.scss'
@@ -27,6 +29,45 @@ export default class AuditUrlValidationInfoComponent implements OnInit {
   isLoading = signal<boolean>(true);
   data = signal<AuditUrlValidationSchemasResponseModel | null>(null);
   validationId = signal<string | null>(null);
+
+  // Filters
+  searchTerm = signal<string>('');
+  severityFilter = signal<string>('');
+  typeFilter = signal<string>('');
+  onlyWithErrors = signal<boolean>(false);
+
+  availableTypes = computed(() => {
+    const schemas = this.data()?.schemas ?? [];
+    const types = new Set<string>();
+    schemas.forEach(s => {
+      s.schema_types_found?.forEach(t => types.add(t));
+    });
+    return Array.from(types).sort();
+  });
+
+  filteredSchemas = computed(() => {
+    const schemas = this.data()?.schemas ?? [];
+    const term = this.searchTerm().toLowerCase();
+    const severity = this.severityFilter().toLowerCase();
+    const type = this.typeFilter();
+    const hasErrors = this.onlyWithErrors();
+
+    return schemas.filter(s => {
+      const matchTerm = !term || s.url.toLowerCase().includes(term);
+      const matchSeverity = !severity || s.severity?.toLowerCase() === severity;
+      const matchType = !type || s.schema_types_found?.includes(type);
+      const matchErrors = !hasErrors || (s.error || (s.validation_errors && !s.validation_errors.is_valid));
+
+      return matchTerm && matchSeverity && matchType && matchErrors;
+    });
+  });
+
+  resetFilters(): void {
+    this.searchTerm.set('');
+    this.severityFilter.set('');
+    this.typeFilter.set('');
+    this.onlyWithErrors.set(false);
+  }
 
   ngOnInit(): void {
     const id = this._route.snapshot.paramMap.get('id');
