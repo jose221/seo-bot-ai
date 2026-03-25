@@ -113,6 +113,13 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     },
     {
       key: 'id',
+      name: 'Volver a ejecutar',
+      type: 'link',
+      innerHtml: () => '<i class="bi bi-arrow-repeat me-1"></i>Volver a ejecutar',
+      action: (item: AuditSchemaItemResponseModel) => this.toRerun(item),
+    },
+    {
+      key: 'id',
       name: 'Validar URLs',
       type: 'link',
       innerHtml: () => '<i class="bi bi-link-45deg me-1"></i>Validar',
@@ -138,8 +145,9 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     this.startAutoReload();
   }
 
-  ngOnDestroy() {
+  override ngOnDestroy() {
     this.stopAutoReload();
+    super.ngOnDestroy();
   }
 
   startAutoReload() {
@@ -184,6 +192,40 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
       console.error(e);
     } finally {
       this.loadingDetail.set(false);
+    }
+  }
+
+  private getSchemaJsonForRerun(item: FindAuditSchemaResponseModel): string {
+    const incoming = item.incoming_schema_json;
+    if (incoming?.trim()) return incoming;
+    if (incoming) return JSON.stringify(incoming, null, 2);
+    if (item.proposed_schema_json) return JSON.stringify(item.proposed_schema_json, null, 2);
+    return '';
+  }
+
+  async toRerun(item: AuditSchemaItemResponseModel) {
+    this.isLoading.set(true);
+    try {
+      const detail = await this._auditSchemaRepository.find(item.id);
+      await this._router.navigate(['/admin/audit/schemas/create'], {
+        state: {
+          rerunData: {
+            source_type: detail.source_type ?? item.source_type ?? 'audit_page',
+            source_id: detail.source_id ?? item.source_id ?? '',
+            programming_language: detail.programming_language ?? 'c#',
+            include_ai_analysis: detail.include_ai_analysis ?? true,
+            modified_schema_json: this.getSchemaJsonForRerun(detail),
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error al preparar la re-ejecucion de schema:', error);
+      await this._sweetAlertUtil.error(
+        'general.messages.error',
+        'No se pudo cargar el schema para re-ejecutarlo.'
+      );
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

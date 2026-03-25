@@ -24,7 +24,7 @@ import {
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 import {TranslateModule} from '@ngx-translate/core';
 import {CreateCompareAuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
-import {RouterLink} from '@angular/router';
+import {ActivatedRoute, RouterLink} from '@angular/router';
 
 @Component({
   selector: 'app-compare-audit-form',
@@ -43,6 +43,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   });
   private readonly formRepository = inject(AuditRepository);
   private readonly targetRepository = inject(TargetRepository)
+  private readonly route = inject(ActivatedRoute);
   public targetSearchList = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[])
   public loadingCompareList = signal<boolean>(false);
 
@@ -65,6 +66,9 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
+    const rerunData = (history.state?.rerunData ?? null) as Partial<CreateCompareAuditRequestModel> | null;
+    const queryBaseWebPageId = this.route.snapshot.queryParamMap.get('web_page_id');
+
     // Cargar tags disponibles
     try {
       const tags = await this.targetRepository.getTags();
@@ -77,6 +81,18 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
       only_page_with_audits_completed: true,
     } as SearchTargetRequestModel)
     this.targetSearchList.set(response);
+
+    if (queryBaseWebPageId) {
+      this.form.patchValue({ web_page_id: queryBaseWebPageId });
+    }
+
+    if (rerunData) {
+      this.form.patchValue({
+        web_page_id: rerunData.web_page_id ?? '',
+        web_page_id_to_compare: rerunData.web_page_id_to_compare ?? [],
+        include_ai_analysis: rerunData.include_ai_analysis ?? true,
+      });
+    }
 
     // Cargar la lista inicial después del ciclo de detección de cambios
     setTimeout(async () => {

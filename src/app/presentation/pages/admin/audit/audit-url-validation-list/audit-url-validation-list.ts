@@ -139,6 +139,13 @@ export class AuditUrlValidationList
     },
     {
       key: 'id',
+      name: 'Volver a ejecutar',
+      type: 'link',
+      innerHtml: () => '<i class="bi bi-arrow-repeat me-1"></i>Volver a ejecutar',
+      action: (item: AuditUrlValidationItemResponseModel) => this.toRerun(item),
+    },
+    {
+      key: 'id',
       name: 'Eliminar',
       type: 'link',
       innerHtml: () => 'Eliminar',
@@ -155,8 +162,9 @@ export class AuditUrlValidationList
     this.startAutoReload();
   }
 
-  ngOnDestroy() {
+  override ngOnDestroy() {
     this.stopAutoReload();
+    super.ngOnDestroy();
   }
 
   startAutoReload() {
@@ -201,6 +209,38 @@ export class AuditUrlValidationList
       console.error(e);
     } finally {
       this.loadingDetail.set(false);
+    }
+  }
+
+  async toRerun(item: AuditUrlValidationItemResponseModel) {
+    this.isLoading.set(true);
+    try {
+      const detail = await this._repository.find(item.id);
+      const urls = this.parseResultsJson(detail.results_json)
+        .map((result) => result?.url)
+        .filter((url): url is string => Boolean(url))
+        .join('\n');
+
+      await this._router.navigate(['/admin/audit/url-validations/create'], {
+        state: {
+          rerunData: {
+            source_type: detail.source_type ?? item.source_type ?? 'audit_page',
+            source_id: detail.source_id ?? item.source_id ?? '',
+            name_validation: detail.name_validation ?? item.name_validation ?? '',
+            description_validation: detail.description_validation ?? item.description_validation ?? '',
+            ai_instruction: detail.ai_instruction ?? '',
+            urls,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error al preparar la re-ejecucion de validacion URL:', error);
+      await this._sweetAlertUtil.error(
+        'general.messages.error',
+        'No se pudo cargar la validacion para re-ejecutarla.'
+      );
+    } finally {
+      this.isLoading.set(false);
     }
   }
 

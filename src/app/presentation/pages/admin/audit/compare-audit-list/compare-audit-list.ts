@@ -112,6 +112,13 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
       },
       {
         key: 'id',
+        name: 'Volver a ejecutar',
+        type: 'link',
+        innerHtml: () => '<i class="bi bi-arrow-repeat me-1"></i>Volver a ejecutar',
+        action: (item: CompareAuditResponseModel) => this.toRerun(item)
+      },
+      {
+        key: 'id',
         name: 'Schema',
         type: 'link',
         innerHtml: (element: any) => '<i class="bi bi-braces-asterisk me-1"></i>Schema',
@@ -149,8 +156,9 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     this.startAutoReload();
   }
 
-  ngOnDestroy() {
+  override ngOnDestroy() {
     this.stopAutoReload();
+    super.ngOnDestroy();
   }
 
   startAutoReload() {
@@ -196,6 +204,59 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     this.showMessageComparison.set(true)
     console.log('response:', response);
   }
+
+  private async resolveCompetitorWebPageIds(response: FindCompareAuditResponseModel): Promise<string[]> {
+    const auditIds = response.comparison_result?.comparisons
+      ?.map((comparison) => comparison.summary?.compare_audit_id)
+      .filter((id): id is string => Boolean(id)) ?? [];
+
+    const uniqueAuditIds = Array.from(new Set(auditIds));
+    const competitorWebPageIds = await Promise.all(
+      uniqueAuditIds.map(async (auditId) => {
+        try {
+          const audit = await this._auditRepository.find(auditId);
+          return audit.web_page_id;
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    return Array.from(
+      new Set(
+        competitorWebPageIds.filter(
+          (id): id is string => Boolean(id) && id !== response.base_web_page_id
+        )
+      )
+    );
+  }
+
+  async toRerun(item: CompareAuditResponseModel) {
+    this.isLoading.set(true);
+    try {
+      const detail = await this._auditRepository.findComparisons(item.id);
+      const competitorWebPageIds = await this.resolveCompetitorWebPageIds(detail);
+
+      await this._router.navigate(['/admin/audit/compare'], {
+        state: {
+          rerunData: {
+            web_page_id: detail.base_web_page_id ?? item.base_web_page_id ?? '',
+            web_page_id_to_compare: competitorWebPageIds,
+            include_ai_analysis: (detail as any)?.include_ai_analysis ?? true,
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error al preparar la re-ejecucion de comparacion:', error);
+      await this._sweetAlertUtil.error(
+        'general.messages.error',
+        'No se pudo cargar la comparacion para re-ejecutarla.'
+      );
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
   async toDelete(item: CompareAuditResponseModel){
     const result = await this._sweetAlertUtil.fire({
       title: 'general.messages.confirmDelete',

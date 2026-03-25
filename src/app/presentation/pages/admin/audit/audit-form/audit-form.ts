@@ -60,9 +60,32 @@ export class AuditForm extends ValidationFormBase implements OnInit {
 
   async ngOnInit(): Promise<void> {
     const webPageId = this.route.snapshot.queryParamMap.get('web_page_id');
+    const rerunAuditId = this.route.snapshot.queryParamMap.get('rerun_audit_id');
     if (webPageId) {
       this.form.patchValue({ web_page_id: webPageId });
     }
+
+    const rerunData = (history.state?.rerunData ?? null) as Partial<CreateAuditRequestModel> | null;
+    if (rerunData) {
+      this.form.patchValue({
+        web_page_id: rerunData.web_page_id ?? '',
+        include_ai_analysis: rerunData.include_ai_analysis ?? true,
+      });
+    }
+
+    if (rerunAuditId) {
+      try {
+        const audit = await this.formRepository.find(rerunAuditId);
+        this.form.patchValue({
+          web_page_id: audit.web_page_id ?? this.form.get('web_page_id')?.value ?? '',
+          include_ai_analysis: (audit as any)?.include_ai_analysis ?? this.form.get('include_ai_analysis')?.value ?? true,
+        });
+      } catch (e) {
+        // No bloquea el formulario: se mantiene el fallback con query params/state.
+        console.error('No se pudo hidratar la re-ejecucion desde rerun_audit_id:', e);
+      }
+    }
+
     // Cargar tags disponibles
     try {
       const tags = await this.targetRepository.getTags();
@@ -70,7 +93,13 @@ export class AuditForm extends ValidationFormBase implements OnInit {
     } catch {
       this.availableTags.set([]);
     }
-    await this.targetSearch()
+
+    try {
+      await this.targetSearch();
+    } catch (e) {
+      console.error('No se pudieron cargar paginas objetivo:', e);
+      this.targetSearchList.set([]);
+    }
   }
 
   messages(name: string){

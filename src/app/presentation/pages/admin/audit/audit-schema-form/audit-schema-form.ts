@@ -88,6 +88,7 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
     // Leer queryParams para prellenar el formulario
     const sourceType = this._route.snapshot.queryParamMap.get('source_type');
     const sourceId = this._route.snapshot.queryParamMap.get('source_id');
+    const rerunData = (history.state?.rerunData ?? null) as Partial<CreateAuditSchemaRequestModel> | null;
 
     if (sourceType) {
       this.form.patchValue({ source_type: sourceType });
@@ -106,6 +107,20 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
 
     if (sourceId) {
       this.form.patchValue({ source_id: sourceId });
+    }
+
+    if (rerunData) {
+      const modifiedSchemaJson = typeof rerunData.modified_schema_json === 'string'
+        ? rerunData.modified_schema_json
+        : (rerunData.modified_schema_json ? JSON.stringify(rerunData.modified_schema_json, null, 2) : '');
+
+      this.form.patchValue({
+        source_type: rerunData.source_type ?? this.form.get('source_type')?.value ?? 'audit_page',
+        source_id: rerunData.source_id ?? '',
+        programming_language: rerunData.programming_language ?? 'c#',
+        include_ai_analysis: rerunData.include_ai_analysis ?? true,
+        modified_schema_json: modifiedSchemaJson,
+      });
     }
   }
 

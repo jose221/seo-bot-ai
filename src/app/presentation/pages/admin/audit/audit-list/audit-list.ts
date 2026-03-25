@@ -123,6 +123,13 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
       },
       {
         key: 'id',
+        name: 'Volver a ejecutar',
+        type: 'link',
+        innerHtml: () => '<i class="bi bi-arrow-repeat me-1"></i>Volver a ejecutar',
+        action: (item: AuditResponseModel) => this.toRerun(item)
+      },
+      {
+        key: 'id',
         name: 'Schema',
         type: 'link',
         innerHtml: (element: any) => '<i class="bi bi-braces-asterisk me-1"></i>Schema',
@@ -158,8 +165,9 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
     this.startAutoReload();
   }
 
-  ngOnDestroy() {
+  override ngOnDestroy() {
     this.stopAutoReload();
+    super.ngOnDestroy();
   }
 
   startAutoReload() {
@@ -202,6 +210,15 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
   async toShow(item: AuditResponseModel){
     console.log('item:', item);
     this.showItem.set(item);
+  }
+
+  async toRerun(item: AuditResponseModel) {
+    await this._router.navigate(['/admin/audit/create'], {
+      queryParams: {
+        rerun_audit_id: item.id,
+        web_page_id: item.web_page_id ?? '',
+      },
+    });
   }
 
   downloadReport(type: 'pdf' | 'excel' | 'word') {

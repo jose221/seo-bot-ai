@@ -81,6 +81,7 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
   async ngOnInit(): Promise<void> {
     const sourceType = this._route.snapshot.queryParamMap.get('source_type');
     const sourceId = this._route.snapshot.queryParamMap.get('source_id');
+    const rerunData = (history.state?.rerunData ?? null) as Partial<CreateAuditUrlValidationRequestModel> | null;
 
     if (sourceType) {
       this.form.patchValue({ source_type: sourceType });
@@ -98,6 +99,17 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
 
     if (sourceId) {
       this.form.patchValue({ source_id: sourceId });
+    }
+
+    if (rerunData) {
+      this.form.patchValue({
+        source_type: rerunData.source_type ?? this.form.get('source_type')?.value ?? 'audit_page',
+        source_id: rerunData.source_id ?? '',
+        name_validation: rerunData.name_validation ?? '',
+        description_validation: rerunData.description_validation ?? '',
+        ai_instruction: rerunData.ai_instruction ?? '',
+        urls: rerunData.urls ?? '',
+      });
     }
   }
 
