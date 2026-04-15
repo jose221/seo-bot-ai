@@ -2,11 +2,15 @@
 Servicio para auditoría de schemas (original vs propuesto vs nuevo).
 """
 import json
+import logging
 import re
 from typing import Any, Dict, List, Optional, Set
 
 from app.services.ai_client import AIClient
 from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
+from app.services.schema_validators import SchemaValidatorPipeline
+
+logger = logging.getLogger(__name__)
 
 # Límites para minificación de esquemas antes de enviar a la IA
 _MAX_SCHEMA_ITEMS = 40       # máximo de objetos en una lista raíz de esquemas (sin contar @graph)
@@ -53,10 +57,12 @@ class SchemaAuditService:
 
     def __init__(self):
         self.ai_client = AIClient()
+        self._validator_pipeline = SchemaValidatorPipeline()
 
     def validate_schema_payload(self, payload: Any, label: str) -> Dict[str, Any]:
         """
-        Validación estructural básica para JSON-LD / schema.org.
+        Validación estructural + avanzada (PyLD, Schema.org, Google Rich Results)
+        para JSON-LD / schema.org.
         """
         errors: List[str] = []
         warnings: List[str] = []
@@ -66,7 +72,8 @@ class SchemaAuditService:
                 "label": label,
                 "is_valid": False,
                 "errors": [f"{label}: esquema no proporcionado"],
-                "warnings": []
+                "warnings": [],
+                "advanced_validation": None,
             }
 
         items = self._normalize_to_items(payload)
@@ -75,7 +82,8 @@ class SchemaAuditService:
                 "label": label,
                 "is_valid": False,
                 "errors": [f"{label}: el esquema debe ser un objeto o lista de objetos JSON"],
-                "warnings": []
+                "warnings": [],
+                "advanced_validation": None,
             }
 
         has_schema_context = False
@@ -117,12 +125,27 @@ class SchemaAuditService:
                 f"{label}: no se detectó @context con schema.org (se recomienda usar https://schema.org)"
             )
 
+        # ── Validación avanzada (PyLD + Schema.org + Google Rich Results) ──
+        advanced_validation = None
+        try:
+            advanced_validation = self._validator_pipeline.run(payload, label)
+        except Exception as e:
+            logger.warning(f"Error en validación avanzada para {label}: {e}")
+            advanced_validation = {
+                "validators": [],
+                "is_valid": True,
+                "total_errors": 0,
+                "total_warnings": 0,
+                "pipeline_error": str(e),
+            }
+
         return {
             "label": label,
             "is_valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
-            "items_count": len(items)
+            "items_count": len(items),
+            "advanced_validation": advanced_validation,
         }
 
     def build_structural_comparison(

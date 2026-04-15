@@ -46,6 +46,9 @@ pdf2docx
 # Schema Extraction
 extruct
 
+# Schema Validation (JSON-LD + Schema.org)
+pyld>=2.0.4
+
 # Tokenizer
 tiktoken
 

@@ -31,6 +31,31 @@ y jerarquía — NO por URL literal.
 {{ validation_errors }}
 {% endif %}
 
+{% if validation_errors and validation_errors.advanced_validation %}
+## Validación avanzada (PyLD + Schema.org + Google Rich Results)
+{% set adv = validation_errors.advanced_validation %}
+- **Resultado global:** {{ "Válido" if adv.is_valid else "Inválido" }}
+- **Total errores avanzados:** {{ adv.total_errors }}
+- **Total advertencias avanzadas:** {{ adv.total_warnings }}
+{% for v in adv.validators %}
+
+### Validador: {{ v.validator }}
+- Estado: {{ "OK" if v.is_valid else "Con errores" }}
+{% if v.errors %}
+**Errores:**
+{% for e in v.errors %}
+- [{{ e.level }}] {{ e.message }}
+{% endfor %}
+{% endif %}
+{% if v.warnings %}
+**Advertencias:**
+{% for w in v.warnings %}
+- [{{ w.level }}] {{ w.message }}
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endif %}
+
 # Instrucciones
 - Redacción en primera persona del plural (nosotros): "Hemos detectado...", "Recomendamos...".
 - **ESTRICTAMENTE PROHIBIDO usar emojis ni iconos** en el reporte.
