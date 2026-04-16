@@ -29,7 +29,7 @@ from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
 from app.services.url_validation_service import get_url_validation_service
-from app.services.background_tasks import run_comparison_task, run_schema_audit_task, run_url_validation_task
+from app.services.background_tasks import run_comparison_task, run_schema_audit_task, run_url_validation_task, run_url_validation_single_url_task
 
 router = APIRouter()
 
@@ -911,6 +911,192 @@ async def get_url_validation(
         )
 
     return audit_schemas.AuditUrlValidationDetailResponse.model_validate(validation)
+
+
+@router.post(
+    "/audits/url-validations/{validation_id}/rerun",
+    response_model=audit_schemas.AuditUrlValidationTaskResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["Auditorías"],
+)
+async def rerun_url_validation(
+        validation_id: UUID,
+        background_tasks: BackgroundTasks,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """
+    Vuelve a ejecutar una validación de URLs completa sobre el mismo registro.
+    Re-analiza todas las URLs conservando el mismo ID. No crea un registro nuevo.
+    """
+    stmt = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt)).scalars().first()
+
+    if not validation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Validación no encontrada")
+
+    if validation.status == UrlValidationStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La validación ya está en progreso",
+        )
+
+    # Re-resolver proposed_schema desde el source original
+    schema_audit_service = get_schema_audit_service()
+    proposed_schema = None
+
+    if validation.source_type == UrlValidationSourceType.AUDIT_PAGE:
+        source_obj = (await session.execute(
+            select(AuditReport).where(AuditReport.id == validation.source_id)
+        )).scalars().first()
+        if source_obj:
+            ai_suggestions = source_obj.ai_suggestions or {}
+            proposal_text = ai_suggestions.get("content") or ai_suggestions.get("analysis")
+            proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+            if proposed_schema is None:
+                proposed_schema = (source_obj.seo_analysis or {}).get("schema_markup", [])
+
+    elif validation.source_type == UrlValidationSourceType.AUDIT_COMPARISON:
+        source_obj = (await session.execute(
+            select(AuditComparison).where(AuditComparison.id == validation.source_id)
+        )).scalars().first()
+        if source_obj:
+            comparison_result = source_obj.comparison_result or {}
+            proposal_text = comparison_result.get("ai_schema_comparison")
+            proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+            if proposed_schema is None:
+                proposed_schema = comparison_result.get("raw_schemas", {}).get("base", [])
+
+    if not proposed_schema:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo obtener el esquema propuesto desde el source original",
+        )
+
+    # Re-parsear URLs desde urls_raw
+    url_service = get_url_validation_service()
+    urls = url_service.parse_urls(validation.urls_raw or "")
+
+    if not urls:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay URLs válidas para re-analizar",
+        )
+
+    # Resetear el registro para nueva ejecución
+    validation.status = UrlValidationStatus.PENDING
+    validation.results_json = []
+    validation.global_severity = None
+    validation.error_message = None
+    validation.completed_at = None
+    session.add(validation)
+    await session.commit()
+
+    auth_token = getattr(current_user, "_token", None) or "dummy-token"
+    background_tasks.add_task(
+        run_url_validation_task,
+        validation_id=validation.id,
+        urls=urls,
+        proposed_schema=proposed_schema,
+        name_validation=validation.name_validation,
+        description_validation=validation.description_validation or "",
+        ai_instruction=validation.ai_instruction or "",
+        token=auth_token,
+    )
+
+    return audit_schemas.AuditUrlValidationTaskResponse(
+        task_id=validation.id,
+        status=UrlValidationStatus.PENDING,
+        total_urls=len(urls),
+        message=f"Re-ejecución iniciada para {len(urls)} URLs — {validation.name_validation}",
+    )
+
+
+@router.post(
+    "/audits/url-validations/{validation_id}/rerun/{url:path}",
+    response_model=audit_schemas.AuditUrlValidationTaskResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    tags=["Auditorías"],
+)
+async def rerun_url_validation_single(
+        validation_id: UUID,
+        url: str,
+        background_tasks: BackgroundTasks,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """
+    Vuelve a analizar una única URL dentro de una validación existente.
+    Solo actualiza la entrada de esa URL en results_json. El resto se conserva intacto.
+    """
+    stmt = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt)).scalars().first()
+
+    if not validation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Validación no encontrada")
+
+    if validation.status == UrlValidationStatus.IN_PROGRESS:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="La validación ya está en progreso",
+        )
+
+    # Re-resolver proposed_schema desde el source original
+    schema_audit_service = get_schema_audit_service()
+    proposed_schema = None
+
+    if validation.source_type == UrlValidationSourceType.AUDIT_PAGE:
+        source_obj = (await session.execute(
+            select(AuditReport).where(AuditReport.id == validation.source_id)
+        )).scalars().first()
+        if source_obj:
+            ai_suggestions = source_obj.ai_suggestions or {}
+            proposal_text = ai_suggestions.get("content") or ai_suggestions.get("analysis")
+            proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+            if proposed_schema is None:
+                proposed_schema = (source_obj.seo_analysis or {}).get("schema_markup", [])
+
+    elif validation.source_type == UrlValidationSourceType.AUDIT_COMPARISON:
+        source_obj = (await session.execute(
+            select(AuditComparison).where(AuditComparison.id == validation.source_id)
+        )).scalars().first()
+        if source_obj:
+            comparison_result = source_obj.comparison_result or {}
+            proposal_text = comparison_result.get("ai_schema_comparison")
+            proposed_schema = schema_audit_service.extract_proposed_schema_from_text(proposal_text)
+            if proposed_schema is None:
+                proposed_schema = comparison_result.get("raw_schemas", {}).get("base", [])
+
+    if not proposed_schema:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pudo obtener el esquema propuesto desde el source original",
+        )
+
+    auth_token = getattr(current_user, "_token", None) or "dummy-token"
+    background_tasks.add_task(
+        run_url_validation_single_url_task,
+        validation_id=validation.id,
+        target_url=url,
+        proposed_schema=proposed_schema,
+        name_validation=validation.name_validation,
+        description_validation=validation.description_validation or "",
+        ai_instruction=validation.ai_instruction or "",
+        token=auth_token,
+    )
+
+    return audit_schemas.AuditUrlValidationTaskResponse(
+        task_id=validation.id,
+        status=UrlValidationStatus.IN_PROGRESS,
+        total_urls=1,
+        message=f"Re-análisis iniciado para: {url}",
+    )
 
 
 @router.get(

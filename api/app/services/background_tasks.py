@@ -906,3 +906,146 @@ def _generate_overall_summary(base_audit: AuditReport, comparisons: list) -> dic
         }
     }
 
+
+# ---------------------------------------------------------------------------
+# Re-ejecución de una URL individual dentro de una validación existente
+# ---------------------------------------------------------------------------
+
+async def run_url_validation_single_url_task(
+    validation_id: UUID,
+    target_url: str,
+    proposed_schema: Any,
+    name_validation: str,
+    description_validation: str,
+    ai_instruction: str,
+    token: str,
+):
+    """
+    Vuelve a analizar una única URL dentro de una AuditUrlValidation existente.
+    Actualiza solo la entrada correspondiente en results_json y recalcula global_severity.
+    El resto de los resultados se conserva intacto.
+    """
+    from app.services.url_validation_service import get_url_validation_service
+
+    try:
+        with db_manager.sync_session_context() as session:
+            validation = session.get(AuditUrlValidation, validation_id)
+            if not validation:
+                print(f"❌ run_url_validation_single_url_task: validación {validation_id} no encontrada")
+                return
+            validation.status = UrlValidationStatus.IN_PROGRESS
+            session.add(validation)
+
+        service = get_url_validation_service()
+        print(f"🔁 Re-analizando URL individual: {target_url} — {name_validation}")
+
+        result_entry = {"url": target_url}
+        in_tok = 0
+        out_tok = 0
+
+        try:
+            url_schemas = await service.fetch_schema_for_url(target_url, timeout_ms=30_000)
+
+            if not url_schemas:
+                result_entry.update({
+                    "schema_types_found": [],
+                    "validation_errors": {"errors": ["No se detectaron schemas en la URL"]},
+                    "severity": "warning",
+                    "ai_report": "",
+                    "comparison_table": {},
+                })
+            else:
+                url_schemas = filter_open_graph_schemas(url_schemas)
+                types_found = []
+                for schema in url_schemas:
+                    if isinstance(schema, dict):
+                        stype = schema.get("@type")
+                        if isinstance(stype, str):
+                            types_found.append(stype)
+                        elif isinstance(stype, list):
+                            types_found.extend([t for t in stype if isinstance(t, str)])
+                        for node in schema.get("@graph", []):
+                            if isinstance(node, dict):
+                                ntype = node.get("@type")
+                                if isinstance(ntype, str):
+                                    types_found.append(ntype)
+                                elif isinstance(ntype, list):
+                                    types_found.extend([t for t in ntype if isinstance(t, str)])
+
+                result_entry["schema_types_found"] = sorted(set(types_found))
+                result_entry["extracted_schemas"] = url_schemas
+
+                validation_result = service.validate_url_schema(url_schemas, target_url)
+                result_entry["validation_errors"] = validation_result
+
+                try:
+                    ai_result = await service.generate_url_analysis_ai(
+                        url=target_url,
+                        url_schema=url_schemas,
+                        proposed_schema=proposed_schema,
+                        validation_errors=validation_result,
+                        name_validation=name_validation,
+                        description_validation=description_validation,
+                        ai_instruction=ai_instruction,
+                        token=token,
+                    )
+                    ai_content = ai_result.get("content", "")
+                    usage = ai_result.get("usage", {})
+                    in_tok = usage.get("prompt_tokens", 0)
+                    out_tok = usage.get("completion_tokens", 0)
+                    result_entry["ai_report"] = ai_content
+                    result_entry["severity"] = service.extract_severity_from_ai(ai_content)
+                except Exception as ai_err:
+                    print(f"⚠️  Error IA para {target_url}: {ai_err}")
+                    result_entry["ai_report"] = f"Error en análisis IA: {ai_err}"
+                    result_entry["severity"] = "warning"
+
+        except Exception as url_err:
+            print(f"❌ Error procesando {target_url}: {url_err}")
+            result_entry["error"] = str(url_err)
+            result_entry["severity"] = "warning"
+
+        # Actualizar solo la entrada de esa URL en results_json
+        with db_manager.sync_session_context() as session:
+            validation = session.get(AuditUrlValidation, validation_id)
+            if not validation:
+                return
+
+            current_results: list = list(validation.results_json or [])
+
+            # Reemplazar la entrada existente o añadirla si no estaba
+            updated = False
+            for idx, item in enumerate(current_results):
+                if isinstance(item, dict) and item.get("url") == target_url:
+                    current_results[idx] = result_entry
+                    updated = True
+                    break
+            if not updated:
+                current_results.append(result_entry)
+
+            new_global_severity = service.compute_global_severity(current_results)
+
+            validation.results_json = current_results
+            validation.global_severity = new_global_severity
+            validation.input_tokens = (validation.input_tokens or 0) + in_tok
+            validation.output_tokens = (validation.output_tokens or 0) + out_tok
+            validation.status = UrlValidationStatus.COMPLETED
+            validation.completed_at = datetime.utcnow()
+            session.add(validation)
+
+        print(f"✅ Re-análisis de URL individual completado: {target_url} — validación {validation_id}")
+
+    except Exception as e:
+        print(f"❌ Error en re-análisis de URL individual {validation_id}/{target_url}: {e}")
+        import traceback
+        traceback.print_exc()
+        try:
+            with db_manager.sync_session_context() as session:
+                validation = session.get(AuditUrlValidation, validation_id)
+                if validation:
+                    validation.status = UrlValidationStatus.FAILED
+                    validation.error_message = str(e)
+                    session.add(validation)
+        except Exception as inner:
+            print(f"❌ Error al guardar estado de fallo: {inner}")
+
