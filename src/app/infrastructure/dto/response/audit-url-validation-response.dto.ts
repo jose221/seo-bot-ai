@@ -111,6 +111,7 @@ export interface AuditUrlValidationSchemaItemDto {
 
 export interface AuditUrlValidationSchemasResponseDto {
   validation_id: string;
+  source_id?: string;
   name_validation: string;
   status: string;
   global_severity: string | null;

@@ -139,7 +139,8 @@ export class AuditUrlValidationSchemasResponseModel {
     public status: string,
     public global_severity: string | null,
     public total: number,
-    public schemas: AuditUrlValidationSchemaItemModel[]
+    public schemas: AuditUrlValidationSchemaItemModel[],
+    public source_id?: string
   ) {}
 }
 

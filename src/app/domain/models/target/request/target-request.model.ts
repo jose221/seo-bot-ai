@@ -11,6 +11,18 @@ export class CreateTargetRequestModel {
   }
 }
 
+export class UpdateTargetRequestModel {
+  constructor(
+    public name?: string,
+    public instructions?: string,
+    public tech_stack?: string,
+    public is_active?: boolean,
+    public manual_html_content?: string,
+    public tags?: string[],
+    public provider?: string,
+  ) {}
+}
+
 export class FilterTargetRequestModel {
   constructor(
     public page: number,

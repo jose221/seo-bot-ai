@@ -4,6 +4,7 @@ import {authGuard} from '@/app/presentation/guards/auth.guard';
 import {Admin} from '@/app/presentation/pages/admin/admin';
 import {TargetList} from '@/app/presentation/pages/admin/target/target-list/target-list';
 import {TargetForm} from '@/app/presentation/pages/admin/target/target-form/target-form';
+import {TargetUpdate} from '@/app/presentation/pages/admin/target/target-update/target-update';
 import {AuditList} from '@/app/presentation/pages/admin/audit/audit-list/audit-list';
 import {AuditForm} from '@/app/presentation/pages/admin/audit/audit-form/audit-form';
 import {CompareAuditForm} from '@/app/presentation/pages/admin/audit/compare-audit-form/compare-audit-form';
@@ -25,6 +26,7 @@ export const routes: Routes = [
       { path: '', redirectTo: 'target', pathMatch: 'full' },
       {path: 'target', component: TargetList},
       {path: 'target/create', component: TargetForm},
+      {path: 'target/update/:id', component: TargetUpdate},
       {path: 'audit', component: AuditList},
       {path: 'audit/create', component: AuditForm},
       {path: 'audit/comparisons', component: CompareAuditList},

@@ -1,0 +1,179 @@
+<div class="row justify-content-center">
+  <div class="col-lg-8 col-xl-7">
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/target">
+        {{ 'targets.list' | translate }}
+      </a>
+    </div>
+
+    @if (pageLoading()) {
+      <div class="text-center py-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p class="mt-3 text-muted">Cargando datos del target...</p>
+      </div>
+    } @else {
+      <div class="card rounded-3 border-0 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+          <div class="text-center mb-4">
+            <h2 class="fw-bold text-primary mb-2">Actualizar Target</h2>
+            <p class="text-muted">Modifica los datos del sitio web objetivo</p>
+          </div>
+          @if (error()) {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              {{error()}}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          }
+          <form [formGroup]="form" (ngSubmit)="onSubmit()">
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="siteName">
+                {{ 'targets.form.name.label' | translate }}
+                <span class="text-danger">*</span>
+              </label>
+              <input
+                formControlName="name"
+                class="border-2 form-control form-control-lg"
+                type="text"
+                id="siteName"
+                [placeholder]="'targets.form.name.placeholder' | translate"
+                [ngClass]="{'is-invalid': messages('name').length > 0}"
+              >
+              @for(msg of messages('name'); track msg){
+                <div class="invalid-feedback">{{msg}}</div>
+              }
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="techStack">
+                {{ 'targets.form.techStack.label' | translate }}
+                <span class="text-danger">*</span>
+              </label>
+              <input
+                formControlName="tech_stack"
+                class="border-2 form-control form-control-lg"
+                type="text"
+                id="techStack"
+                [placeholder]="'targets.form.techStack.placeholder' | translate"
+                [ngClass]="{'is-invalid': messages('tech_stack').length > 0}"
+              >
+              @for(msg of messages('tech_stack'); track msg){
+                <div class="invalid-feedback">{{msg}}</div>
+              }
+            </div>
+
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="instructions">
+                {{ 'targets.form.instructions.label' | translate }}
+                <span class="text-danger">*</span>
+              </label>
+              <textarea
+                class="border-2 form-control form-control-lg"
+                id="instructions"
+                [placeholder]="'targets.form.instructions.placeholder' | translate"
+                formControlName="instructions"
+                [ngClass]="{'is-invalid': messages('instructions').length > 0}"
+                rows="4">
+              </textarea>
+              @for(msg of messages('instructions'); track msg){
+                <div class="invalid-feedback">{{msg}}</div>
+              }
+            </div>
+
+            <!-- HTML Manual -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="manualHtmlContent">
+                {{ 'targets.form.manualHtmlContent.label' | translate }}
+              </label>
+              <textarea
+                class="border-2 form-control form-control-lg font-monospace"
+                id="manualHtmlContent"
+                [placeholder]="'targets.form.manualHtmlContent.placeholder' | translate"
+                formControlName="manual_html_content"
+                rows="12">
+              </textarea>
+              <div class="form-text">{{ 'targets.form.manualHtmlContent.help' | translate }}</div>
+            </div>
+
+            <!-- Provider -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="provider">
+                Proveedor
+              </label>
+              <input
+                class="border-2 form-control form-control-lg"
+                type="text"
+                id="provider"
+                placeholder="Ej: Pricetravel, Facebook, Google..."
+                formControlName="provider"
+              >
+              <div class="form-text">Empresa o proveedor asociado al target (opcional)</div>
+            </div>
+
+            <!-- is_active -->
+            <div class="mb-4">
+              <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="isActive" formControlName="is_active">
+                <label class="form-check-label fw-semibold" for="isActive">Activo</label>
+              </div>
+              <div class="form-text">Desactiva el target para excluirlo de futuros análisis.</div>
+            </div>
+
+            <!-- Tags con autocomplete -->
+            <div class="mb-4">
+              <label class="form-label fw-semibold" for="tagInput">Tags</label>
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                @for (tag of tags(); track tag) {
+                  <span class="badge bg-primary d-flex align-items-center gap-1 fs-6 fw-normal px-3 py-2">
+                    <i class="bi bi-tag-fill me-1"></i>{{ tag }}
+                    <button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.6rem;" (click)="removeTag(tag)" aria-label="Eliminar tag"></button>
+                  </span>
+                }
+              </div>
+              <div class="position-relative">
+                <input
+                  type="text"
+                  id="tagInput"
+                  class="border-2 form-control form-control-lg"
+                  placeholder="Escribe un tag y presiona Enter, o selecciona uno existente..."
+                  [value]="tagInput()"
+                  (input)="onTagInputChange($any($event.target).value)"
+                  (focus)="onTagInputFocus()"
+                  (blur)="showTagDropdown.set(false)"
+                  (keydown)="onTagKeydown($event)"
+                  autocomplete="off"
+                >
+                @if (showTagDropdown()) {
+                  <div class="dropdown-menu show w-100 shadow-sm border-0" style="max-height:200px;overflow-y:auto;top:100%;z-index:1055;">
+                    @for (tag of filteredTags(); track tag) {
+                      <button type="button" class="dropdown-item d-flex align-items-center gap-2"
+                        (mousedown)="selectTag(tag)">
+                        <i class="bi bi-tag text-primary"></i>{{ tag }}
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+              <div class="form-text">Escribe y presiona Enter o coma para agregar un tag nuevo.</div>
+            </div>
+
+            <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5">
+              <a class="btn btn-outline-secondary btn-lg px-4" routerLink="/admin/target">
+                Cancelar
+              </a>
+              <button class="btn btn-primary btn-lg shadow-sm px-5" type="submit" [disabled]="loading()">
+                @if (loading()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                  Guardando...
+                } @else {
+                  <svg class="bi bi-check-circle me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"/><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"/></svg>
+                  Guardar cambios
+                }
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+  </div>
+</div>
+

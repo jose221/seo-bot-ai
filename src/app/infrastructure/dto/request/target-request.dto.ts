@@ -20,6 +20,16 @@ export interface CreateTargetRequestDto {
   provider?: string
 }
 
+export interface UpdateTargetRequestDto {
+  name?: string
+  instructions?: string
+  tech_stack?: string
+  is_active?: boolean
+  manual_html_content?: string
+  tags?: string[]
+  provider?: string
+}
+
 export interface FilterTargetRequestDto {
   page: number
   page_size: number

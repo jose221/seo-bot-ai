@@ -3,6 +3,7 @@ import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
+import { TargetRepository } from '@/app/domain/repositories/target/target.repository';
 import {
   AuditUrlValidationSchemasResponseModel,
   AuditUrlValidationSchemaItemModel,
@@ -35,6 +36,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _repository = inject(AuditUrlValidationRepository);
   private readonly _authRepository = inject(AuthRepository);
+  private readonly _targetRepository = inject(TargetRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
   private readonly _platformId = inject(PLATFORM_ID);
 
@@ -76,6 +78,9 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   // Rerun
   rerunLoading = signal<boolean>(false);
   rerunUrlTarget = signal<string | null>(null);
+
+  // HTML fetch
+  htmlLoading = signal<boolean>(false);
 
   availableTypes = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -454,6 +459,81 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
       }
     } finally {
       this.rerunUrlTarget.set(null);
+    }
+  }
+
+  // ===== TARGET HTML METHODS =====
+
+  /** Abre en nueva pestaña la página de actualización del target (solo si está logueado) */
+  openUpdateTargetPage(): void {
+    const sourceId = this.data()?.source_id;
+    if (!sourceId) {
+      this._sweetAlertUtil.error('Error', 'No se pudo obtener el ID del target.');
+      return;
+    }
+    window.open(`/admin/target/update/${sourceId}`, '_blank');
+  }
+
+  /** Llama al endpoint público GET /targets/{id}/html y copia el HTML al portapapeles */
+  async copyTargetHtml(): Promise<void> {
+    const sourceId = this.data()?.source_id;
+    if (!sourceId) {
+      await this._sweetAlertUtil.error('Error', 'No se pudo obtener el ID del target.');
+      return;
+    }
+    try {
+      this.htmlLoading.set(true);
+      const response = await this._targetRepository.getHtml(sourceId);
+      await navigator.clipboard.writeText(response.html);
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: `HTML copiado (${response.source === 'live' ? 'en vivo' : 'almacenado'} · ${response.html_length.toLocaleString()} chars)`
+      });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 503) {
+        await this._sweetAlertUtil.error('Sin HTML disponible', 'No se pudo obtener el HTML del target en tiempo real y no hay HTML almacenado.');
+      } else {
+        await this._sweetAlertUtil.error('Error', 'No se pudo obtener el HTML del target.');
+      }
+    } finally {
+      this.htmlLoading.set(false);
+    }
+  }
+
+  /** Valida por URL usando el endpoint de HTML del target para pasarlo al validador */
+  async openValidatorWithHtml(tool: 'schema' | 'google'): Promise<void> {
+    const sourceId = this.data()?.source_id;
+    if (!sourceId) {
+      // Fallback: abrir validador sin HTML
+      const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
+      window.open(validatorUrl, '_blank');
+      return;
+    }
+    try {
+      this.htmlLoading.set(true);
+      const response = await this._targetRepository.getHtml(sourceId);
+      await navigator.clipboard.writeText(response.html);
+      const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
+      this._sweetAlertUtil.fire({
+        icon: 'info',
+        title: 'HTML copiado al portapapeles',
+        text: 'Pégalo en el validador que se abrirá a continuación (pestaña "Code Snippet").'
+      });
+      setTimeout(() => {
+        window.open(validatorUrl, '_blank');
+      }, 2000);
+    } catch {
+      // Si falla obtener HTML, abrir igual el validador
+      const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
+      window.open(validatorUrl, '_blank');
+    } finally {
+      this.htmlLoading.set(false);
     }
   }
 }

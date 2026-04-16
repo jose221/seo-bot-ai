@@ -77,6 +77,12 @@ export class HttpService {
     return response.data;
   }
 
+  async patch<T>(url: string, data?: any, config?: AxiosRequestConfig, token?: string | null): Promise<T> {
+    const finalConfig = this.getHeaders(token, config);
+    const response: AxiosResponse<T> = await this.axiosInstance.patch(url, data, finalConfig);
+    return response.data;
+  }
+
   async delete<T>(url: string, config?: AxiosRequestConfig, token?: string | null): Promise<T> {
     const finalConfig = this.getHeaders(token, config);
     const response: AxiosResponse<T> = await this.axiosInstance.delete(url, finalConfig);

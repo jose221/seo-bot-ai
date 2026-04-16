@@ -19,3 +19,12 @@ export interface SearchTargetResponseDto {
   tags?: string[]
   provider?: string
 }
+
+export interface TargetHtmlResponseDto {
+  target_id: string
+  url: string
+  html: string
+  source: 'live' | 'stored'
+  html_length: number
+}
+

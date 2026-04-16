@@ -4,15 +4,16 @@ import {TargetMapper} from '@/app/domain/mappers/target/target.mapper';
 import {
   CreateTargetRequestModel,
   FilterTargetRequestModel,
-  SearchTargetRequestModel
+  SearchTargetRequestModel,
+  UpdateTargetRequestModel
 } from '@/app/domain/models/target/request/target-request.model';
 import {
   SearchTargetResponseModel,
+  TargetHtmlResponseModel,
   TargetResponseModel
 } from '@/app/domain/models/target/response/target-response.model';
-import {SearchTargetResponseDto, TargetResponseDto} from '@/app/infrastructure/dto/response/target-response.dto';
+import {SearchTargetResponseDto, TargetHtmlResponseDto, TargetResponseDto} from '@/app/infrastructure/dto/response/target-response.dto';
 import {environment} from '@/environments/environment';
-import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 import {HttpItemsModel} from '@/app/infrastructure/dto/http/http-default.model';
 import {BaseService} from '@/app/infrastructure/services/base/base.service';
 
@@ -30,6 +31,10 @@ export class TargetService extends BaseService{
     return await this.httpService.post<any>(`${environment.endpoints.target.path}`, this.itemMapper.mapCreate(params), {}, this.getToken);
   }
 
+  async update(id: string, params: UpdateTargetRequestModel): Promise<any> {
+    return await this.httpService.patch<any>(`${environment.endpoints.target.path}/${id}`, this.itemMapper.mapUpdate(params), {}, this.getToken);
+  }
+
   async delete(id: string): Promise<any> {
     return await this.httpService.delete<any>(`${environment.endpoints.target.path}/${id}`, {}, this.getToken);
   }
@@ -44,7 +49,7 @@ export class TargetService extends BaseService{
     return response.items.map((item: SearchTargetResponseDto) => this.itemMapper.mapResponseSearch(item));
   }
 
-  async find(id: number): Promise<TargetResponseModel> {
+  async find(id: string): Promise<TargetResponseModel> {
     const response = await this.httpService.get<TargetResponseDto>(`${environment.endpoints.target.path}/${id}`, {},{}, this.getToken);
     return this.itemMapper.mapResponse(response);
   }
@@ -52,5 +57,10 @@ export class TargetService extends BaseService{
   async getTags(): Promise<string[]> {
     const response = await this.httpService.get<{ tags: string[]; total: number }>(`${environment.endpoints.target.tags}`, {}, {}, this.getToken);
     return response.tags ?? [];
+  }
+
+  async getHtml(id: string): Promise<TargetHtmlResponseModel> {
+    const response = await this.httpService.get<TargetHtmlResponseDto>(`${environment.endpoints.target.path}/${id}/html`, {}, {});
+    return new TargetHtmlResponseModel(response.target_id, response.url, response.html, response.source, response.html_length);
   }
 }

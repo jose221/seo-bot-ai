@@ -58,6 +58,28 @@
                       ↺ Re-ejecutar todo
                     }
                   </button>
+                  @if (info.source_id) {
+                    <button class="btn btn-sm btn-outline-warning"
+                            (click)="openUpdateTargetPage()"
+                            title="Actualizar HTML del target (abre nueva pestaña)">
+                      ✎ Actualizar HTML
+                    </button>
+                  }
+                </div>
+              }
+              @if (info.source_id) {
+                <div class="mt-2 d-flex flex-wrap gap-2 justify-content-md-end">
+                  <button class="btn btn-sm btn-outline-secondary"
+                          (click)="copyTargetHtml()"
+                          [disabled]="htmlLoading()"
+                          title="Obtener y copiar el HTML del target al portapapeles">
+                    @if (htmlLoading()) {
+                      <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                      Obteniendo...
+                    } @else {
+                      📋 Obtener HTML
+                    }
+                  </button>
                 </div>
               }
             </div>
@@ -207,11 +229,20 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
                       <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'schema')">
-                        Schema.org Validator
+                        Schema.org Validator (por URL)
                       </a></li>
                       <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'google')">
-                        Google Rich Results
+                        Google Rich Results (por URL)
                       </a></li>
+                      @if (data()?.source_id) {
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidatorWithHtml('schema')" [class.disabled]="htmlLoading()">
+                          <span class="me-1">📋</span> Schema.org (con HTML del target)
+                        </a></li>
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidatorWithHtml('google')" [class.disabled]="htmlLoading()">
+                          <span class="me-1">📋</span> Google Rich (con HTML del target)
+                        </a></li>
+                      }
                     </ul>
                   </div>
                   <button class="btn-action" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar JSON-LD">

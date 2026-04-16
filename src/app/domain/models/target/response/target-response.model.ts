@@ -23,3 +23,14 @@ export class SearchTargetResponseModel {
     public provider?: string,
   ) {}
 }
+
+export class TargetHtmlResponseModel {
+  constructor(
+    public target_id: string,
+    public url: string,
+    public html: string,
+    public source: 'live' | 'stored',
+    public html_length: number,
+  ) {}
+}
+
