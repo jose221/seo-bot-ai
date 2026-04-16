@@ -15,6 +15,7 @@ from app.api.deps import get_current_user
 from app.helpers import extract_domain
 from app.models import AuditComparison, AuditSchemaReview, SchemaAuditStatus, SchemaAuditSourceType
 from app.models import AuditUrlValidation, UrlValidationStatus, UrlValidationSourceType
+from app.models.url_validation_comment import UrlValidationComment, CommentStatus
 from app.models.user import User
 from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
@@ -1005,6 +1006,186 @@ async def list_url_validation_schemas_public(
         total=len(schemas),
         schemas=schemas,
     )
+
+
+# ---------------------------------------------------------------------------
+# Comentarios públicos de validaciones de URL
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/audits/url-validations/{validation_id}/schemas/public/comments",
+    response_model=audit_schemas.CommentListResponse,
+    tags=["Público"],
+)
+async def list_url_validation_comments(
+        validation_id: UUID,
+        page: int = Query(default=1, ge=1),
+        page_size: int = Query(default=20, ge=1, le=100),
+        session=Depends(get_session),
+):
+    """
+    Endpoint público: lista paginada de comentarios de una validación de URLs.
+    No requiere autenticación.
+    """
+    stmt_total = select(func.count()).select_from(UrlValidationComment).where(
+        UrlValidationComment.validation_id == validation_id
+    )
+    total = (await session.execute(stmt_total)).scalar_one()
+
+    offset = (page - 1) * page_size
+    stmt = (
+        select(UrlValidationComment)
+        .where(UrlValidationComment.validation_id == validation_id)
+        .order_by(UrlValidationComment.created_at.desc())
+        .offset(offset)
+        .limit(page_size)
+    )
+    items = (await session.execute(stmt)).scalars().all()
+
+    return audit_schemas.CommentListResponse(
+        validation_id=validation_id,
+        total=total,
+        page=page,
+        page_size=page_size,
+        items=[audit_schemas.CommentResponse.model_validate(c) for c in items],
+    )
+
+
+@router.post(
+    "/audits/url-validations/schema/public/{url:path}/comment",
+    response_model=audit_schemas.CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Público"],
+)
+async def create_url_validation_comment(
+        url: str,
+        body: audit_schemas.CommentCreate,
+        session=Depends(get_session),
+):
+    """
+    Endpoint público: crea un comentario sobre un schema item identificado por su URL.
+    Busca la validación más reciente (completed) que contenga esa URL.
+    No requiere autenticación.
+    """
+    # Buscar la validación más reciente que contenga esta URL en results_json
+    stmt = (
+        select(AuditUrlValidation)
+        .where(AuditUrlValidation.status == UrlValidationStatus.COMPLETED)
+        .order_by(AuditUrlValidation.created_at.desc())
+    )
+    validations = (await session.execute(stmt)).scalars().all()
+
+    matched_validation = None
+    for v in validations:
+        raw = v.results_json or []
+        if any(isinstance(item, dict) and item.get("url") == url for item in raw):
+            matched_validation = v
+            break
+
+    if not matched_validation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No se encontró una validación completada que contenga la URL: {url}",
+        )
+
+    comment = UrlValidationComment(
+        validation_id=matched_validation.id,
+        schema_item_url=url,
+        username=body.username,
+        comment=body.comment,
+        status=CommentStatus.PENDING,
+    )
+    session.add(comment)
+    await session.commit()
+    await session.refresh(comment)
+
+    return audit_schemas.CommentResponse.model_validate(comment)
+
+
+@router.patch(
+    "/audits/url-validations/schema/comments/{comment_id}/answer",
+    response_model=audit_schemas.CommentResponse,
+    tags=["Auditorías"],
+)
+async def answer_url_validation_comment(
+        comment_id: UUID,
+        body: audit_schemas.CommentAnswerUpdate,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """
+    Responde a un comentario y cambia su estado (done | rejected).
+    Solo el dueño de la validación puede usar este endpoint.
+    """
+    stmt = select(UrlValidationComment).where(UrlValidationComment.id == comment_id)
+    comment = (await session.execute(stmt)).scalars().first()
+
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comentario no encontrado")
+
+    # Verificar que el usuario autenticado es dueño de la validación
+    stmt_v = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == comment.validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt_v)).scalars().first()
+    if not validation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para responder este comentario",
+        )
+
+    allowed_statuses = {s.value for s in CommentStatus}
+    if body.status not in allowed_statuses:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=f"Estado inválido. Valores permitidos: {allowed_statuses}",
+        )
+
+    comment.answer = body.answer
+    comment.status = CommentStatus(body.status)
+    comment.answered_at = datetime.utcnow()
+
+    session.add(comment)
+    await session.commit()
+    await session.refresh(comment)
+
+    return audit_schemas.CommentResponse.model_validate(comment)
+
+
+@router.delete(
+    "/audits/url-validations/schema/comments/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["Auditorías"],
+)
+async def delete_url_validation_comment(
+        comment_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """
+    Elimina un comentario.
+    Solo el dueño de la validación puede eliminar comentarios.
+    """
+    stmt = select(UrlValidationComment).where(UrlValidationComment.id == comment_id)
+    comment = (await session.execute(stmt)).scalars().first()
+
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comentario no encontrado")
+
+    stmt_v = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == comment.validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt_v)).scalars().first()
+    if not validation:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permiso para eliminar este comentario",
+        )
+
+    await session.delete(comment)
+    await session.commit()
 
 
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)

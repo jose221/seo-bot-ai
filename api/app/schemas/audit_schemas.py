@@ -585,3 +585,61 @@ class AuditUrlValidationDetailResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# ---------------------------------------------------------------------------
+# Schemas para comentarios públicos de validaciones de URL
+# ---------------------------------------------------------------------------
+
+class CommentCreate(BaseModel):
+    """Body para crear un comentario público"""
+    username: str = Field(..., max_length=150, description="Nombre público del comentarista")
+    comment: str = Field(..., description="Texto del comentario")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "username": "anonimo 234",
+                "comment": "No me convence este schema"
+            }
+        }
+
+
+class CommentAnswerUpdate(BaseModel):
+    """Body para responder y cambiar estado de un comentario (solo dueño autenticado)"""
+    answer: str = Field(..., description="Respuesta al comentario")
+    status: str = Field(..., description="Nuevo estado: done | rejected")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "answer": "Gracias por tu observación, lo corregiremos.",
+                "status": "done"
+            }
+        }
+
+
+class CommentResponse(BaseModel):
+    """Representación de un comentario"""
+    id: UUID
+    validation_id: UUID
+    schema_item_url: str
+    username: str
+    comment: str
+    status: str
+    answer: Optional[str] = None
+    answered_at: Optional[datetime] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CommentListResponse(BaseModel):
+    """Lista paginada de comentarios de una validación"""
+    validation_id: UUID
+    total: int
+    page: int
+    page_size: int
+    items: List[CommentResponse]
+

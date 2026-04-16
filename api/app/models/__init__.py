@@ -9,6 +9,7 @@ from app.models.audit_schema_review import AuditSchemaReview, SchemaAuditStatus,
 from app.models.audit_url_validation import (
     AuditUrlValidation, UrlValidationStatus, UrlValidationSeverity, UrlValidationSourceType
 )
+from app.models.url_validation_comment import UrlValidationComment, CommentStatus
 
 __all__ = [
     "User",
@@ -24,5 +25,7 @@ __all__ = [
     "UrlValidationStatus",
     "UrlValidationSeverity",
     "UrlValidationSourceType",
+    "UrlValidationComment",
+    "CommentStatus",
 ]
 
