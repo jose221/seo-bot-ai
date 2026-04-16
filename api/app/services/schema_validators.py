@@ -209,7 +209,132 @@ def _cached_document_loader(url: str, options: Optional[Dict] = None):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# 2. Schema.org – Conformidad de tipos y propiedades
+# 2. Pydantic Schema.org – Validación de tipos con modelos Pydantic
+# ──────────────────────────────────────────────────────────────────────
+
+# Mapeo de @type → módulo/clase en pydantic_schemaorg
+_PYDANTIC_SCHEMAORG_TYPE_MAP: Dict[str, str] = {
+    "Recipe": "Recipe",
+    "Product": "Product",
+    "Article": "Article",
+    "NewsArticle": "NewsArticle",
+    "BlogPosting": "BlogPosting",
+    "Event": "Event",
+    "LocalBusiness": "LocalBusiness",
+    "Organization": "Organization",
+    "Person": "Person",
+    "FAQPage": "FAQPage",
+    "HowTo": "HowTo",
+    "BreadcrumbList": "BreadcrumbList",
+    "WebSite": "WebSite",
+    "WebPage": "WebPage",
+    "VideoObject": "VideoObject",
+    "ImageObject": "ImageObject",
+    "Review": "Review",
+    "Offer": "Offer",
+    "AggregateRating": "AggregateRating",
+    "Course": "Course",
+    "SoftwareApplication": "SoftwareApplication",
+    "JobPosting": "JobPosting",
+    "Restaurant": "Restaurant",
+    "Hotel": "Hotel",
+    "ItemList": "ItemList",
+    "Dataset": "Dataset",
+    "Book": "Book",
+    "Movie": "Movie",
+}
+
+
+def _get_pydantic_model(schema_type: str):
+    """Importa dinámicamente el modelo Pydantic de pydantic_schemaorg para un @type."""
+    module_name = _PYDANTIC_SCHEMAORG_TYPE_MAP.get(schema_type)
+    if not module_name:
+        return None
+    try:
+        import importlib
+        mod = importlib.import_module(f"pydantic_schemaorg.{module_name}")
+        return getattr(mod, module_name, None)
+    except (ImportError, AttributeError):
+        return None
+
+
+class PydanticSchemaOrgValidator(BaseValidator):
+    """
+    Valida conformidad de tipos Schema.org usando modelos Pydantic
+    de pydantic-schemaorg. Detecta campos con tipos incorrectos
+    y estructuras que no coinciden con la especificación.
+    """
+
+    name = "Pydantic-SchemaOrg"
+
+    def validate(self, payload: Any, label: str) -> Dict[str, Any]:
+        errors: List[Dict[str, str]] = []
+        warnings: List[Dict[str, str]] = []
+
+        try:
+            import pydantic_schemaorg  # noqa: F401
+        except ImportError:
+            warnings.append({
+                "level": "INFO",
+                "message": "pydantic-schemaorg no instalado — validación de tipos Pydantic omitida.",
+            })
+            return self._result(True, errors, warnings)
+
+        items = _normalize_to_items(payload)
+        if not items:
+            return self._result(True, errors, warnings)
+
+        for idx, item in enumerate(items):
+            schema_type = _get_type_str(item)
+            if not schema_type:
+                continue
+
+            model_class = _get_pydantic_model(schema_type)
+            if not model_class:
+                continue  # No hay modelo Pydantic para este tipo, se valida con otros validadores
+
+            # Preparar datos: quitar @context para evitar conflictos
+            data = {k: v for k, v in item.items() if k != "@context"}
+
+            try:
+                model_class(**data)
+            except Exception as e:
+                err_str = str(e)
+                # Pydantic v1 usa ValidationError con .errors(), v2 también
+                if hasattr(e, "errors") and callable(e.errors):
+                    for error in e.errors():
+                        loc = error.get("loc", ())
+                        msg = error.get("msg", str(error))
+                        errors.append({
+                            "level": "ERROR",
+                            "message": (
+                                f"{label}[{idx}] @type={schema_type}: "
+                                f"Campo {'.'.join(str(l) for l in loc)} — {msg}"
+                            ),
+                        })
+                else:
+                    # Error genérico
+                    warnings.append({
+                        "level": "WARNING",
+                        "message": (
+                            f"{label}[{idx}] @type={schema_type}: "
+                            f"Error de validación Pydantic: {err_str[:300]}"
+                        ),
+                    })
+
+        return self._result(len(errors) == 0, errors, warnings)
+
+    def _result(self, is_valid: bool, errors: list, warnings: list) -> Dict[str, Any]:
+        return {
+            "validator": self.name,
+            "is_valid": is_valid,
+            "errors": errors,
+            "warnings": warnings,
+        }
+
+
+# ──────────────────────────────────────────────────────────────────────
+# 3. Schema.org – Conformidad de tipos y propiedades
 # ──────────────────────────────────────────────────────────────────────
 
 # Propiedades fundamentales esperadas por tipo en Schema.org
@@ -544,7 +669,7 @@ class SchemaOrgValidator(BaseValidator):
 
 
 # ──────────────────────────────────────────────────────────────────────
-# 3. Google Rich Results – Reglas específicas de Google
+# 4. Google Rich Results – Reglas específicas de Google
 # ──────────────────────────────────────────────────────────────────────
 
 # Reglas de Google para Rich Results (más estrictas que Schema.org puro)
@@ -899,6 +1024,7 @@ class SchemaValidatorPipeline:
         if validators is None:
             self.validators: List[BaseValidator] = [
                 PyLDValidator(),
+                PydanticSchemaOrgValidator(),
                 SchemaOrgValidator(),
                 GoogleComplianceValidator(),
             ]

@@ -41,7 +41,7 @@ export class TargetImplementationRepository implements TargetRepository {
   async getTags(): Promise<string[]> {
     return await this.primaryService.getTags();
   }
-  async getHtml(id: string): Promise<TargetHtmlResponseModel> {
-    return await this.primaryService.getHtml(id);
+  async getHtml(url: string): Promise<TargetHtmlResponseModel> {
+    return await this.primaryService.getHtml(url);
   }
 }

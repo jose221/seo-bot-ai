@@ -12,6 +12,14 @@
             </PendingDiffInfo>
           </value>
         </entry>
+        <entry key="/tmp/fix_use_target_id.py">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="/tmp/fix_use_target_id.py" />
+              <option name="updatedContent" value="PIPE = chr(0x7C)&#10;&#10;path = '/Users/joseangelalvaradogonzalez/seo-bot-ai/src/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info.ts'&#10;&#10;with open(path, 'r') as f:&#10;    content = f.read()&#10;&#10;# Fix the loadSchemas method to use target_id first, then source_id as fallback&#10;old = &quot;      // source_id viene del backend; si est disponible lo usamos\n      if (response.source_id) {\n        this.sourceId.set(response.source_id);\n      } else if (this._authRepository.isAuthenticated()) {&quot;&#10;&#10;new = &quot;      // target_id es el web_page_id real; source_id es el audit_report_id\n      if (response.target_id) {\n        this.sourceId.set(response.target_id);\n      } else if (this._authRepository.isAuthenticated()) {&quot;&#10;&#10;if old in content:&#10;    content = content.replace(old, new)&#10;    print(&quot;Fixed loadSchemas to use target_id&quot;)&#10;else:&#10;    print(&quot;Pattern not found for loadSchemas fix&quot;)&#10;    # Show relevant section&#10;    idx = content.find('source_id viene')&#10;    print(repr(content[idx:idx+200]))&#10;&#10;with open(path, 'w') as f:&#10;    f.write(content)&#10;&#10;print(&quot;Done&quot;)&#10;" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
       </map>
     </option>
   </component>

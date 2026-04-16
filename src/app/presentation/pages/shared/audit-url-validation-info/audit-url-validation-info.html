@@ -58,28 +58,6 @@
                       ↺ Re-ejecutar todo
                     }
                   </button>
-                  @if (info.source_id) {
-                    <button class="btn btn-sm btn-outline-warning"
-                            (click)="openUpdateTargetPage()"
-                            title="Actualizar HTML del target (abre nueva pestaña)">
-                      ✎ Actualizar HTML
-                    </button>
-                  }
-                </div>
-              }
-              @if (info.source_id) {
-                <div class="mt-2 d-flex flex-wrap gap-2 justify-content-md-end">
-                  <button class="btn btn-sm btn-outline-secondary"
-                          (click)="copyTargetHtml()"
-                          [disabled]="htmlLoading()"
-                          title="Obtener y copiar el HTML del target al portapapeles">
-                    @if (htmlLoading()) {
-                      <span class="spinner-border spinner-border-sm me-1" role="status"></span>
-                      Obteniendo...
-                    } @else {
-                      📋 Obtener HTML
-                    }
-                  </button>
                 </div>
               }
             </div>
@@ -234,12 +212,12 @@
                       <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'google')">
                         Google Rich Results (por URL)
                       </a></li>
-                      @if (data()?.source_id) {
+                      @if (validationId()) {
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidatorWithHtml('schema')" [class.disabled]="htmlLoading()">
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidatorWithHtml(schema.url, 'schema')" [class.disabled]="htmlLoading()">
                           <span class="me-1">📋</span> Schema.org (con HTML del target)
                         </a></li>
-                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidatorWithHtml('google')" [class.disabled]="htmlLoading()">
+                        <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidatorWithHtml(schema.url, 'google')" [class.disabled]="htmlLoading()">
                           <span class="me-1">📋</span> Google Rich (con HTML del target)
                         </a></li>
                       }
@@ -275,7 +253,23 @@
                         ↺ Re-analizar URL
                       }
                     </button>
+                    <button class="btn-action btn-action--edit"
+                            (click)="openUpdateTargetPage()"
+                            title="Actualizar HTML del target (abre nueva pestaña)">
+                      ✎ Actualizar HTML
+                    </button>
                   }
+                  <button class="btn-action btn-action--html"
+                          (click)="copyTargetHtml(schema.url)"
+                          [disabled]="htmlLoading()"
+                          title="Copiar HTML del target">
+                    @if (htmlLoading()) {
+                      <span class="spinner-border spinner-border-sm" role="status"></span>
+                      Obteniendo...
+                    } @else {
+                      📋 Copiar HTML
+                    }
+                  </button>
                 </div>
 
                 <!-- Info Grid -->

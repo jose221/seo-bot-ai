@@ -18,5 +18,5 @@ export abstract class TargetRepository {
   abstract find(id: string): Promise<TargetResponseModel>;
   abstract search(params?: SearchTargetRequestModel): Promise<SearchTargetResponseModel[]>;
   abstract getTags(): Promise<string[]>;
-  abstract getHtml(id: string): Promise<TargetHtmlResponseModel>;
+  abstract getHtml(url: string): Promise<TargetHtmlResponseModel>;
 }

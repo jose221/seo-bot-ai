@@ -59,8 +59,9 @@ export class TargetService extends BaseService{
     return response.tags ?? [];
   }
 
-  async getHtml(id: string): Promise<TargetHtmlResponseModel> {
-    const response = await this.httpService.get<TargetHtmlResponseDto>(`${environment.endpoints.target.path}/${id}/html`, {}, {});
+  async getHtml(url: string): Promise<TargetHtmlResponseModel> {
+    const encodedUrl = encodeURIComponent(url);
+    const response = await this.httpService.get<TargetHtmlResponseDto>(`${environment.endpoints.target.path}/html/${encodedUrl}`, {}, {});
     return new TargetHtmlResponseModel(response.target_id, response.url, response.html, response.source, response.html_length);
   }
 }

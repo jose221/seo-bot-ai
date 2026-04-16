@@ -464,26 +464,23 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
 
   // ===== TARGET HTML METHODS =====
 
-  /** Abre en nueva pestaña la página de actualización del target (solo si está logueado) */
-  openUpdateTargetPage(): void {
-    const sourceId = this.data()?.source_id;
-    if (!sourceId) {
-      this._sweetAlertUtil.error('Error', 'No se pudo obtener el ID del target.');
-      return;
-    }
-    window.open(`/admin/target/update/${sourceId}`, '_blank');
+  private getTargetIdFromRoute(): string | null {
+    return this.validationId();
   }
 
-  /** Llama al endpoint público GET /targets/{id}/html y copia el HTML al portapapeles */
-  async copyTargetHtml(): Promise<void> {
-    const sourceId = this.data()?.source_id;
-    if (!sourceId) {
-      await this._sweetAlertUtil.error('Error', 'No se pudo obtener el ID del target.');
-      return;
-    }
+  /** Abre en nueva pestaña la página de actualización del target (solo si está logueado) */
+  openUpdateTargetPage(): void {
+    const targetId = this.getTargetIdFromRoute();
+    if (!targetId) return;
+    window.open(`/admin/target/update/${targetId}`, '_blank');
+  }
+
+  /** Llama al endpoint público GET /targets/html/{url} y copia el HTML al portapapeles */
+  async copyTargetHtml(pageUrl: string): Promise<void> {
+    if (!pageUrl) return;
     try {
       this.htmlLoading.set(true);
-      const response = await this._targetRepository.getHtml(sourceId);
+      const response = await this._targetRepository.getHtml(pageUrl);
       await navigator.clipboard.writeText(response.html);
       this._sweetAlertUtil.fire({
         toast: true,
@@ -497,29 +494,26 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     } catch (error: any) {
       const status = error?.response?.status;
       if (status === 503) {
-        await this._sweetAlertUtil.error('Sin HTML disponible', 'No se pudo obtener el HTML del target en tiempo real y no hay HTML almacenado.');
+        await this._sweetAlertUtil.error('Sin HTML disponible', 'No se pudo obtener el HTML en tiempo real y no hay HTML guardado para esta página.');
       } else {
-        await this._sweetAlertUtil.error('Error', 'No se pudo obtener el HTML del target.');
+        await this._sweetAlertUtil.error('Error', 'No se pudo obtener el HTML de la página.');
       }
     } finally {
       this.htmlLoading.set(false);
     }
   }
 
-  /** Valida por URL usando el endpoint de HTML del target para pasarlo al validador */
-  async openValidatorWithHtml(tool: 'schema' | 'google'): Promise<void> {
-    const sourceId = this.data()?.source_id;
-    if (!sourceId) {
-      // Fallback: abrir validador sin HTML
-      const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
+  /** Valida por URL obteniendo antes el HTML de esa página vía /targets/html/{url} */
+  async openValidatorWithHtml(pageUrl: string, tool: 'schema' | 'google'): Promise<void> {
+    const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
+    if (!pageUrl) {
       window.open(validatorUrl, '_blank');
       return;
     }
     try {
       this.htmlLoading.set(true);
-      const response = await this._targetRepository.getHtml(sourceId);
+      const response = await this._targetRepository.getHtml(pageUrl);
       await navigator.clipboard.writeText(response.html);
-      const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
       this._sweetAlertUtil.fire({
         icon: 'info',
         title: 'HTML copiado al portapapeles',
@@ -529,8 +523,6 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
         window.open(validatorUrl, '_blank');
       }, 2000);
     } catch {
-      // Si falla obtener HTML, abrir igual el validador
-      const validatorUrl = tool === 'schema' ? 'https://validator.schema.org/' : 'https://search.google.com/test/rich-results';
       window.open(validatorUrl, '_blank');
     } finally {
       this.htmlLoading.set(false);

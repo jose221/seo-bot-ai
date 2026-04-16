@@ -48,6 +48,8 @@ extruct
 
 # Schema Validation (JSON-LD + Schema.org)
 pyld>=2.0.4
+# Nota: pydantic-schemaorg 1.x requiere pydantic<2 y rompe FastAPI moderno.
+# Si se usa, debe instalarse en un entorno separado o con stack legacy.
 
 # Tokenizer
 tiktoken

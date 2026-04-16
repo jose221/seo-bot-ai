@@ -337,52 +337,57 @@ async def update_target_html(
 
 
 @router.get(
-    "/targets/{target_id}/html",
+    "/targets/html/{target_url:path}",
     response_model=target_schemas.HtmlContentResponse,
     tags=["Público"],
 )
 async def get_target_html(
-        target_id: UUID,
+        target_url: str,
         session=Depends(get_session),
 ):
     """
-    Obtiene el HTML completo de un target.
-    Intenta hacer scraping en tiempo real con las mismas técnicas antibot que los audits
-    (Playwright + Nodriver como fallback).
-    Si el sitio bloquea el acceso, devuelve el HTML guardado manualmente en el target.
+    Obtiene el HTML completo de un target buscado por su URL.
+    Intenta hacer scraping en tiempo real (Playwright + Nodriver como fallback antibot).
+    Si el sitio bloquea el acceso, devuelve el HTML guardado en el target.
     Endpoint público, no requiere autenticación.
+
+    Ejemplo: GET /targets/html/https://example.com
     """
-    statement = select(WebPage).where(WebPage.id == target_id, WebPage.is_active == True)
+    from urllib.parse import unquote
+    from uuid import uuid4
+    target_url = unquote(target_url)
+    statement = select(WebPage).where(WebPage.url == target_url, WebPage.is_active == True)
     target = (await session.execute(statement)).scalars().first()
 
-    if not target:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target no encontrado")
-
-    # Intentar scraping en tiempo real
+    # Intentar scraping en tiempo real (tanto si existe en tabla como si no)
     html: Optional[str] = None
     source = "live"
 
     try:
         from app.services.audit_engine import get_audit_engine
         engine = get_audit_engine()
-        html = await engine.fetch_html(target.url, timeout_ms=30_000)
+        html = await engine.fetch_html(target.url if target else target_url, timeout_ms=30_000)
     except Exception as scrape_err:
-        print(f"⚠️  Scraping bloqueado para {target.url}: {scrape_err} — usando HTML guardado")
+        print(f"⚠️  Scraping bloqueado para {target_url}: {scrape_err} — intentando fallback")
         html = None
 
-    # Fallback al HTML guardado si el scraping falló o devolvió vacío
-    if not html:
-        if not target.manual_html_content:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="No se pudo obtener el HTML en tiempo real y no hay contenido guardado para este target",
-            )
+    # Fallback al HTML guardado si el scraping falló y existe en tabla
+    if not html and target and target.manual_html_content:
         html = target.manual_html_content
         source = "stored"
 
+    # Si no se pudo obtener HTML de ninguna forma
+    if not html:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="No se pudo acceder a su HTML. No fue posible obtener el contenido mediante scraping"
+                   + (" ni hay contenido guardado para este target." if target else
+                      " y la URL no está registrada como target."),
+        )
+
     return target_schemas.HtmlContentResponse(
-        target_id=target.id,
-        url=target.url,
+        target_id=target.id if target else uuid4(),
+        url=target.url if target else target_url,
         html=html,
         source=source,
         html_length=len(html),
