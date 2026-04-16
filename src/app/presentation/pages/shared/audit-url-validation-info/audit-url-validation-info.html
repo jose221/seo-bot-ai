@@ -258,18 +258,18 @@
                             title="Actualizar HTML del target (abre nueva pestaña)">
                       ✎ Actualizar HTML
                     </button>
+                    <button class="btn-action btn-action--html"
+                            (click)="copyTargetHtml(schema.url)"
+                            [disabled]="htmlLoading()"
+                            title="Copiar HTML del target">
+                      @if (htmlLoading()) {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                        Obteniendo...
+                      } @else {
+                        📋 Copiar HTML
+                      }
+                    </button>
                   }
-                  <button class="btn-action btn-action--html"
-                          (click)="copyTargetHtml(schema.url)"
-                          [disabled]="htmlLoading()"
-                          title="Copiar HTML del target">
-                    @if (htmlLoading()) {
-                      <span class="spinner-border spinner-border-sm" role="status"></span>
-                      Obteniendo...
-                    } @else {
-                      📋 Copiar HTML
-                    }
-                  </button>
                 </div>
 
                 <!-- Info Grid -->
@@ -333,7 +333,7 @@
                         <div class="code-block-wrapper">
                           <div class="code-actions">
                             <button class="code-action-btn" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar">
-                              Copiar
+                              Copiar schema
                             </button>
                             <button class="code-action-btn" (click)="openModal(schema, 'schema')" title="Expandir">
                               &#x2922;
