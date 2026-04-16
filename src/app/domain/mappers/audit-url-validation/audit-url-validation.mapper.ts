@@ -20,6 +20,7 @@ import {
   PublicCommentsResponseModel,
   PublicCommentItemModel,
   CreatePublicCommentResponseModel,
+  RerunValidationResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   AuditUrlValidationItemResponseDto,
@@ -29,6 +30,7 @@ import {
   AuditUrlValidationSchemasResponseDto,
   PublicCommentsResponseDto,
   CreatePublicCommentResponseDto,
+  RerunValidationResponseDto,
 } from '@/app/infrastructure/dto/response/audit-url-validation-response.dto';
 
 export class AuditUrlValidationMapper extends AppMapper {
@@ -101,6 +103,10 @@ export class AuditUrlValidationMapper extends AppMapper {
 
   mapAnswerComment(model: AnswerCommentRequestModel): AnswerCommentRequestDto {
     return this.autoMap<any, any>(model, { except: [] });
+  }
+
+  mapResponseRerun(dto: RerunValidationResponseDto): RerunValidationResponseModel {
+    return this.autoMap<any, any>(dto, { except: [] });
   }
 }
 

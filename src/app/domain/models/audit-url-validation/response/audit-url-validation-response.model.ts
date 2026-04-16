@@ -108,6 +108,16 @@ export class CreatePublicCommentResponseModel {
   ) {}
 }
 
+// ============ RERUN MODEL ============
+export class RerunValidationResponseModel {
+  constructor(
+    public task_id: string,
+    public status: string,
+    public total_urls: number,
+    public message: string
+  ) {}
+}
+
 // ============ SCHEMAS MODEL ============
 export class AuditUrlValidationSchemaItemModel {
   constructor(

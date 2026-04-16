@@ -5,6 +5,7 @@ import {
   AuditUrlValidationSchemasResponseModel,
   PublicCommentsResponseModel,
   CreatePublicCommentResponseModel,
+  RerunValidationResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   CreateAuditUrlValidationRequestModel,
@@ -23,5 +24,7 @@ export abstract class AuditUrlValidationRepository {
   abstract getPublicComments(validationId: string, page?: number): Promise<PublicCommentsResponseModel>;
   abstract createPublicComment(schemaItemId: string, validationId: string, params: CreatePublicCommentRequestModel): Promise<CreatePublicCommentResponseModel>;
   abstract answerComment(commentId: string, params: AnswerCommentRequestModel): Promise<any>;
+  abstract rerunValidation(validationId: string): Promise<RerunValidationResponseModel>;
+  abstract rerunValidationUrl(validationId: string, url: string): Promise<RerunValidationResponseModel>;
 }
 

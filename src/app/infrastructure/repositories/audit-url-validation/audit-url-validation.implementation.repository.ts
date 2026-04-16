@@ -14,6 +14,7 @@ import {
   AuditUrlValidationSchemasResponseModel,
   PublicCommentsResponseModel,
   CreatePublicCommentResponseModel,
+  RerunValidationResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 
 @Injectable({
@@ -56,6 +57,14 @@ export class AuditUrlValidationImplementationRepository implements AuditUrlValid
 
   async answerComment(commentId: string, params: AnswerCommentRequestModel): Promise<any> {
     return await this.primaryService.answerComment(commentId, params);
+  }
+
+  async rerunValidation(validationId: string): Promise<RerunValidationResponseModel> {
+    return await this.primaryService.rerunValidation(validationId);
+  }
+
+  async rerunValidationUrl(validationId: string, url: string): Promise<RerunValidationResponseModel> {
+    return await this.primaryService.rerunValidationUrl(validationId, url);
   }
 }
 

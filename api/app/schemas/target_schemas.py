@@ -127,3 +127,22 @@ class DeleteTargetResponse(BaseModel):
   target_id: str
   hard_delete: bool
 
+
+class WebPageHtmlUpdate(BaseModel):
+  """Body para actualizar manualmente el HTML de un target"""
+  manual_html_content: str = Field(..., description="HTML completo de la página")
+
+  class Config:
+    json_schema_extra = {
+      "example": {"manual_html_content": "<html><head>...</head><body>...</body></html>"}
+    }
+
+
+class HtmlContentResponse(BaseModel):
+  """Respuesta del endpoint de obtención de HTML (live scraping + fallback)"""
+  target_id: UUID
+  url: str
+  html: str
+  source: str = Field(description="'live' si se obtuvo en tiempo real, 'stored' si es el HTML guardado")
+  html_length: int
+

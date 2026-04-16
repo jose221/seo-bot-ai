@@ -73,6 +73,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   answerStatus = signal<string>('done');
   answerSubmitting = signal<boolean>(false);
 
+  // Rerun
+  rerunLoading = signal<boolean>(false);
+  rerunUrlTarget = signal<string | null>(null);
+
   availableTypes = computed(() => {
     const schemas = this.data()?.schemas ?? [];
     const types = new Set<string>();
@@ -378,6 +382,78 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
       });
     } catch {
       return dateStr;
+    }
+  }
+
+  async rerunAll(): Promise<void> {
+    const id = this.validationId();
+    if (!id) return;
+    const confirmed = await this._sweetAlertUtil.fire({
+      title: 'Re-ejecutar validación completa',
+      text: '¿Estás seguro de que deseas re-analizar todas las URLs? Esto puede tardar varios minutos.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, re-ejecutar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!confirmed.isConfirmed) return;
+    try {
+      this.rerunLoading.set(true);
+      await this._repository.rerunValidation(id);
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: 'Validación re-iniciada en segundo plano'
+      });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 409) {
+        await this._sweetAlertUtil.error('', 'Ya hay una validación en progreso. Espera a que termine.');
+      } else {
+        await this._sweetAlertUtil.error('', 'No se pudo re-ejecutar la validación. Intenta nuevamente.');
+      }
+    } finally {
+      this.rerunLoading.set(false);
+    }
+  }
+
+  async rerunUrl(url: string): Promise<void> {
+    const id = this.validationId();
+    if (!id || !url) return;
+    const confirmed = await this._sweetAlertUtil.fire({
+      title: 'Re-analizar URL',
+      html: `¿Re-analizar esta URL?<br><small class="text-muted">${url}</small>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, re-analizar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!confirmed.isConfirmed) return;
+    try {
+      this.rerunUrlTarget.set(url);
+      await this._repository.rerunValidationUrl(id, url);
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 5000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: 'URL re-analizada en segundo plano'
+      });
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 409) {
+        await this._sweetAlertUtil.error('', 'Ya hay una validación en progreso. Espera a que termine.');
+      } else {
+        await this._sweetAlertUtil.error('', 'No se pudo re-analizar la URL. Intenta nuevamente.');
+      }
+    } finally {
+      this.rerunUrlTarget.set(null);
     }
   }
 }

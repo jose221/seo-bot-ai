@@ -16,6 +16,7 @@ import {
   AuditUrlValidationSchemasResponseModel,
   PublicCommentsResponseModel,
   CreatePublicCommentResponseModel,
+  RerunValidationResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   AuditUrlValidationListResponseDto,
@@ -24,6 +25,7 @@ import {
   AuditUrlValidationSchemasResponseDto,
   PublicCommentsResponseDto,
   CreatePublicCommentResponseDto,
+  RerunValidationResponseDto,
 } from '@/app/infrastructure/dto/response/audit-url-validation-response.dto';
 
 @Injectable({
@@ -121,6 +123,27 @@ export class AuditUrlValidationService extends BaseService {
       {},
       this.getToken
     );
+  }
+
+  async rerunValidation(validationId: string): Promise<RerunValidationResponseModel> {
+    const response = await this.httpService.post<RerunValidationResponseDto>(
+      `${this.endpoint}/${validationId}/rerun`,
+      {},
+      {},
+      this.getToken
+    );
+    return this.mapper.mapResponseRerun(response);
+  }
+
+  async rerunValidationUrl(validationId: string, url: string): Promise<RerunValidationResponseModel> {
+    const encodedUrl = encodeURIComponent(url);
+    const response = await this.httpService.post<RerunValidationResponseDto>(
+      `${this.endpoint}/${validationId}/rerun/${encodedUrl}`,
+      {},
+      {},
+      this.getToken
+    );
+    return this.mapper.mapResponseRerun(response);
   }
 }
 

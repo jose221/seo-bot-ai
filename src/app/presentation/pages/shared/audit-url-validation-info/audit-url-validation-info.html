@@ -45,6 +45,21 @@
             <div class="col-12 col-md-4 text-md-end">
               <small class="text-muted d-block">ID de Validación</small>
               <code class="validation-id">{{ info.validation_id }}</code>
+              @if (isLoggedIn()) {
+                <div class="mt-3 d-flex flex-wrap gap-2 justify-content-md-end">
+                  <button class="btn btn-sm btn-outline-primary"
+                          (click)="rerunAll()"
+                          [disabled]="rerunLoading()"
+                          title="Re-ejecutar toda la validación desde cero">
+                    @if (rerunLoading()) {
+                      <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                      Re-ejecutando...
+                    } @else {
+                      ↺ Re-ejecutar todo
+                    }
+                  </button>
+                </div>
+              }
             </div>
           </div>
         </div>
@@ -216,6 +231,20 @@
                       <span class="comment-badge">{{ commentCount }}</span>
                     }
                   </button>
+                  <!-- Botón Re-analizar URL (solo autenticados) -->
+                  @if (isLoggedIn()) {
+                    <button class="btn-action btn-action--rerun"
+                            (click)="rerunUrl(schema.url)"
+                            [disabled]="rerunUrlTarget() === schema.url"
+                            title="Re-analizar solo esta URL">
+                      @if (rerunUrlTarget() === schema.url) {
+                        <span class="spinner-border spinner-border-sm" role="status"></span>
+                        Analizando...
+                      } @else {
+                        ↺ Re-analizar URL
+                      }
+                    </button>
+                  }
                 </div>
 
                 <!-- Info Grid -->

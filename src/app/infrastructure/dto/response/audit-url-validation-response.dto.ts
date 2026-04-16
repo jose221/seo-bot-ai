@@ -89,6 +89,14 @@ export interface CreatePublicCommentResponseDto {
   created_at: string;
 }
 
+// ============ RERUN DTO ============
+export interface RerunValidationResponseDto {
+  task_id: string;
+  status: string;
+  total_urls: number;
+  message: string;
+}
+
 // ============ SCHEMAS DTO ============
 export interface AuditUrlValidationSchemaItemDto {
   url: string;

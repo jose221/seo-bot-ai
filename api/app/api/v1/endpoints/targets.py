@@ -306,6 +306,89 @@ async def update_target(
     return target
 
 
+@router.patch("/targets/{target_id}/html", response_model=target_schemas.WebPageResponse)
+async def update_target_html(
+        target_id: UUID,
+        body: target_schemas.WebPageHtmlUpdate,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """
+    Actualiza el contenido HTML manual guardado para un target.
+    Útil para proporcionar HTML cuando el sitio bloquea el scraping automático.
+    Requiere autenticación.
+    """
+    statement = select(WebPage).where(
+        WebPage.id == target_id,
+        WebPage.user_id == current_user.id,
+    )
+    target = (await session.execute(statement)).scalars().first()
+
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target no encontrado")
+
+    target.manual_html_content = body.manual_html_content
+    target.updated_at = datetime.utcnow()
+    session.add(target)
+    await session.commit()
+    await session.refresh(target)
+
+    return target
+
+
+@router.get(
+    "/targets/{target_id}/html",
+    response_model=target_schemas.HtmlContentResponse,
+    tags=["Público"],
+)
+async def get_target_html(
+        target_id: UUID,
+        session=Depends(get_session),
+):
+    """
+    Obtiene el HTML completo de un target.
+    Intenta hacer scraping en tiempo real con las mismas técnicas antibot que los audits
+    (Playwright + Nodriver como fallback).
+    Si el sitio bloquea el acceso, devuelve el HTML guardado manualmente en el target.
+    Endpoint público, no requiere autenticación.
+    """
+    statement = select(WebPage).where(WebPage.id == target_id, WebPage.is_active == True)
+    target = (await session.execute(statement)).scalars().first()
+
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target no encontrado")
+
+    # Intentar scraping en tiempo real
+    html: Optional[str] = None
+    source = "live"
+
+    try:
+        from app.services.audit_engine import get_audit_engine
+        engine = get_audit_engine()
+        html = await engine.fetch_html(target.url, timeout_ms=30_000)
+    except Exception as scrape_err:
+        print(f"⚠️  Scraping bloqueado para {target.url}: {scrape_err} — usando HTML guardado")
+        html = None
+
+    # Fallback al HTML guardado si el scraping falló o devolvió vacío
+    if not html:
+        if not target.manual_html_content:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="No se pudo obtener el HTML en tiempo real y no hay contenido guardado para este target",
+            )
+        html = target.manual_html_content
+        source = "stored"
+
+    return target_schemas.HtmlContentResponse(
+        target_id=target.id,
+        url=target.url,
+        html=html,
+        source=source,
+        html_length=len(html),
+    )
+
+
 @router.delete("/targets/{target_id}", response_model=target_schemas.DeleteTargetResponse)
 async def delete_target(
         target_id: UUID,
