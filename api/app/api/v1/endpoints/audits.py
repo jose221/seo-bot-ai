@@ -960,6 +960,53 @@ async def list_url_validation_schemas(
     )
 
 
+@router.get(
+    "/audits/url-validations/{validation_id}/schemas/public",
+    response_model=audit_schemas.AuditUrlValidationSchemasResponse,
+    tags=["Público"],
+)
+async def list_url_validation_schemas_public(
+        validation_id: UUID,
+        session=Depends(get_session),
+):
+    """Endpoint público: devuelve los esquemas de una validación de URLs sin requerir autenticación."""
+    stmt = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == validation_id,
+    )
+    validation = (await session.execute(stmt)).scalars().first()
+
+    if not validation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Validación de URLs no encontrada",
+        )
+
+    raw_results = validation.results_json or []
+    schemas = [
+        audit_schemas.AuditUrlValidationSchemaItem(
+            url=item.get("url", ""),
+            schema_types_found=item.get("schema_types_found"),
+            extracted_schemas=item.get("extracted_schemas"),
+            validation_errors=item.get("validation_errors"),
+            severity=item.get("severity"),
+            ai_report=item.get("ai_report"),
+            error=item.get("error"),
+            comparison_table=item.get("comparison_table"),
+        )
+        for item in raw_results
+        if isinstance(item, dict)
+    ]
+
+    return audit_schemas.AuditUrlValidationSchemasResponse(
+        validation_id=validation.id,
+        name_validation=validation.name_validation,
+        status=validation.status,
+        global_severity=validation.global_severity,
+        total=len(schemas),
+        schemas=schemas,
+    )
+
+
 @router.get("/audits/{audit_id}", response_model=audit_schemas.AuditResponse)
 async def get_audit(
         audit_id: UUID,
