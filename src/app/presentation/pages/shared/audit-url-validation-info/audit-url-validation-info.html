@@ -1,0 +1,329 @@
+<!-- ===== PUBLIC HEADER ===== -->
+<div class="public-page">
+  <header class="public-header">
+    <div class="container">
+      <div class="d-flex align-items-center gap-2">
+        <span class="fw-bold">SEO Schema Validator</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="container py-4">
+
+    @if (isLoading()) {
+      <!-- ===== LOADING STATE ===== -->
+      <div class="loading-state text-center py-5">
+        <div class="loading-spinner mx-auto mb-4"></div>
+        <h5 class="fw-semibold text-muted">Cargando validación...</h5>
+        <p class="text-muted small">Obteniendo los esquemas extraídos</p>
+      </div>
+    } @else if (data()) {
+      @let info = data()!;
+
+      <!-- ===== HERO / RESUMEN ===== -->
+      <div class="hero-card mb-4">
+        <div class="hero-card-body">
+          <div class="row align-items-center g-3">
+            <div class="col-12 col-md-8">
+              <h1 class="hero-title">{{ info.name_validation }}</h1>
+              <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                <span class="sv-badge" [ngClass]="getSeverityClass(info.global_severity)">
+                  {{ info.global_severity || 'OK' }}
+                </span>
+                <span class="sv-badge" [ngClass]="{
+                  'sv-success': info.status === 'completed',
+                  'sv-warning': info.status === 'pending',
+                  'sv-danger': info.status === 'failed',
+                  'sv-info': info.status === 'processing'
+                }">
+                  {{ info.status }}
+                </span>
+                <span class="text-muted small">
+                  {{ info.total }} URL(s) analizadas
+                </span>
+              </div>
+            </div>
+            <div class="col-12 col-md-4 text-md-end">
+              <small class="text-muted d-block">ID de Validación</small>
+              <code class="validation-id">{{ info.validation_id }}</code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== STATS CARDS ===== -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-sm-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--total">
+              <span class="stat-emoji">🌐</span>
+            </div>
+            <div class="stat-value">{{ stats().total }}</div>
+            <div class="stat-label">Total URLs</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--ok">
+              <span class="stat-emoji">✓</span>
+            </div>
+            <div class="stat-value">{{ stats().ok }}</div>
+            <div class="stat-label">OK</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--warning">
+              <span class="stat-emoji">⚠</span>
+            </div>
+            <div class="stat-value">{{ stats().warnings }}</div>
+            <div class="stat-label">Warnings</div>
+          </div>
+        </div>
+        <div class="col-6 col-sm-3">
+          <div class="stat-card">
+            <div class="stat-icon stat-icon--critical">
+              <span class="stat-emoji">✕</span>
+            </div>
+            <div class="stat-value">{{ stats().critical }}</div>
+            <div class="stat-label">Críticos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== FILTROS TOGGLE ===== -->
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn-filter-toggle" (click)="showFilters.set(!showFilters())"
+                  [class.active]="showFilters() || hasActiveFilters()">
+            Filtros
+            @if (hasActiveFilters()) {
+              <span class="filter-dot"></span>
+            }
+          </button>
+          @if (hasActiveFilters()) {
+            <button class="btn-clear-filters" (click)="resetFilters()">
+              ✕ Limpiar
+            </button>
+          }
+        </div>
+        <span class="results-count">
+          {{ filteredSchemas().length }} de {{ stats().total }} resultados
+        </span>
+      </div>
+
+      @if (showFilters()) {
+        <div class="filter-panel mb-4">
+          <div class="row g-3">
+            <div class="col-12 col-sm-6 col-lg-4">
+              <label class="filter-label">Buscar URL</label>
+              <input type="text" class="filter-input"
+                     [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)"
+                     placeholder="Filtrar por URL...">
+            </div>
+            <div class="col-6 col-sm-6 col-lg-3">
+              <label class="filter-label">Severidad</label>
+              <select class="filter-input"
+                      [ngModel]="severityFilter()" (ngModelChange)="severityFilter.set($event)">
+                <option value="">Todas</option>
+                <option value="ok">OK</option>
+                <option value="warning">Warning</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div class="col-6 col-sm-6 col-lg-3">
+              <label class="filter-label">Tipo Schema</label>
+              <select class="filter-input"
+                      [ngModel]="typeFilter()" (ngModelChange)="typeFilter.set($event)">
+                <option value="">Todos</option>
+                @for (type of availableTypes(); track type) {
+                  <option [value]="type">{{ type }}</option>
+                }
+              </select>
+            </div>
+            <div class="col-12 col-sm-6 col-lg-2 d-flex align-items-end">
+              <label class="filter-switch">
+                <input type="checkbox"
+                       [ngModel]="onlyWithErrors()" (ngModelChange)="onlyWithErrors.set($event)">
+                <span class="filter-switch-slider"></span>
+                <span class="filter-switch-label">Solo errores</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ===== LISTADO DE URLS ===== -->
+      <div class="schemas-list">
+        @for (schema of filteredSchemas(); track $index) {
+          <div class="schema-card" [class.schema-card--expanded]="isCardExpanded($index)">
+            <!-- Card Header (siempre visible, clickeable) -->
+            <div class="schema-card-header" (click)="toggleCard($index)">
+              <div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
+                <span class="sv-badge sv-badge--sm" [ngClass]="getSeverityClass(schema.severity)">
+                  {{ schema.severity }}
+                </span>
+                <a [href]="schema.url" target="_blank" class="schema-url" (click)="$event.stopPropagation()">
+                  {{ schema.url }}
+                </a>
+              </div>
+              <div class="d-flex align-items-center gap-2">
+                @if (schema.schema_types_found?.length) {
+                  <span class="type-count d-none d-md-inline-flex">
+                    {{ schema.schema_types_found?.length }} tipos
+                  </span>
+                }
+                @if (schema.error || (schema.validation_errors && !schema.validation_errors.is_valid)) {
+                  <span class="error-indicator">!</span>
+                }
+                <span class="chevron-icon">{{ isCardExpanded($index) ? '▲' : '▼' }}</span>
+              </div>
+            </div>
+
+            <!-- Card Body (colapsable) -->
+            @if (isCardExpanded($index)) {
+              <div class="schema-card-body">
+                <!-- Actions bar -->
+                <div class="schema-actions">
+                  <div class="dropdown">
+                    <button class="btn-action" type="button" data-bs-toggle="dropdown">
+                      Validar URL ▾
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                      <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'schema')">
+                        Schema.org Validator
+                      </a></li>
+                      <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'google')">
+                        Google Rich Results
+                      </a></li>
+                    </ul>
+                  </div>
+                  <button class="btn-action" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar JSON-LD">
+                    Copiar
+                  </button>
+                </div>
+
+                <!-- Info Grid -->
+                <div class="schema-info-grid">
+                  <!-- Sidebar / Meta info -->
+                  <div class="schema-meta">
+                    @if (schema.schema_types_found?.length) {
+                      <div class="meta-section">
+                        <h6 class="meta-title">Tipos detectados</h6>
+                        <div class="d-flex flex-wrap gap-1">
+                          @for (type of schema.schema_types_found; track type) {
+                            <span class="type-chip">{{ type }}</span>
+                          }
+                        </div>
+                      </div>
+                    }
+
+                    @if (schema.validation_errors) {
+                      @let vErrors = schema.validation_errors;
+                      <div class="meta-section">
+                        <div class="validation-status" [class.validation-status--valid]="vErrors.is_valid" [class.validation-status--invalid]="!vErrors.is_valid">
+                          <div>
+                            <strong>{{ vErrors.is_valid ? '✓ Estructura Válida' : '✕ Errores de Validación' }}</strong>
+                            @if (vErrors.items_count) {
+                              <small class="d-block text-muted">{{ vErrors.items_count }} items encontrados</small>
+                            }
+                          </div>
+                        </div>
+                      </div>
+                    }
+
+                    @if (schema.error) {
+                      <div class="meta-section">
+                        <div class="error-box">
+                          <span>{{ schema.error }}</span>
+                        </div>
+                      </div>
+                    }
+                  </div>
+
+                  <!-- Tabs Content -->
+                  <div class="schema-content">
+                    <ul class="schema-tabs" role="tablist">
+                      <li role="presentation">
+                        <button class="schema-tab active" [id]="'schemas-tab-' + $index" data-bs-toggle="tab"
+                                [attr.data-bs-target]="'#schemas-pane-' + $index" type="button" role="tab">
+                          Esquemas
+                        </button>
+                      </li>
+                      <li role="presentation">
+                        <button class="schema-tab" [id]="'report-tab-' + $index" data-bs-toggle="tab"
+                                [attr.data-bs-target]="'#report-pane-' + $index" type="button" role="tab">
+                          Reporte IA
+                        </button>
+                      </li>
+                    </ul>
+
+                    <div class="tab-content">
+                      <div class="tab-pane fade show active" [id]="'schemas-pane-' + $index" role="tabpanel">
+                        <div class="code-block-wrapper">
+                          <div class="code-actions">
+                            <button class="code-action-btn" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar">
+                              Copiar
+                            </button>
+                            <div class="dropdown">
+                              <button class="code-action-btn" type="button" data-bs-toggle="dropdown">
+                                Validar ▾
+                              </button>
+                              <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li><a class="dropdown-item small" href="javascript:void(0)" (click)="openValidatorWithCode(schema.extracted_schemas, 'schema')">
+                                  Validar en Schema.org
+                                </a></li>
+                                <li><a class="dropdown-item small" href="javascript:void(0)" (click)="openValidatorWithCode(schema.extracted_schemas, 'google')">
+                                  Validar en Google
+                                </a></li>
+                              </ul>
+                            </div>
+                          </div>
+                          <pre class="code-block"><code>{{ formatJson(schema.extracted_schemas) }}</code></pre>
+                        </div>
+                      </div>
+                      <div class="tab-pane fade" [id]="'report-pane-' + $index" role="tabpanel">
+                        <div class="ai-report">
+                          @if (schema.ai_report) {
+                            <markdown [data]="schema.ai_report"></markdown>
+                          } @else {
+                            <div class="empty-report">
+                              <p>No se generó reporte de IA para esta URL.</p>
+                            </div>
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="empty-state">
+            <h5>No hay resultados</h5>
+            <p>Intenta ajustar los criterios de búsqueda o limpia los filtros.</p>
+            <button class="btn-primary-custom" (click)="resetFilters()">
+              Ver todos los esquemas
+            </button>
+          </div>
+        }
+      </div>
+
+    } @else {
+      <!-- ===== ERROR / NO DATA STATE ===== -->
+      <div class="empty-state">
+        <h5>No se encontraron datos</h5>
+        <p>No pudimos recuperar la información de los esquemas para esta validación.</p>
+      </div>
+    }
+
+  </div>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="public-footer">
+    <div class="container text-center">
+      <small class="text-muted">SEO Schema Validator &middot; Reporte público de validación</small>
+    </div>
+  </footer>
+</div>

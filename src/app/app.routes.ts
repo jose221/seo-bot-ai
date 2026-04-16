@@ -37,5 +37,6 @@ export const routes: Routes = [
       {path: 'metrics', component: MetricsDashboardComponent},
     ]
   },
+  {path: 'shared/audit/url-validations/:id/info', loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info')},
   { path: '**', redirectTo: '/admin' }
 ];

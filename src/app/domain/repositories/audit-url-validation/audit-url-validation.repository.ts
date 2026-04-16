@@ -15,5 +15,6 @@ export abstract class AuditUrlValidationRepository {
   abstract find(id: string): Promise<FindAuditUrlValidationResponseModel>;
   abstract delete(id: string): Promise<any>;
   abstract getSchemas(id: string): Promise<AuditUrlValidationSchemasResponseModel>;
+  abstract getSchemasPublic(id: string): Promise<AuditUrlValidationSchemasResponseModel>;
 }
 

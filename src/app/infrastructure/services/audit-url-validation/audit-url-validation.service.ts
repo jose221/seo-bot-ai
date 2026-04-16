@@ -80,5 +80,14 @@ export class AuditUrlValidationService extends BaseService {
     );
     return this.mapper.mapResponseSchemas(response);
   }
+
+  async getSchemasPublic(id: string): Promise<AuditUrlValidationSchemasResponseModel> {
+    const response = await this.httpService.get<AuditUrlValidationSchemasResponseDto>(
+      `${this.endpoint}/${id}/schemas/public`,
+      {},
+      {}
+    );
+    return this.mapper.mapResponseSchemas(response);
+  }
 }
 

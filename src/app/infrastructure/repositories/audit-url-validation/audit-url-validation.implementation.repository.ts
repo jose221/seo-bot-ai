@@ -37,5 +37,9 @@ export class AuditUrlValidationImplementationRepository implements AuditUrlValid
   async getSchemas(id: string): Promise<AuditUrlValidationSchemasResponseModel> {
     return await this.primaryService.getSchemas(id);
   }
+
+  async getSchemasPublic(id: string): Promise<AuditUrlValidationSchemasResponseModel> {
+    return await this.primaryService.getSchemasPublic(id);
+  }
 }
 
