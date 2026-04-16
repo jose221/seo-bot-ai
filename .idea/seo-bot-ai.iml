@@ -7,6 +7,7 @@
   </component>
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/api" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/api/myenv" />
       <excludeFolder url="file://$MODULE_DIR$/myenv" />
     </content>
