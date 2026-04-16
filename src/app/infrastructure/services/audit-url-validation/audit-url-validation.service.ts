@@ -6,18 +6,24 @@ import { AuditUrlValidationMapper } from '@/app/domain/mappers/audit-url-validat
 import {
   CreateAuditUrlValidationRequestModel,
   FilterAuditUrlValidationRequestModel,
+  CreatePublicCommentRequestModel,
+  AnswerCommentRequestModel,
 } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import {
   AuditUrlValidationListResponseModel,
   CreateAuditUrlValidationResponseModel,
   FindAuditUrlValidationResponseModel,
   AuditUrlValidationSchemasResponseModel,
+  PublicCommentsResponseModel,
+  CreatePublicCommentResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   AuditUrlValidationListResponseDto,
   CreateAuditUrlValidationResponseDto,
   FindAuditUrlValidationResponseDto,
   AuditUrlValidationSchemasResponseDto,
+  PublicCommentsResponseDto,
+  CreatePublicCommentResponseDto,
 } from '@/app/infrastructure/dto/response/audit-url-validation-response.dto';
 
 @Injectable({
@@ -88,6 +94,33 @@ export class AuditUrlValidationService extends BaseService {
       {}
     );
     return this.mapper.mapResponseSchemas(response);
+  }
+
+  async getPublicComments(validationId: string, page: number = 1): Promise<PublicCommentsResponseModel> {
+    const response = await this.httpService.get<PublicCommentsResponseDto>(
+      `${this.endpoint}/${validationId}/schemas/public/comments`,
+      { page },
+      {}
+    );
+    return this.mapper.mapResponsePublicComments(response);
+  }
+
+  async createPublicComment(schemaItemId: string, validationId: string, params: CreatePublicCommentRequestModel): Promise<CreatePublicCommentResponseModel> {
+    const response = await this.httpService.post<CreatePublicCommentResponseDto>(
+      `${this.endpoint}/schema/public/${schemaItemId}/comment`,
+      this.mapper.mapPublicComment(params),
+      { params: { validation_id: validationId } }
+    );
+    return this.mapper.mapResponseCreatePublicComment(response);
+  }
+
+  async answerComment(commentId: string, params: AnswerCommentRequestModel): Promise<any> {
+    return await this.httpService.post<any>(
+      `${this.endpoint}/schema/comments/${commentId}/answer`,
+      this.mapper.mapAnswerComment(params),
+      {},
+      this.getToken
+    );
   }
 }
 

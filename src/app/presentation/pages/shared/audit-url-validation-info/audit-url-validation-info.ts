@@ -1,12 +1,23 @@
-import { Component, inject, signal, OnInit, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, OnInit, computed, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
-import { AuditUrlValidationSchemasResponseModel, AuditUrlValidationSchemaItemModel } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
+import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
+import {
+  AuditUrlValidationSchemasResponseModel,
+  AuditUrlValidationSchemaItemModel,
+  PublicCommentItemModel,
+} from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
+import {
+  CreatePublicCommentRequestModel,
+  AnswerCommentRequestModel,
+} from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 import { MarkdownModule } from 'ngx-markdown';
 import { FormsModule } from '@angular/forms';
+
+const LS_USERNAME_KEY = 'public_validator_username';
 
 @Component({
   selector: 'app-public-audit-url-validation-info',
@@ -23,7 +34,9 @@ import { FormsModule } from '@angular/forms';
 export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _repository = inject(AuditUrlValidationRepository);
+  private readonly _authRepository = inject(AuthRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
+  private readonly _platformId = inject(PLATFORM_ID);
 
   isLoading = signal<boolean>(true);
   data = signal<AuditUrlValidationSchemasResponseModel | null>(null);
@@ -36,8 +49,29 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   typeFilter = signal<string>('');
   onlyWithErrors = signal<boolean>(false);
 
-  // Collapsed state per schema card
+  // Accordion
   expandedCards = signal<Set<number>>(new Set([0]));
+
+  // Modal expand
+  modalSchema = signal<AuditUrlValidationSchemaItemModel | null>(null);
+  modalTab = signal<'schema' | 'report'>('schema');
+
+  // Auth
+  isLoggedIn = signal<boolean>(false);
+
+  // Comments
+  commentsMap = signal<Map<string, PublicCommentItemModel[]>>(new Map());
+  commentsLoadingSet = signal<Set<string>>(new Set());
+  openCommentSection = signal<string | null>(null);
+  commentUsername = signal<string>('');
+  commentText = signal<string>('');
+  commentSubmitting = signal<boolean>(false);
+
+  // Answer comment (admin only)
+  answerCommentTarget = signal<PublicCommentItemModel | null>(null);
+  answerText = signal<string>('');
+  answerStatus = signal<string>('done');
+  answerSubmitting = signal<boolean>(false);
 
   availableTypes = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -105,6 +139,12 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     if (id) {
       this.validationId.set(id);
       this.loadSchemas(id);
+      this.loadPublicComments(id);
+    }
+    if (isPlatformBrowser(this._platformId)) {
+      const saved = localStorage.getItem(LS_USERNAME_KEY);
+      if (saved) this.commentUsername.set(saved);
+      this.isLoggedIn.set(this._authRepository.isAuthenticated());
     }
   }
 
@@ -119,6 +159,155 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  async loadPublicComments(validationId: string) {
+    try {
+      const response = await this._repository.getPublicComments(validationId);
+      const map = new Map<string, PublicCommentItemModel[]>();
+      for (const comment of response.items) {
+        const key = comment.schema_item_url;
+        if (!map.has(key)) map.set(key, []);
+        map.get(key)!.push(comment);
+      }
+      this.commentsMap.set(map);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+    }
+  }
+
+  getCommentsForSchema(schemaItemId: string): PublicCommentItemModel[] {
+    return this.commentsMap().get(schemaItemId) ?? [];
+  }
+
+  toggleCommentSection(schemaItemId: string): void {
+    if (this.openCommentSection() === schemaItemId) {
+      this.openCommentSection.set(null);
+    } else {
+      this.openCommentSection.set(schemaItemId);
+    }
+  }
+
+  isCommentSectionOpen(schemaItemId: string): boolean {
+    return this.openCommentSection() === schemaItemId;
+  }
+
+  async submitComment(schemaItemId: string): Promise<void> {
+    const username = this.commentUsername().trim();
+    const comment = this.commentText().trim();
+    if (!username || !comment) {
+      await this._sweetAlertUtil.error('', 'Por favor ingresa tu nombre de usuario y el comentario.');
+      return;
+    }
+    if (isPlatformBrowser(this._platformId)) {
+      localStorage.setItem(LS_USERNAME_KEY, username);
+    }
+    try {
+      this.commentSubmitting.set(true);
+      const newComment = await this._repository.createPublicComment(
+        schemaItemId,
+        this.validationId() ?? '',
+        new CreatePublicCommentRequestModel(username, comment)
+      );
+      const map = new Map(this.commentsMap());
+      if (!map.has(schemaItemId)) map.set(schemaItemId, []);
+      map.get(schemaItemId)!.unshift(newComment as any);
+      this.commentsMap.set(map);
+      this.commentText.set('');
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: 'Comentario enviado'
+      });
+    } catch (error) {
+      console.error('Error submitting comment:', error);
+      await this._sweetAlertUtil.error('', 'No se pudo enviar el comentario. Intenta nuevamente.');
+    } finally {
+      this.commentSubmitting.set(false);
+    }
+  }
+
+  openAnswerModal(comment: PublicCommentItemModel): void {
+    this.answerCommentTarget.set(comment);
+    this.answerText.set(comment.answer ?? '');
+    this.answerStatus.set('done');
+    if (isPlatformBrowser(this._platformId)) {
+      const modalEl = document.getElementById('answerCommentModal');
+      if (modalEl) {
+        const { Modal } = (window as any).bootstrap;
+        Modal.getOrCreateInstance(modalEl).show();
+      }
+    }
+  }
+
+  async submitAnswer(): Promise<void> {
+    const comment = this.answerCommentTarget();
+    const answer = this.answerText().trim();
+    if (!comment || !answer) {
+      await this._sweetAlertUtil.error('', 'Por favor ingresa una respuesta.');
+      return;
+    }
+    try {
+      this.answerSubmitting.set(true);
+      await this._repository.answerComment(
+        comment.id,
+        new AnswerCommentRequestModel(answer, this.answerStatus())
+      );
+      // Actualizar el mapa de comentarios localmente
+      const map = new Map(this.commentsMap());
+      for (const [key, comments] of map.entries()) {
+        const idx = comments.findIndex(c => c.id === comment.id);
+        if (idx >= 0) {
+          comments[idx] = { ...comments[idx], answer, status: this.answerStatus(), answered_at: new Date().toISOString() };
+          map.set(key, [...comments]);
+          break;
+        }
+      }
+      this.commentsMap.set(map);
+      if (isPlatformBrowser(this._platformId)) {
+        const modalEl = document.getElementById('answerCommentModal');
+        if (modalEl) {
+          const { Modal } = (window as any).bootstrap;
+          Modal.getOrCreateInstance(modalEl).hide();
+        }
+      }
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: 'Respuesta enviada'
+      });
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+      await this._sweetAlertUtil.error('', 'No se pudo enviar la respuesta. Intenta nuevamente.');
+    } finally {
+      this.answerSubmitting.set(false);
+    }
+  }
+
+  // Modal expand
+  openModal(schema: AuditUrlValidationSchemaItemModel, tab: 'schema' | 'report'): void {
+    this.modalSchema.set(schema);
+    this.modalTab.set(tab);
+    if (isPlatformBrowser(this._platformId)) {
+      const modalEl = document.getElementById('expandModal');
+      if (modalEl) {
+        const { Modal } = (window as any).bootstrap;
+        const modal = Modal.getOrCreateInstance(modalEl);
+        modal.show();
+      }
+    }
+  }
+
+  setModalTab(tab: 'schema' | 'report'): void {
+    this.modalTab.set(tab);
   }
 
   async copyToClipboard(text: any) {
@@ -179,5 +368,16 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     setTimeout(() => {
       window.open(validatorUrl, '_blank');
     }, 2000);
+  }
+
+  formatDate(dateStr: string): string {
+    try {
+      return new Date(dateStr).toLocaleString('es-MX', {
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
+      });
+    } catch {
+      return dateStr;
+    }
   }
 }

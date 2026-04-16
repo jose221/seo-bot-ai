@@ -1,4 +1,4 @@
-<!-- ===== PUBLIC HEADER ===== -->
+<!-- ===== PUBLIC PAGE WRAPPER ===== -->
 <div class="public-page">
   <header class="public-header">
     <div class="container">
@@ -11,7 +11,6 @@
   <div class="container py-4">
 
     @if (isLoading()) {
-      <!-- ===== LOADING STATE ===== -->
       <div class="loading-state text-center py-5">
         <div class="loading-spinner mx-auto mb-4"></div>
         <h5 class="fw-semibold text-muted">Cargando validación...</h5>
@@ -157,6 +156,7 @@
       <div class="schemas-list">
         @for (schema of filteredSchemas(); track $index) {
           <div class="schema-card" [class.schema-card--expanded]="isCardExpanded($index)">
+
             <!-- Card Header (siempre visible, clickeable) -->
             <div class="schema-card-header" (click)="toggleCard($index)">
               <div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
@@ -183,6 +183,7 @@
             <!-- Card Body (colapsable) -->
             @if (isCardExpanded($index)) {
               <div class="schema-card-body">
+
                 <!-- Actions bar -->
                 <div class="schema-actions">
                   <div class="dropdown">
@@ -200,6 +201,20 @@
                   </div>
                   <button class="btn-action" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar JSON-LD">
                     Copiar
+                  </button>
+                  <!-- Botón Expandir en Modal -->
+                  <button class="btn-action btn-action--expand" (click)="openModal(schema, 'schema')" title="Ver esquema completo">
+                    &#x2922; Expandir
+                  </button>
+                  <!-- Botón Comentarios -->
+                  <button class="btn-action btn-action--comment"
+                          [class.btn-action--active]="isCommentSectionOpen(schema.url)"
+                          (click)="toggleCommentSection(schema.url)">
+                    💬 Comentarios
+                    @let commentCount = getCommentsForSchema(schema.url).length;
+                    @if (commentCount > 0) {
+                      <span class="comment-badge">{{ commentCount }}</span>
+                    }
                   </button>
                 </div>
 
@@ -259,11 +274,15 @@
                     </ul>
 
                     <div class="tab-content">
+                      <!-- Tab Esquemas con overflow horizontal -->
                       <div class="tab-pane fade show active" [id]="'schemas-pane-' + $index" role="tabpanel">
                         <div class="code-block-wrapper">
                           <div class="code-actions">
                             <button class="code-action-btn" (click)="copyToClipboard(schema.extracted_schemas)" title="Copiar">
                               Copiar
+                            </button>
+                            <button class="code-action-btn" (click)="openModal(schema, 'schema')" title="Expandir">
+                              &#x2922;
                             </button>
                             <div class="dropdown">
                               <button class="code-action-btn" type="button" data-bs-toggle="dropdown">
@@ -279,11 +298,20 @@
                               </ul>
                             </div>
                           </div>
-                          <pre class="code-block"><code>{{ formatJson(schema.extracted_schemas) }}</code></pre>
+                          <div class="code-scroll-wrapper">
+                            <pre class="code-block"><code>{{ formatJson(schema.extracted_schemas) }}</code></pre>
+                          </div>
                         </div>
                       </div>
+
+                      <!-- Tab Reporte IA con overflow horizontal en tablas -->
                       <div class="tab-pane fade" [id]="'report-pane-' + $index" role="tabpanel">
-                        <div class="ai-report">
+                        <div class="ai-report-actions">
+                          <button class="code-action-btn code-action-btn--dark" (click)="openModal(schema, 'report')" title="Expandir reporte IA">
+                            &#x2922; Expandir
+                          </button>
+                        </div>
+                        <div class="ai-report ai-report--overflow">
                           @if (schema.ai_report) {
                             <markdown [data]="schema.ai_report"></markdown>
                           } @else {
@@ -296,6 +324,88 @@
                     </div>
                   </div>
                 </div>
+
+                <!-- ===== SECCIÓN COMENTARIOS (colapsable por schema) ===== -->
+                @if (isCommentSectionOpen(schema.url)) {
+                  <div class="comments-section">
+                    <div class="comments-header">
+                      <span class="comments-title">💬 Comentarios sobre este segmento</span>
+                    </div>
+
+                    <!-- Formulario nuevo comentario -->
+                    <div class="comment-form">
+                      <div class="row g-2">
+                        <div class="col-12 col-sm-4">
+                          <input
+                            type="text"
+                            class="filter-input"
+                            placeholder="Tu nombre de usuario..."
+                            [ngModel]="commentUsername()"
+                            (ngModelChange)="commentUsername.set($event)"
+                            maxlength="60">
+                          <small class="comment-hint">Se guardará para futuros comentarios</small>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                          <textarea
+                            class="filter-input comment-textarea"
+                            placeholder="Escribe tu comentario aquí..."
+                            [ngModel]="commentText()"
+                            (ngModelChange)="commentText.set($event)"
+                            rows="2"
+                            maxlength="500"></textarea>
+                        </div>
+                        <div class="col-12 col-sm-2 d-flex align-items-end">
+                          <button class="btn-submit-comment w-100"
+                                  [disabled]="commentSubmitting()"
+                                  (click)="submitComment(schema.url)">
+                            @if (commentSubmitting()) {
+                              <span class="comment-spinner"></span>
+                            } @else {
+                              Enviar
+                            }
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Listado de comentarios -->
+                    @let comments = getCommentsForSchema(schema.url);
+                    @if (comments.length > 0) {
+                      <div class="comments-list">
+                        @for (c of comments; track c.id) {
+                          <div class="comment-item">
+                            <div class="comment-avatar">{{ c.username.charAt(0).toUpperCase() }}</div>
+                            <div class="comment-body">
+                              <div class="comment-meta">
+                                <span class="comment-username">{{ c.username }}</span>
+                                <span class="comment-date">{{ formatDate(c.created_at) }}</span>
+                                <span class="comment-status comment-status--{{ c.status }}">{{ c.status }}</span>
+                                @if (isLoggedIn()) {
+                                  <button class="btn-reply" (click)="openAnswerModal(c)">
+                                    Responder
+                                  </button>
+                                }
+                              </div>
+                              <p class="comment-text">{{ c.comment }}</p>
+                              @if (c.answer) {
+                                <div class="comment-answer">
+                                  <span class="comment-answer-label">Respuesta oficial:</span>
+                                  <p class="comment-answer-text">{{ c.answer }}</p>
+                                  @if (c.answered_at) {
+                                    <span class="comment-answer-date">{{ formatDate(c.answered_at) }}</span>
+                                  }
+                                </div>
+                              }
+                            </div>
+                          </div>
+                        }
+                      </div>
+                    } @else {
+                      <p class="comments-empty">Sé el primero en comentar este segmento.</p>
+                    }
+                  </div>
+                }
+
               </div>
             }
           </div>
@@ -311,7 +421,6 @@
       </div>
 
     } @else {
-      <!-- ===== ERROR / NO DATA STATE ===== -->
       <div class="empty-state">
         <h5>No se encontraron datos</h5>
         <p>No pudimos recuperar la información de los esquemas para esta validación.</p>
@@ -326,4 +435,113 @@
       <small class="text-muted">SEO Schema Validator &middot; Reporte público de validación</small>
     </div>
   </footer>
+</div>
+
+<!-- ===== MODAL RESPONDER COMENTARIO (Bootstrap) ===== -->
+<div class="modal fade" id="answerCommentModal" tabindex="-1" aria-labelledby="answerCommentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header modal-header--custom">
+        <h5 class="modal-title" id="answerCommentModalLabel">Responder comentario</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <div class="modal-body">
+        @if (answerCommentTarget()) {
+          <div class="answer-original-comment mb-3">
+            <small class="text-muted d-block mb-1">Comentario de <strong>{{ answerCommentTarget()!.username }}</strong>:</small>
+            <p class="answer-original-text">{{ answerCommentTarget()!.comment }}</p>
+          </div>
+        }
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Tu respuesta</label>
+          <textarea
+            class="form-control"
+            rows="4"
+            placeholder="Escribe tu respuesta..."
+            [ngModel]="answerText()"
+            (ngModelChange)="answerText.set($event)"
+            maxlength="1000"></textarea>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Estado del comentario</label>
+          <select class="form-select" [ngModel]="answerStatus()" (ngModelChange)="answerStatus.set($event)">
+            <option value="done">Done — Resuelto</option>
+            <option value="rejected">Rejected — Rechazado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary"
+                [disabled]="answerSubmitting()"
+                (click)="submitAnswer()">
+          @if (answerSubmitting()) {
+            <span class="spinner-border spinner-border-sm me-1"></span> Enviando...
+          } @else {
+            Enviar respuesta
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL EXPANDIR (Bootstrap) ===== -->
+<div class="modal fade" id="expandModal" tabindex="-1" aria-labelledby="expandModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-fullscreen">
+    <div class="modal-content">
+      <div class="modal-header modal-header--custom">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+          <h5 class="modal-title" id="expandModalLabel">
+            @if (modalSchema()) {
+              <span class="sv-badge sv-badge--sm" [ngClass]="getSeverityClass(modalSchema()!.severity)">
+                {{ modalSchema()!.severity }}
+              </span>
+            }
+            <span class="ms-2 modal-url">{{ modalSchema()?.url }}</span>
+          </h5>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+
+      @if (modalSchema()) {
+        <!-- Tab selector dentro del modal -->
+        <div class="modal-tabs-bar">
+          <button class="modal-tab-btn" [class.active]="modalTab() === 'schema'" (click)="setModalTab('schema')">
+            Esquemas Extraídos
+          </button>
+          <button class="modal-tab-btn" [class.active]="modalTab() === 'report'" (click)="setModalTab('report')">
+            Reporte IA
+          </button>
+          @if (modalTab() === 'schema') {
+            <button class="btn-action ms-auto me-3" (click)="copyToClipboard(modalSchema()!.extracted_schemas)">
+              Copiar JSON
+            </button>
+          }
+        </div>
+
+        <div class="modal-body modal-body--fullcontent">
+          @if (modalTab() === 'schema') {
+            <!-- Esquema JSON en modal: overflow horizontal completo -->
+            <div class="modal-code-wrapper">
+              <pre class="code-block code-block--modal"><code>{{ formatJson(modalSchema()!.extracted_schemas) }}</code></pre>
+            </div>
+          } @else {
+            <!-- Reporte IA en modal: tabla con overflow horizontal -->
+            <div class="modal-report-wrapper">
+              <div class="ai-report ai-report--modal">
+                @if (modalSchema()!.ai_report) {
+                  <markdown [data]="modalSchema()!.ai_report!"></markdown>
+                } @else {
+                  <div class="empty-report">
+                    <p>No se generó reporte de IA para esta URL.</p>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+  </div>
 </div>

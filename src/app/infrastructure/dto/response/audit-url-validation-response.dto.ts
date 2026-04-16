@@ -56,6 +56,39 @@ export interface FindAuditUrlValidationResponseDto {
   completed_at: string | null;
 }
 
+// ============ PUBLIC COMMENTS DTOs ============
+export interface PublicCommentItemDto {
+  id: string;
+  schema_item_url: string;
+  validation_id: string;
+  username: string;
+  comment: string;
+  status: string;
+  answer: string | null;
+  answered_at: string | null;
+  created_at: string;
+}
+
+export interface PublicCommentsResponseDto {
+  validation_id: string;
+  items: PublicCommentItemDto[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+export interface CreatePublicCommentResponseDto {
+  id: string;
+  schema_item_url: string;
+  validation_id: string;
+  username: string;
+  comment: string;
+  status: string;
+  answer: string | null;
+  answered_at: string | null;
+  created_at: string;
+}
+
 // ============ SCHEMAS DTO ============
 export interface AuditUrlValidationSchemaItemDto {
   url: string;

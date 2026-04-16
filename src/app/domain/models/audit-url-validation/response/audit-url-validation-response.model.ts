@@ -69,6 +69,45 @@ export class FindAuditUrlValidationResponseModel {
   ) {}
 }
 
+// ============ PUBLIC COMMENTS MODELS ============
+export class PublicCommentItemModel {
+  constructor(
+    public id: string,
+    public schema_item_url: string,
+    public validation_id: string,
+    public username: string,
+    public comment: string,
+    public status: string,
+    public answer: string | null,
+    public answered_at: string | null,
+    public created_at: string
+  ) {}
+}
+
+export class PublicCommentsResponseModel {
+  constructor(
+    public validation_id: string,
+    public items: PublicCommentItemModel[],
+    public total: number,
+    public page: number,
+    public page_size: number
+  ) {}
+}
+
+export class CreatePublicCommentResponseModel {
+  constructor(
+    public id: string,
+    public schema_item_url: string,
+    public validation_id: string,
+    public username: string,
+    public comment: string,
+    public status: string,
+    public answer: string | null,
+    public answered_at: string | null,
+    public created_at: string
+  ) {}
+}
+
 // ============ SCHEMAS MODEL ============
 export class AuditUrlValidationSchemaItemModel {
   constructor(

@@ -1059,37 +1059,26 @@ async def list_url_validation_comments(
 )
 async def create_url_validation_comment(
         url: str,
-        body: audit_schemas.CommentCreate,
+        validation_id: UUID = Query(..., description="ID de la AuditUrlValidation a la que pertenece la URL"),
+        body: audit_schemas.CommentCreate = ...,
         session=Depends(get_session),
 ):
     """
     Endpoint público: crea un comentario sobre un schema item identificado por su URL.
-    Busca la validación más reciente (completed) que contenga esa URL.
+    Requiere validation_id como query param para evitar escaneos costosos.
     No requiere autenticación.
     """
-    # Buscar la validación más reciente que contenga esta URL en results_json
-    stmt = (
-        select(AuditUrlValidation)
-        .where(AuditUrlValidation.status == UrlValidationStatus.COMPLETED)
-        .order_by(AuditUrlValidation.created_at.desc())
-    )
-    validations = (await session.execute(stmt)).scalars().all()
+    stmt = select(AuditUrlValidation).where(AuditUrlValidation.id == validation_id)
+    validation = (await session.execute(stmt)).scalars().first()
 
-    matched_validation = None
-    for v in validations:
-        raw = v.results_json or []
-        if any(isinstance(item, dict) and item.get("url") == url for item in raw):
-            matched_validation = v
-            break
-
-    if not matched_validation:
+    if not validation:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No se encontró una validación completada que contenga la URL: {url}",
+            detail="Validación no encontrada",
         )
 
     comment = UrlValidationComment(
-        validation_id=matched_validation.id,
+        validation_id=validation.id,
         schema_item_url=url,
         username=body.username,
         comment=body.comment,

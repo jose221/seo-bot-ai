@@ -12,3 +12,13 @@ export interface FilterAuditUrlValidationRequestDto {
   page_size?: number;
 }
 
+export interface CreatePublicCommentRequestDto {
+  username: string;
+  comment: string;
+}
+
+export interface AnswerCommentRequestDto {
+  answer: string;
+  status: string;
+}
+

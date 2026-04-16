@@ -4,12 +4,16 @@ import { AuditUrlValidationService } from '@/app/infrastructure/services/audit-u
 import {
   CreateAuditUrlValidationRequestModel,
   FilterAuditUrlValidationRequestModel,
+  CreatePublicCommentRequestModel,
+  AnswerCommentRequestModel,
 } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import {
   AuditUrlValidationListResponseModel,
   CreateAuditUrlValidationResponseModel,
   FindAuditUrlValidationResponseModel,
   AuditUrlValidationSchemasResponseModel,
+  PublicCommentsResponseModel,
+  CreatePublicCommentResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 
 @Injectable({
@@ -40,6 +44,18 @@ export class AuditUrlValidationImplementationRepository implements AuditUrlValid
 
   async getSchemasPublic(id: string): Promise<AuditUrlValidationSchemasResponseModel> {
     return await this.primaryService.getSchemasPublic(id);
+  }
+
+  async getPublicComments(validationId: string, page?: number): Promise<PublicCommentsResponseModel> {
+    return await this.primaryService.getPublicComments(validationId, page);
+  }
+
+  async createPublicComment(schemaItemId: string, validationId: string, params: CreatePublicCommentRequestModel): Promise<CreatePublicCommentResponseModel> {
+    return await this.primaryService.createPublicComment(schemaItemId, validationId, params);
+  }
+
+  async answerComment(commentId: string, params: AnswerCommentRequestModel): Promise<any> {
+    return await this.primaryService.answerComment(commentId, params);
   }
 }
 

@@ -17,3 +17,17 @@ export class FilterAuditUrlValidationRequestModel {
   ) {}
 }
 
+export class CreatePublicCommentRequestModel {
+  constructor(
+    public username: string,
+    public comment: string
+  ) {}
+}
+
+export class AnswerCommentRequestModel {
+  constructor(
+    public answer: string,
+    public status: string
+  ) {}
+}
+
