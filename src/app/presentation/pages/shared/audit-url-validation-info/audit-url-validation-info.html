@@ -105,6 +105,48 @@
         </div>
       </div>
 
+      @let commentInfo = commentSummary();
+      @if (commentInfo.totalComments > 0) {
+        <div class="comments-overview-card mb-4">
+          <div class="comments-overview-content">
+            <div class="comments-overview-title">
+              💬 Hay {{ commentInfo.totalComments }} comentario(s) en esta validación
+            </div>
+            <div class="comments-overview-meta">
+              @if (commentInfo.pendingComments > 0) {
+                <span class="sv-badge sv-warning">
+                  {{ commentInfo.pendingComments }} pendiente(s) por atender
+                </span>
+              } @else {
+                <span class="sv-badge sv-success">
+                  Todos los comentarios fueron atendidos
+                </span>
+              }
+            </div>
+          </div>
+        </div>
+
+        <div class="notifications-panel mb-4">
+          <div class="notifications-header">
+            <div class="notifications-title">🔔 Notificaciones de comentarios</div>
+            <small class="text-muted">Haz clic para ir al esquema con comentario</small>
+          </div>
+          <div class="notifications-list">
+            @for (item of commentInfo.items; track item.url) {
+              <button class="notification-item" type="button" (click)="scrollToSchema(item.url)">
+                <span class="notification-url">{{ item.url }}</span>
+                <span class="notification-badges">
+                  @if (item.pendingCount > 0) {
+                    <span class="sv-badge sv-warning">{{ item.pendingCount }} pendiente(s)</span>
+                  }
+                  <span class="sv-badge sv-secondary">{{ item.totalCount }} comentario(s)</span>
+                </span>
+              </button>
+            }
+          </div>
+        </div>
+      }
+
       <!-- ===== FILTROS TOGGLE ===== -->
       <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div class="d-flex align-items-center gap-2">
@@ -170,7 +212,9 @@
       <!-- ===== LISTADO DE URLS ===== -->
       <div class="schemas-list">
         @for (schema of filteredSchemas(); track $index) {
-          <div class="schema-card" [class.schema-card--expanded]="isCardExpanded($index)">
+          <div class="schema-card"
+               [attr.id]="getSchemaDomId(schema.url)"
+               [class.schema-card--expanded]="isCardExpanded($index)">
 
             <!-- Card Header (siempre visible, clickeable) -->
             <div class="schema-card-header" (click)="toggleCard($index)">
