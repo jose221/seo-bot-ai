@@ -122,6 +122,41 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     return this.searchTerm() !== '' || this.severityFilter() !== '' || this.typeFilter() !== '' || this.onlyWithErrors();
   });
 
+  commentSummary = computed(() => {
+    const schemas = this.data()?.schemas ?? [];
+    const commentMap = this.commentsMap();
+    let totalComments = 0;
+    let pendingComments = 0;
+
+    const items = schemas
+      .map((schema) => {
+        const comments = commentMap.get(schema.url) ?? [];
+        if (!comments.length) return null;
+
+        const pendingCount = comments.filter((comment) => comment.status === 'pending').length;
+        totalComments += comments.length;
+        pendingComments += pendingCount;
+
+        return {
+          url: schema.url,
+          severity: schema.severity,
+          totalCount: comments.length,
+          pendingCount
+        };
+      })
+      .filter((item): item is { url: string; severity: string | null; totalCount: number; pendingCount: number } => !!item)
+      .sort((a, b) => {
+        if (b.pendingCount !== a.pendingCount) return b.pendingCount - a.pendingCount;
+        return b.totalCount - a.totalCount;
+      });
+
+    return {
+      totalComments,
+      pendingComments,
+      items
+    };
+  });
+
   toggleCard(index: number): void {
     const current = new Set(this.expandedCards());
     if (current.has(index)) {
@@ -199,6 +234,43 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
 
   isCommentSectionOpen(schemaItemId: string): boolean {
     return this.openCommentSection() === schemaItemId;
+  }
+
+  getSchemaDomId(url: string): string {
+    return `schema-card-${encodeURIComponent(url).replace(/%/g, '')}`;
+  }
+
+  scrollToSchema(url: string): void {
+    if (!isPlatformBrowser(this._platformId)) return;
+
+    const focusSchemaCard = () => {
+      const index = this.filteredSchemas().findIndex((schema) => schema.url === url);
+      if (index < 0) return false;
+
+      if (!this.isCardExpanded(index)) {
+        this.toggleCard(index);
+      }
+      this.openCommentSection.set(url);
+
+      const element = document.getElementById(this.getSchemaDomId(url));
+      if (!element) return false;
+
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      element.classList.add('schema-card--highlight');
+      setTimeout(() => {
+        element.classList.remove('schema-card--highlight');
+      }, 1800);
+      return true;
+    };
+
+    if (focusSchemaCard()) return;
+
+    if (this.hasActiveFilters()) {
+      this.resetFilters();
+      setTimeout(() => {
+        focusSchemaCard();
+      }, 80);
+    }
   }
 
   async submitComment(schemaItemId: string): Promise<void> {
