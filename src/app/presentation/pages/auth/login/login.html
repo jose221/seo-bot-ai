@@ -1,71 +1,44 @@
-<div class="container mt-5">
-  <div class="row justify-content-center">
-    <div class="col-md-6 col-lg-5">
-      <div class="d-flex justify-content-end mb-2">
+<div class="login-wrap min-vh-100 d-flex align-items-center justify-content-center py-5">
+  <div class="login-card shadow-lg">
+
+    <!-- Header -->
+    <div class="login-card__header text-center">
+      <div class="login-card__avatar">
+        <i class="bi bi-shield-lock-fill"></i>
+      </div>
+      <h2 class="login-card__title mt-3">{{ 'login.title' | translate }}</h2>
+      <p class="login-card__subtitle">{{ 'login.subtitle' | translate }}</p>
+    </div>
+
+    <!-- Error -->
+    @if (error()) {
+      <div class="alert alert-danger mx-4 mt-3 mb-0 d-flex gap-2 align-items-center">
+        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
+        <span>{{ error() | translate }}</span>
+      </div>
+    }
+
+    <div class="login-card__body">
+
+      <!-- Selector de idioma -->
+      <div class="d-flex justify-content-end mb-3">
         <app-language-selector />
       </div>
-      <div class="card shadow">
-        <div class="card-header text-center text-white bg-primary">
-          <h3 class="mb-0">{{ 'login.title' | translate }}</h3>
-        </div>
-        <div class="card-body">
-          @if (error()) {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-              {{error() | translate}}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-          }
-          <form [formGroup]="form" (ngSubmit)="onSubmit()" class="user" id="loginForm">
-            <div class="mb-3">
-              <label class="form-label" for="email">{{ 'login.email.label' | translate }}</label>
-              <input
-                formControlName="email"
-                aria-describedby=" validationMessages"
-                [ngClass]="{'is-invalid': messages('email').length > 0}"
-                class="form-control" type="email" id="email" [placeholder]="'login.email.placeholder' | translate">
-              @for(msg of messages('email'); track msg){
-                <div id="validationMessages" class="invalid-feedback">
-                  {{msg}}
-                </div>
-              }
-            </div>
-            <div class="mb-3">
-              <label class="form-label" for="password">{{ 'login.password.label' | translate }}</label>
-              <input
-                formControlName="password"
-                aria-describedby=" validationPassword"
-                [ngClass]="{'is-invalid': messages('password').length > 0}"
-                class="form-control" type="password" id="password" [placeholder]="'login.password.placeholder' | translate">
-              @for(msg of messages('password'); track msg){
-                <div id="validationPassword" class="invalid-feedback">
-                  {{msg}}
-                </div>
-              }
-            </div>
-            <div class="mb-3 form-check">
-              <input type="checkbox" class="form-check-input" id="rememberMe">
-              <label class="form-check-label" for="rememberMe">{{ 'login.rememberMe' | translate }}</label>
-            </div>
-            <div class="d-grid gap-2">
-              <button class="btn btn-primary" type="submit" [disabled]="loading()">
-                @if (loading()) {
-                  <span>{{ 'login.loading' | translate }}</span>
-                } @else {
-                  <span>{{ 'login.submit' | translate }}</span>
-                }
-              </button>
-              <button class="btn btn-outline-secondary" type="button">{{ 'login.clear' | translate }}</button></div>
-          </form>
-          <!--
-          <div class="text-center mt-3">
-            <a class="text-decoration-none" href="#">¿Olvidaste tu contraseña?</a>
-          </div>
-          <div class="text-center mt-2">
-            <small>¿No tienes una cuenta? <a class="text-decoration-none" href="#">Regístrate aquí</a></small>
-          </div>
-          -->
-        </div>
-      </div>
+
+      <!-- Botón SSO Keycloak -->
+      <button
+        type="button"
+        class="btn btn-primary w-100 login-btn"
+        (click)="signIn()"
+        [disabled]="loading()">
+        @if (loading()) {
+          <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+          {{ 'login.loading' | translate }}
+        } @else {
+          <i class="bi bi-box-arrow-in-right me-2"></i>{{ 'login.signInWithSso' | translate }}
+        }
+      </button>
+
     </div>
   </div>
 </div>

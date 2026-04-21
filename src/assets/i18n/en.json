@@ -26,13 +26,15 @@
     "rememberMe": "Remember me",
     "submit": "Log In",
     "clear": "Clear",
-    "loading": "Loading...",
+    "loading": "Verifying session...",
     "forgotPassword": "Forgot your password?",
     "noAccount": "Don't have an account?",
     "register": "Sign up here",
     "errors": {
       "invalidCredentials": "Invalid credentials"
-    }
+    },
+    "subtitle": "Sign in securely with your institutional account (SSO)",
+    "signInWithSso": "Sign in with SSO"
   },
   "validation": {
     "required": "This field is required",

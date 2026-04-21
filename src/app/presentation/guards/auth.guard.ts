@@ -1,11 +1,10 @@
 import { inject, PLATFORM_ID } from '@angular/core';
-import { Router, CanActivateFn } from '@angular/router';
+import { CanActivateFn } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 
-export const authGuard: CanActivateFn = () => {
+export const authGuard: CanActivateFn = async (): Promise<boolean> => {
   const authRepository = inject(AuthRepository);
-  const router = inject(Router);
   const platformId = inject(PLATFORM_ID);
 
   // En SSR, permitir el acceso (la validación real se hará en el cliente)
@@ -13,10 +12,29 @@ export const authGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Verificación solo en el navegador
-  if (authRepository.isAuthenticated()) {
-    return true;
+  console.info('[authGuard] validating protected route', { path: window.location.pathname });
+
+  // check-sso: detecta sesión activa de Keycloak sin forzar redirect
+  const signedIn = await authRepository.completeSignIn();
+  if (signedIn) {
+    console.info('[authGuard] Keycloak session detected');
   }
 
-  return router.createUrlTree(['/']);
+  const isValid = await authRepository.verifyToken();
+
+  if (!isValid) {
+    console.error('[authGuard] verifyToken returned false, redirecting to /');
+    window.location.href = '/';
+    return false;
+  }
+
+  const isAuthenticated = authRepository.isAuthenticated();
+
+  if (!isAuthenticated) {
+    console.error('[authGuard] token not present, redirecting to /');
+    window.location.href = '/';
+    return false;
+  }
+
+  return true;
 };

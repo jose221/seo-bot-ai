@@ -3,7 +3,7 @@ import { Router, CanActivateFn } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 
-export const loginGuard: CanActivateFn = () => {
+export const loginGuard: CanActivateFn = async (): Promise<boolean | any> => {
   const authRepository = inject(AuthRepository);
   const router = inject(Router);
   const platformId = inject(PLATFORM_ID);
@@ -13,10 +13,10 @@ export const loginGuard: CanActivateFn = () => {
     return true;
   }
 
-  // Verificación solo en el navegador
-  if (!authRepository.isAuthenticated()) {
-    return true;
+  // Si ya hay sesión activa, redirigir al área protegida
+  if (authRepository.isAuthenticated()) {
+    return router.createUrlTree(['/admin']);
   }
 
-  return router.createUrlTree(['/admin']);
+  return true;
 };

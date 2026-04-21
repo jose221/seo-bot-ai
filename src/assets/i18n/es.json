@@ -26,13 +26,15 @@
     "rememberMe": "Recordarme",
     "submit": "Iniciar Sesión",
     "clear": "Limpiar",
-    "loading": "Cargando...",
+    "loading": "Verificando sesión...",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "noAccount": "¿No tienes una cuenta?",
     "register": "Regístrate aquí",
     "errors": {
       "invalidCredentials": "Credenciales inválidas"
-    }
+    },
+    "subtitle": "Accede de forma segura con tu cuenta institucional (SSO)",
+    "signInWithSso": "Iniciar sesión con SSO"
   },
   "validation": {
     "required": "Este campo es requerido",

@@ -5,6 +5,18 @@ export const environment = {
   prometheusUrl: 'https://prometheus.herandro.com.mx',
   metricsUrl: 'https://api.seo-bot-ai.herandro.com.mx/metrics',
   timeout: 360000,
+  keycloak: {
+    /** URL base del servidor Keycloak (sin /realms/...) */
+    url: 'https://auth-keycloak.herandro.com.mx',
+    /** Realm donde está configurado el cliente */
+    realm: 'herandro',
+    /** Cliente público del frontend */
+    clientId: 'seo-bot-ai-web',
+    /** Redirección tras login exitoso */
+    redirectUri: 'http://localhost:4200/admin',
+    /** Redirección tras logout */
+    postLogoutRedirectUri: 'http://localhost:4200/',
+  },
   endpoints: {
     auth:{
       login: '/auth/login',
