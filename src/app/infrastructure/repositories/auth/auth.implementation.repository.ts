@@ -24,6 +24,18 @@ export class AuthImplementationRepository implements AuthRepository {
     private localstorageService: LocalstorageService
   ) {}
 
+  private persistAccessToken(token: string): void {
+    this.cookieService.set(this.accessTokenKey, token, environment.settings.auth.expires_in_days);
+    this.localstorageService.set(this.accessTokenKey, token, environment.settings.auth.expires_in_days);
+  }
+
+  private getStoredAccessToken(): string | null {
+    const cookieToken = this.cookieService.get(this.accessTokenKey);
+    if (cookieToken) return cookieToken;
+    const localToken = this.localstorageService.get(this.accessTokenKey);
+    return typeof localToken === 'string' ? localToken : null;
+  }
+
   /** Persiste detalles del último error de auth para diagnóstico en la pantalla de login. */
   private storeAuthDebug(reason: string, details?: unknown): void {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -33,9 +45,9 @@ export class AuthImplementationRepository implements AuthRepository {
   }
 
   /** Redirige al usuario al formulario de login de Keycloak. */
-  signIn(): void {
+  signIn(redirectUri?: string): void {
     if (!isPlatformBrowser(this.platformId)) return;
-    this.keycloakService.login();
+    this.keycloakService.login(redirectUri);
   }
 
   /**
@@ -60,7 +72,7 @@ export class AuthImplementationRepository implements AuthRepository {
         return false;
       }
 
-      this.cookieService.set(this.accessTokenKey, accessToken, environment.settings.auth.expires_in_days);
+      this.persistAccessToken(accessToken);
 
       const userProfile = this.keycloakService.getUserProfile();
       this.localstorageService.set(
@@ -85,7 +97,7 @@ export class AuthImplementationRepository implements AuthRepository {
   async login(params: AuthLoginRequestModel): Promise<AuthLoginResponseModel> {
     const response = await this.primaryService.login(params);
     if (response?.access_token) {
-      this.cookieService.set(this.accessTokenKey, response.access_token, environment.settings.auth.expires_in_days);
+      this.persistAccessToken(response.access_token);
       this.localstorageService.set(this.userKey, {
         user_id: response.user_id,
         user_email: response.user_email,
@@ -104,6 +116,7 @@ export class AuthImplementationRepository implements AuthRepository {
 
   logout(): void {
     this.cookieService.remove(this.accessTokenKey);
+    this.localstorageService.remove(this.accessTokenKey);
     this.localstorageService.remove(this.userKey);
     this.keycloakService.logout();
   }
@@ -114,14 +127,14 @@ export class AuthImplementationRepository implements AuthRepository {
 
   isAuthenticated(): boolean {
     if (this.keycloakService.isAuthenticated()) return true;
-    return this.cookieService.get(this.accessTokenKey) !== null;
+    return this.getStoredAccessToken() !== null;
   }
 
   getToken(): string {
     // Preferir token Keycloak (siempre actualizado), fallback a cookie
     const kcToken = this.keycloakService.getTokenSync();
     if (kcToken) return kcToken;
-    return this.cookieService.get(this.accessTokenKey) as string;
+    return this.getStoredAccessToken() ?? '';
   }
 
   /**
@@ -132,12 +145,12 @@ export class AuthImplementationRepository implements AuthRepository {
     try {
       const freshToken = await this.keycloakService.getToken();
       if (freshToken) {
-        this.cookieService.set(this.accessTokenKey, freshToken, environment.settings.auth.expires_in_days);
+        this.persistAccessToken(freshToken);
         return true;
       }
 
-      // Fallback: verificar si hay token almacenado en cookie
-      const storedToken = this.cookieService.get(this.accessTokenKey);
+      // Fallback: verificar si hay token almacenado localmente
+      const storedToken = this.getStoredAccessToken();
       if (!storedToken) {
         this.storeAuthDebug('No token found in Keycloak or cookie');
         return false;

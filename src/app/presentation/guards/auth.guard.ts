@@ -1,11 +1,12 @@
 import { inject, PLATFORM_ID } from '@angular/core';
-import { CanActivateFn } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 
-export const authGuard: CanActivateFn = async (): Promise<boolean> => {
+export const authGuard: CanActivateFn = async (_route, state): Promise<boolean | ReturnType<Router['createUrlTree']>> => {
   const authRepository = inject(AuthRepository);
   const platformId = inject(PLATFORM_ID);
+  const router = inject(Router);
 
   // En SSR, permitir el acceso (la validación real se hará en el cliente)
   if (!isPlatformBrowser(platformId)) {
@@ -24,16 +25,18 @@ export const authGuard: CanActivateFn = async (): Promise<boolean> => {
 
   if (!isValid) {
     console.error('[authGuard] verifyToken returned false, redirecting to /');
-    window.location.href = '/';
-    return false;
+    return router.createUrlTree(['/'], {
+      queryParams: { returnUrl: state.url || '/admin' }
+    });
   }
 
   const isAuthenticated = authRepository.isAuthenticated();
 
   if (!isAuthenticated) {
     console.error('[authGuard] token not present, redirecting to /');
-    window.location.href = '/';
-    return false;
+    return router.createUrlTree(['/'], {
+      queryParams: { returnUrl: state.url || '/admin' }
+    });
   }
 
   return true;

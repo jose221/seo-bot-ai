@@ -23,6 +23,12 @@ export class KeycloakService {
   private readonly platformId = inject(PLATFORM_ID);
   private _initialized = false;
 
+  private hasAuthCallbackParams(): boolean {
+    if (!this.isBrowser) return false;
+    const url = window.location.href;
+    return url.includes('code=') || url.includes('state=') || url.includes('error=');
+  }
+
   /** Devuelve `true` si estamos en el navegador */
   private get isBrowser(): boolean {
     return isPlatformBrowser(this.platformId);
@@ -36,23 +42,31 @@ export class KeycloakService {
    */
   async init(): Promise<boolean> {
     if (!this.isBrowser) return false;
-    if (this._initialized && this.keycloak) {
+
+    const hasAuthCallback = this.hasAuthCallbackParams();
+
+    if (this._initialized && this.keycloak && !hasAuthCallback) {
       return this.keycloak.authenticated ?? false;
     }
 
     const kcConfig = environment.keycloak;
 
-    this.keycloak = new Keycloak({
-      url: kcConfig.url,
-      realm: kcConfig.realm,
-      clientId: kcConfig.clientId,
-    });
+    // Si venimos del callback de login, recreamos la instancia para evitar
+    // quedarnos con un estado "no autenticado" cacheado.
+    if (!this.keycloak || hasAuthCallback) {
+      this.keycloak = new Keycloak({
+        url: kcConfig.url,
+        realm: kcConfig.realm,
+        clientId: kcConfig.clientId,
+      });
+      this._initialized = false;
+    }
 
     try {
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: this.isBrowser
-          ? `${window.location.origin}/silent-check-sso.html`
+          ? `${window.location.origin}/assets/silent-check-sso.html`
           : undefined,
         pkceMethod: 'S256',
         checkLoginIframe: false,

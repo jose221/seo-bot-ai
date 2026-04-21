@@ -3,7 +3,7 @@ import {isPlatformBrowser} from '@angular/common';
 import {TranslateModule} from '@ngx-translate/core';
 import {LanguageSelector} from '@/app/presentation/components/general/language-selector/language-selector';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
-import {Router} from '@angular/router';
+import {ActivatedRoute, Router} from '@angular/router';
 
 @Component({
   selector: 'app-login',
@@ -19,7 +19,13 @@ export class Login implements OnInit {
   protected readonly loading = signal(false);
   private readonly authRepository = inject(AuthRepository);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly platformId = inject(PLATFORM_ID);
+
+  private getSafeReturnUrl(): string {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') ?? '/admin';
+    return returnUrl.startsWith('/admin') ? returnUrl : '/admin';
+  }
 
   async ngOnInit() {
     if (!isPlatformBrowser(this.platformId)) return;
@@ -38,7 +44,7 @@ export class Login implements OnInit {
         timeout
       ]);
       if (isAuthenticated) {
-        await this.router.navigateByUrl('/admin');
+        await this.router.navigateByUrl(this.getSafeReturnUrl());
       }
     } catch (e: Error | any) {
       this.error.set(`${e?.response?.statusText ?? e?.name ?? 'Error'} ${e?.message ?? ''}`.trim());
@@ -50,6 +56,8 @@ export class Login implements OnInit {
   /** Redirige al usuario al formulario de login de Keycloak (SSO). */
   signIn() {
     this.error.set('');
-    this.authRepository.signIn();
+    const returnUrl = this.getSafeReturnUrl();
+    const redirectUri = `${window.location.origin}/?returnUrl=${encodeURIComponent(returnUrl)}`;
+    this.authRepository.signIn(redirectUri);
   }
 }

@@ -3,7 +3,7 @@ import { Router, CanActivateFn } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 
-export const loginGuard: CanActivateFn = async (): Promise<boolean | any> => {
+export const loginGuard: CanActivateFn = async (route): Promise<boolean | any> => {
   const authRepository = inject(AuthRepository);
   const router = inject(Router);
   const platformId = inject(PLATFORM_ID);
@@ -15,7 +15,9 @@ export const loginGuard: CanActivateFn = async (): Promise<boolean | any> => {
 
   // Si ya hay sesión activa, redirigir al área protegida
   if (authRepository.isAuthenticated()) {
-    return router.createUrlTree(['/admin']);
+    const returnUrl = route.queryParamMap.get('returnUrl');
+    const safeReturnUrl = returnUrl?.startsWith('/admin') ? returnUrl : '/admin';
+    return router.createUrlTree([safeReturnUrl]);
   }
 
   return true;

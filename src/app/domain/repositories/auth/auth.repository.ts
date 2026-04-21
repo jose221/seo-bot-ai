@@ -7,7 +7,7 @@ export abstract class AuthRepository {
   abstract verifyToken(): Promise<boolean>;
   public abstract getToken(): string;
   /** Redirige al proveedor de identidad (Keycloak) para iniciar sesión. */
-  abstract signIn(): void;
+  abstract signIn(redirectUri?: string): void;
   /** Completa el flujo de sign-in: inicializa Keycloak y persiste el token. */
   abstract completeSignIn(): Promise<boolean>;
   abstract login(params: AuthLoginRequestModel): Promise<AuthLoginResponseModel|any>;
