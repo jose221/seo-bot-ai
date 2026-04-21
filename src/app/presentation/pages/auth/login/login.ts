@@ -26,8 +26,8 @@ export class Login implements OnInit {
 
     const storedAuthError = sessionStorage.getItem('auth:lastError');
     if (storedAuthError) {
-      console.error('[login] last auth diagnostic:', JSON.parse(storedAuthError));
-      sessionStorage.removeItem('auth:lastError');
+      //console.error('[login] last auth diagnostic:', JSON.parse(storedAuthError));
+      //sessionStorage.removeItem('auth:lastError');
     }
 
     this.loading.set(true);
