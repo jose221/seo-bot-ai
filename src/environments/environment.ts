@@ -11,7 +11,7 @@ export const environment = {
     /** Realm donde está configurado el cliente */
     realm: 'herandro',
     /** Cliente público del frontend */
-    clientId: 'portfolio-web',
+    clientId: 'seo-bot-ai-web',
     /** Redirección tras login exitoso */
     redirectUri: 'http://localhost:4200/admin',
     /** Redirección tras logout */
