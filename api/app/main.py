@@ -2,16 +2,26 @@
 Aplicación principal de FastAPI - SEO Bot AI
 Inicialización de la aplicación, configuración de CORS y routers.
 """
+import logging
 import os
-from fastapi import FastAPI
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from contextlib import asynccontextmanager
 from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.middleware.base import RequestResponseEndpoint
 
 from app.core.config import settings
 from app.core.database import init_db
+from app.core.security import clear_request_auth_context
 from app.api.v1.api import api_router
+from app.shared.herandro_services_api.herandro_services_api_client import (
+    close_hsa_client,
+    init_hsa_client,
+)
+
+log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -20,7 +30,7 @@ async def lifespan(app: FastAPI):
     Contexto de ciclo de vida de la aplicación.
     Se ejecuta al inicio y al cierre de la aplicación.
     """
-    # Inicializar base de datos (solo si está disponible)
+    # 1. Base de datos
     try:
         print("🚀 Inicializando base de datos...")
         await init_db()
@@ -29,8 +39,17 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  Base de datos no disponible: {e}")
         print("⚠️  La aplicación continuará sin persistencia")
 
+    # 2. Cliente Herandro Services API
+    await init_hsa_client(
+        base_url=settings.HSA_BASE_URL,
+        timeout=settings.HSA_TIMEOUT_SECONDS,
+    )
+    print(f"✅ Herandro Services API client inicializado → {settings.HSA_BASE_URL}")
+
     yield
 
+    # Limpieza
+    await close_hsa_client()
     print("👋 Cerrando aplicación...")
 
 
@@ -38,8 +57,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Sistema de auditoría web inteligente con IA",
-    lifespan=lifespan
+    description=(
+        "Sistema de auditoría web inteligente con IA\n\n"
+        "**Autenticación:** Bearer JWT de Keycloak."
+    ),
+    lifespan=lifespan,
 )
 
 
@@ -53,20 +75,31 @@ app.add_middleware(
 )
 
 
+# Middleware que limpia el contexto de autenticación por request
+@app.middleware("http")
+async def request_auth_context_middleware(
+    request: Request,
+    call_next: RequestResponseEndpoint,
+) -> Response:
+    clear_request_auth_context()
+    try:
+        return await call_next(request)
+    finally:
+        clear_request_auth_context()
+
+
 # Incluir routers
 app.include_router(api_router, prefix="/api/v1")
 
-# Montar directorio de storage para servir archivos estáticos (screenshots, reportes, etc.)
+# Montar directorio de storage para servir archivos estáticos
 storage_path = settings.STORAGE_PATH
 if not os.path.exists(storage_path):
-    # Intentar crear directorio si no existe (útil para dev local o si el volumen está vacío)
     try:
         os.makedirs(storage_path, exist_ok=True)
         print(f"📁 Directorio creado: {storage_path}")
     except OSError as e:
         print(f"⚠️ No se pudo crear {storage_path}: {e}")
 
-# Montar storage solo si existe y es accesible
 if os.path.exists(storage_path):
     app.mount(settings.STORAGE_URL_PREFIX, StaticFiles(directory=storage_path), name="storage")
     print(f"✅ Storage montado en {settings.STORAGE_URL_PREFIX} -> {storage_path}")
@@ -77,7 +110,6 @@ else:
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 
-# Endpoint raíz
 @app.get("/")
 async def root():
     """Endpoint raíz - Información básica de la API"""
@@ -86,16 +118,16 @@ async def root():
         "version": settings.VERSION,
         "status": "running",
         "docs": "/docs",
-        "message": "SEO Bot AI - Sistema de auditoría web inteligente"
+        "message": "SEO Bot AI - Sistema de auditoría web inteligente",
     }
 
 
-# Health check
 @app.get("/health")
 async def health_check():
-    """Health check endpoint para verificar el estado del servicio"""
+    """Health check endpoint"""
     return {
         "status": "healthy",
-        "service": settings.PROJECT_NAME
+        "service": settings.PROJECT_NAME,
     }
+
 

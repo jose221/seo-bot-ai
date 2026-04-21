@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "postgres"
 
-    # API Externa de Herandro
+    # API Externa de Herandro (legacy — se mantiene para compatibilidad)
     HERANDRO_API_URL: str = "https://herandro-services-api.herandro.com.mx"
 
     # Seguridad
@@ -36,9 +36,19 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: list = ["*"]
 
     # Storage
-    # Ruta relativa al directorio de ejecución (ej: /app/storage en Docker, ./storage en local)
     STORAGE_PATH: str = "storage"
     STORAGE_URL_PREFIX: str = "/storage"
+
+    # Keycloak (UMA resource + scope)
+    KEYCLOAK_AUTH_SERVER_URL: str = "https://your-keycloak-host"
+    KEYCLOAK_REALM: str = "your-realm"
+    KEYCLOAK_CLIENT_ID: str = "your-client-id"
+    KEYCLOAK_SECRET: str = ""
+    KEYCLOAK_WEB_CLIENT_NAME: str = ""
+
+    # Herandro Services API client
+    HSA_BASE_URL: str = "https://herandro-services-api.herandro.com.mx"
+    HSA_TIMEOUT_SECONDS: float = 30.0
 
     class Config:
         env_file = ".env"

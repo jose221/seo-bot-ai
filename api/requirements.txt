@@ -21,6 +21,9 @@ pydantic-settings
 email-validator
 jinja2>=3.1.0  # Templates para prompts
 
+# Security — Keycloak JWT (RS256)
+python-jose[cryptography]
+
 ##seo
 advertools
 pandas  # advertools usa pandas internamente
@@ -53,4 +56,5 @@ pyld>=2.0.4
 
 # Tokenizer
 tiktoken
+
 
