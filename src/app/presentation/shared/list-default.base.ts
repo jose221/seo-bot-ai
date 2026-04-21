@@ -1,4 +1,5 @@
-import {Directive, effect, inject, OnDestroy, signal} from '@angular/core';
+import {Directive, effect, inject, OnDestroy, PLATFORM_ID, signal} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
 import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
 import {Router} from '@angular/router';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
@@ -13,12 +14,16 @@ export abstract class ListDefaultBase<model> implements OnDestroy {
   protected isLoading = signal<boolean>(true);
   protected readonly _sweetAlertUtil = inject(SweetAlertUtil)
   protected readonly  _router = inject(Router)
+  protected readonly platformId = inject(PLATFORM_ID);
+
   constructor() {
     effect(() => {
-      if (this.isLoading()) {
-        this.loadingService.show();
-      } else {
-        this.loadingService.hide();
+      if (isPlatformBrowser(this.platformId)) {
+        if (this.isLoading()) {
+          this.loadingService.show();
+        } else {
+          this.loadingService.hide();
+        }
       }
     });
   }
@@ -26,7 +31,9 @@ export abstract class ListDefaultBase<model> implements OnDestroy {
   protected abstract init(): void;
 
   ngOnInit() {
-    this.init();
+    if (isPlatformBrowser(this.platformId)) {
+      this.init();
+    }
   }
 
   ngOnDestroy() {

@@ -1,3 +1,4 @@
+import {isPlatformBrowser} from '@angular/common';
 import {Component, inject, signal, OnInit, OnDestroy} from '@angular/core';
 import {ListDefaultBase} from '@/app/presentation/shared/list-default.base';
 import {AuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
@@ -161,6 +162,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
   }
 
   override async ngOnInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
     await super.ngOnInit();
     this.startAutoReload();
   }

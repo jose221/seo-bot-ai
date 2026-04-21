@@ -1,4 +1,5 @@
 import {Component, inject, OnInit, signal} from '@angular/core';
+import {isPlatformBrowser} from '@angular/common';
 import {TargetResponseModel} from '@/app/domain/models/target/response/target-response.model';
 import {TargetRepository} from '@/app/domain/repositories/target/target.repository';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
@@ -44,6 +45,7 @@ export class TargetList extends ListDefaultBase<TargetResponseModel> implements 
   }
 
   override async ngOnInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
     await super.ngOnInit();
     try {
       const tags = await this._targetRepository.getTags();

@@ -1,3 +1,4 @@
+import {isPlatformBrowser} from '@angular/common';
 import { Component, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { ListDefaultBase } from '@/app/presentation/shared/list-default.base';
 import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
@@ -158,6 +159,7 @@ export class AuditUrlValidationList
   }
 
   override async ngOnInit() {
+    if (!isPlatformBrowser(this.platformId)) return;
     await super.ngOnInit();
     this.startAutoReload();
   }

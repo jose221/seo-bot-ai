@@ -52,7 +52,7 @@ export class KeycloakService {
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: this.isBrowser
-          ? `${window.location.origin}/assets/silent-check-sso.html`
+          ? `${window.location.origin}/silent-check-sso.html`
           : undefined,
         pkceMethod: 'S256',
         checkLoginIframe: false,
