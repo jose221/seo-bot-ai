@@ -44,7 +44,8 @@ export class AuditForm extends ValidationFormBase implements OnInit {
   responseCreateAudit = signal<CreateAuditResponseModel>({} as CreateAuditResponseModel);
   protected readonly form = inject(FormBuilder).group({
     include_ai_analysis: [true],
-    web_page_id: ['', Validators.required]
+    web_page_id: ['', Validators.required],
+    documentation_context: ['']
   });
   private readonly formRepository = inject(AuditRepository);
   private readonly targetRepository = inject(TargetRepository)
@@ -70,6 +71,7 @@ export class AuditForm extends ValidationFormBase implements OnInit {
       this.form.patchValue({
         web_page_id: rerunData.web_page_id ?? '',
         include_ai_analysis: rerunData.include_ai_analysis ?? true,
+        documentation_context: rerunData.documentation_context ?? '',
       });
     }
 

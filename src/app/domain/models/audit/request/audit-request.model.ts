@@ -3,7 +3,8 @@ import {StatusType} from '@/app/domain/types/status.type';
 export class CreateAuditRequestModel {
   constructor(
     public include_ai_analysis: boolean,
-    public web_page_id: string
+    public web_page_id: string,
+    public documentation_context?: string
   ) {
   }
 }

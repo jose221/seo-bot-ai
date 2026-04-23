@@ -316,7 +316,10 @@
         "taskId": "Task ID:",
         "acceptButton": "Accept",
         "viewListButton": "View Audit List"
-      }
+      },
+      "documentationContext": "Documentation context",
+      "documentationContextPlaceholder": "E.g.: Our site sells luxury tours in the Caribbean. The target audience is high-income travelers...",
+      "optional": "optional"
     },
     "modal": {
       "title": "Audit Report",

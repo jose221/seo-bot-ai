@@ -16,7 +16,7 @@ from app.shared.herandro_services_api.herandro_services_api_models import (
 class HerandroServicesApiClient:
     """Cliente HTTP para consumir Herandro Services API desde el servidor."""
 
-    def __init__(self, base_url: str, timeout: float = 30.0) -> None:
+    def __init__(self, base_url: str, timeout: float = 900.0) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
 
@@ -105,7 +105,7 @@ class HerandroServicesApiClient:
 _hsa_client_instance: HerandroServicesApiClient | None = None
 
 
-async def init_hsa_client(base_url: str, timeout: float = 30.0) -> None:
+async def init_hsa_client(base_url: str, timeout: float = 900.0) -> None:
     global _hsa_client_instance
     if _hsa_client_instance is None:
         _hsa_client_instance = HerandroServicesApiClient(base_url=base_url, timeout=timeout)

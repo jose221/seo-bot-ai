@@ -81,16 +81,24 @@ class ChatCompletionUsage(BaseModel):
 
 
 class ChatCompletionResponse(BaseModel):
-    """Respuesta de la API de Chat Completions"""
+    """Respuesta de la API de Chat Completions.
+    Soporta el formato nuevo (content top-level) y el formato legacy (choices[]).
+    """
     id: Optional[str] = None
     object: str = "chat.completion"
     created: Optional[int] = None
     model: str
-    choices: List[ChatCompletionChoice]
+    # Formato legacy OpenAI-style
+    choices: Optional[List[ChatCompletionChoice]] = None
+    # Formato nuevo: content directo en la respuesta
+    content: Optional[str] = None
+    generated_at: Optional[str] = None
     usage: Optional[ChatCompletionUsage] = None
 
     def get_content(self) -> str:
-        """Helper para obtener el contenido de la primera respuesta"""
+        """Obtiene el contenido priorizando el formato nuevo (content) sobre legacy (choices)."""
+        if self.content:
+            return self.content
         if self.choices and len(self.choices) > 0:
             return self.choices[0].delta.content
         return ""

@@ -77,6 +77,13 @@ class AuditReport(SQLModel, table=True):
     report_excel_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
     report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
+    # Contexto de documentación extra para los agentes de IA
+    documentation_context: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String, nullable=True),
+        description="Contexto/documentación adicional que se inyecta en los agentes de IA durante la auditoría"
+    )
+
     # Metadata
     error_message: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)

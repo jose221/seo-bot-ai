@@ -1,101 +1,94 @@
-import os
+import json
 from typing import Dict, Any, Optional, Callable
 
 import numpy as np
 import pandas as pd
+import redis
+import redis.asyncio as aioredis
 
-from app.helpers import encode_to_base64_key
+from app.helpers import encode_to_base64_key, serialize_response_data
+from app.core.config import settings
 
 # Definir la raíz del proyecto
+import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-
-# Ruta del directorio de caché relativa a la raíz del proyecto
 cache_dir = os.path.join(project_root, 'storage', 'cache')
 
-import os
-import requests
-from dotenv import load_dotenv
-import json
 
-from app.helpers import serialize_response_data
-
-# Carga las variables de entorno del archivo .env
-load_dotenv()
+def _build_redis_url() -> str:
+    password_part = f":{settings.REDIS_PASSWORD}@" if settings.REDIS_PASSWORD else ""
+    return f"redis://{password_part}{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
 
 
 class CacheProvider:
     def __init__(self):
-        self.base_url = os.getenv("HERANDRO_API_URL")
+        self._client: redis.Redis = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            password=settings.REDIS_PASSWORD or None,
+            decode_responses=True,
+        )
 
-    def upload_data(self, key, data, ttl=0):
-        url = f"{self.base_url}/cache/upload/"
-        params = {'key': key}
-        if ttl is not None:
-            params['ttl'] = ttl
-
+    def upload_data(self, key: str, data, ttl: int = 0):
         serialized_data = serialize_response_data(data)
-        req = {"result": serialized_data}
-
+        payload = json.dumps({"result": serialized_data}, ensure_ascii=False)
         try:
-            response = requests.post(url, data=json.dumps(req, ensure_ascii=False), params=params)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-
-            print(f"Error uploading data: {e}")
-            print(f"Error uploading data: {e.response}")
+            if ttl and ttl > 0:
+                self._client.setex(key, ttl, payload)
+            else:
+                self._client.set(key, payload)
+            return {"status": "ok", "key": key}
+        except redis.RedisError as e:
+            print(f"Error uploading data to Redis: {e}")
             return None
 
-    def get_data(self, key):
-        url = f"{self.base_url}/cache/{key}"
+    def get_data(self, key: str):
         try:
-            response = requests.get(url)
-            response.raise_for_status()
-            if response.status_code == 404:
+            raw = self._client.get(key)
+            if raw is None:
                 return []
-            data = response.json().get('data', {})
-            return data.get('result', []) if len(data.get('result', [])) > 0 else (data.get('data', {})).get('result',
-                                                                                                             [])
-        except requests.exceptions.RequestException as e:
-            print(f"Error getting data: {e}")
+            data = json.loads(raw)
+            return data.get("result", [])
+        except redis.RedisError as e:
+            print(f"Error getting data from Redis: {e}")
             return None
 
-    async def get_data_async(self, key):
-        import httpx
-        url = f"{self.base_url}/cache/{key}"
+    async def get_data_async(self, key: str):
         try:
-            async with httpx.AsyncClient() as client:
-                response = await client.get(url)
-            if response.status_code == 404:
+            async_client = aioredis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
+                password=settings.REDIS_PASSWORD or None,
+                decode_responses=True,
+            )
+            async with async_client:
+                raw = await async_client.get(key)
+            if raw is None:
                 return []
-            data = response.json().get('data', {})
-            return data.get('result', [])
-        except httpx.HTTPStatusError as e:
-            print(f"Error getting data asynchronously: {e}")
+            data = json.loads(raw)
+            return data.get("result", [])
+        except Exception as e:
+            print(f"Error getting data asynchronously from Redis: {e}")
             return None
 
-    def delete_data(self, key):
-        url = f"{self.base_url}/cache/{key}"
+    def delete_data(self, key: str):
         try:
-            response = requests.delete(url)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error deleting data: {e}")
+            deleted = self._client.delete(key)
+            return {"status": "ok", "deleted": deleted}
+        except redis.RedisError as e:
+            print(f"Error deleting data from Redis: {e}")
             return None
 
-    def search_delete(self, table):
-        url = f"{self.base_url}/cache/search-delete/"
-        query = {
-            "pattern": f"%{table}%"
-        }
-
+    def search_delete(self, table: str):
+        pattern = f"*{table}*"
         try:
-            response = requests.delete(url, params=query)
-            response.raise_for_status()
-            return response.json()
-        except requests.exceptions.RequestException as e:
-            print(f"Error deleting data: {e}")
+            keys = self._client.keys(pattern)
+            deleted = self._client.delete(*keys) if keys else 0
+            return {"status": "ok", "deleted": deleted, "pattern": pattern}
+        except redis.RedisError as e:
+            print(f"Error in search_delete from Redis: {e}")
             return None
 
 

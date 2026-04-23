@@ -57,4 +57,7 @@ pyld>=2.0.4
 # Tokenizer
 tiktoken
 
+# Cache
+redis[asyncio]>=5.0.0
+
 

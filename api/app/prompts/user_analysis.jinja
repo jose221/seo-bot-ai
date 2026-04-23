@@ -2,6 +2,11 @@ Analiza esta página web:
 
 URL: {{ url }}
 
+{% if documentation_context %}
+## CONTEXTO DEL CLIENTE
+{{ documentation_context }}
+
+{% endif %}
 {% if lighthouse_data %}
 Métricas Lighthouse:
 - Performance: {{ lighthouse_data.get('performance_score', 'N/A') }}

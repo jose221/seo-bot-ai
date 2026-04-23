@@ -869,90 +869,111 @@ class ReportGenerator:
 
         doc.build(story)
 
+    def _fmt_score(self, val):
+        """Formatea un valor numérico de score; retorna '-' si es None."""
+        if val is None:
+            return '-'
+        try:
+            return f"{val:+}" if isinstance(val, (int, float)) else str(val)
+        except (TypeError, ValueError):
+            return str(val) if val is not None else '-'
+
     def _create_comparison_excel(self, data: dict, filename: Path):
         """Genera un Excel rico con múltiples hojas y tablas extraídas de la IA."""
         with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            # 1. Hoja de Resumen (Dashboard)
-            summary_data = []
-
-            # Datos Generales
-            base_url = data.get('base_url', 'Unknown')
-            overall = data.get('overall_summary', {})
-
-            summary_data.append({'Metric': 'Base URL', 'Value': base_url})
-            summary_data.append({'Metric': 'Fecha Reporte', 'Value': datetime.now().strftime("%Y-%m-%d %H:%M")})
-            summary_data.append({'Metric': 'Total Competidores', 'Value': overall.get('total_competitors', 0)})
-            summary_data.append({'Metric': 'Ranking Performance', 'Value': overall.get('performance_rank', '-')})
-            summary_data.append({'Metric': 'Ranking SEO', 'Value': overall.get('seo_rank', '-')})
-
-            # Espacio
-            summary_data.append({'Metric': '', 'Value': ''})
-
-            # Tabla comparativa de scores principales
-            comparisons = data.get('comparisons', [])
-            for comp in comparisons:
-                c_url = comp.get('compare_url', 'N/A')
-                scores = comp.get('performance', {}).get('scores', {})
-
-                # Performance
-                p_s = scores.get('performance_score', {})
-                summary_data.append({
-                    'Metric': f"VS {c_url} - Performance",
-                    'Value': f"Base: {p_s.get('base')} | Comp: {p_s.get('compare')} ({p_s.get('difference'):+})"
-                })
-
-                # SEO
-                s_s = scores.get('seo_score', {})
-                summary_data.append({
-                    'Metric': f"VS {c_url} - SEO",
-                    'Value': f"Base: {s_s.get('base')} | Comp: {s_s.get('compare')} ({s_s.get('difference'):+})"
-                })
-
-            pd.DataFrame(summary_data).to_excel(writer, sheet_name='Dashboard', index=False)
-
-            # Ajustar ancho de columnas en Dashboard
+            written_sheets = 0
             try:
-                worksheet = writer.sheets['Dashboard']
-                worksheet.column_dimensions['A'].width = 30
-                worksheet.column_dimensions['B'].width = 50
-            except: pass
+                # 1. Hoja de Resumen (Dashboard)
+                summary_data = []
 
-            # 2. Propuesta de Schemas (Global IA Comparison)
-            ai_schema_txt = data.get('ai_schema_comparison', '')
-            schema_tables = self._extract_tables_from_text(ai_schema_txt)
-            proposed_schemas_global = self._extract_json_blocks(ai_schema_txt)
+                # Datos Generales
+                base_url = data.get('base_url', 'Unknown')
+                overall = data.get('overall_summary', {})
 
-            if proposed_schemas_global:
-                 prop_data = []
-                 for idx, sc in enumerate(proposed_schemas_global, 1):
-                    prop_data.append({
-                        'Origen': 'Análisis Comparativo Global',
-                        'Type': sc.get('@type', 'Unknown'),
-                        'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
+                summary_data.append({'Metric': 'Base URL', 'Value': base_url})
+                summary_data.append({'Metric': 'Fecha Reporte', 'Value': datetime.now().strftime("%Y-%m-%d %H:%M")})
+                summary_data.append({'Metric': 'Total Competidores', 'Value': overall.get('total_competitors', 0)})
+                summary_data.append({'Metric': 'Ranking Performance', 'Value': overall.get('performance_rank', '-')})
+                summary_data.append({'Metric': 'Ranking SEO', 'Value': overall.get('seo_rank', '-')})
+
+                # Espacio
+                summary_data.append({'Metric': '', 'Value': ''})
+
+                # Tabla comparativa de scores principales
+                comparisons = data.get('comparisons', [])
+                for comp in comparisons:
+                    c_url = comp.get('compare_url', 'N/A')
+                    scores = comp.get('performance', {}).get('scores', {})
+
+                    # Performance
+                    p_s = scores.get('performance_score', {}) or {}
+                    summary_data.append({
+                        'Metric': f"VS {c_url} - Performance",
+                        'Value': f"Base: {p_s.get('base', '-')} | Comp: {p_s.get('compare', '-')} ({self._fmt_score(p_s.get('difference'))})"
                     })
-                 pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta Schemas', index=False)
-                 try:
-                     ws = writer.sheets['Propuesta Schemas']
-                     ws.column_dimensions['C'].width = 70
-                 except: pass
 
-            if schema_tables:
-                self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
+                    # SEO
+                    s_s = scores.get('seo_score', {}) or {}
+                    summary_data.append({
+                        'Metric': f"VS {c_url} - SEO",
+                        'Value': f"Base: {s_s.get('base', '-')} | Comp: {s_s.get('compare', '-')} ({self._fmt_score(s_s.get('difference'))})"
+                    })
 
-            # 3. Hojas por Competidor (Tablas de su análisis)
-            for idx, comp in enumerate(comparisons, 1):
-                comp_url = comp.get('compare_url', 'Unknown')
-                # Limpiar nombre hoja (max 31 chars)
-                sheet_name = f"Comp {idx}"
+                pd.DataFrame(summary_data).to_excel(writer, sheet_name='Dashboard', index=False)
+                written_sheets += 1
 
-                # Extraer tablas del análisis individual
-                ai_analysis_txt = comp.get('ai_analysis', '')
-                comp_tables = self._extract_tables_from_text(ai_analysis_txt)
+                # Ajustar ancho de columnas en Dashboard
+                try:
+                    worksheet = writer.sheets['Dashboard']
+                    worksheet.column_dimensions['A'].width = 30
+                    worksheet.column_dimensions['B'].width = 50
+                except: pass
 
-                if comp_tables:
-                    self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
-                else:
-                    pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
+                # 2. Propuesta de Schemas (Global IA Comparison)
+                ai_schema_txt = data.get('ai_schema_comparison', '')
+                schema_tables = self._extract_tables_from_text(ai_schema_txt)
+                proposed_schemas_global = self._extract_json_blocks(ai_schema_txt)
+
+                if proposed_schemas_global:
+                     prop_data = []
+                     for idx, sc in enumerate(proposed_schemas_global, 1):
+                        prop_data.append({
+                            'Origen': 'Análisis Comparativo Global',
+                            'Type': sc.get('@type', 'Unknown'),
+                            'JSON-LD': json.dumps(sc, indent=2, ensure_ascii=False)
+                        })
+                     pd.DataFrame(prop_data).to_excel(writer, sheet_name='Propuesta Schemas', index=False)
+                     written_sheets += 1
+                     try:
+                         ws = writer.sheets['Propuesta Schemas']
+                         ws.column_dimensions['C'].width = 70
+                     except: pass
+
+                if schema_tables:
+                    self._write_dfs_to_sheet(writer, schema_tables, 'Schema Analysis')
+                    written_sheets += 1
+
+                # 3. Hojas por Competidor (Tablas de su análisis)
+                for idx, comp in enumerate(comparisons, 1):
+                    comp_url = comp.get('compare_url', 'Unknown')
+                    # Limpiar nombre hoja (max 31 chars)
+                    sheet_name = f"Comp {idx}"
+
+                    # Extraer tablas del análisis individual
+                    ai_analysis_txt = comp.get('ai_analysis', '')
+                    comp_tables = self._extract_tables_from_text(ai_analysis_txt)
+
+                    if comp_tables:
+                        self._write_dfs_to_sheet(writer, comp_tables, sheet_name)
+                    else:
+                        pd.DataFrame({'Info': [f'No se detectaron tablas para {comp_url}']}).to_excel(writer, sheet_name=sheet_name, index=False)
+                    written_sheets += 1
+
+            except Exception as exc:
+                print(f"⚠️  Error generando hojas de Excel de comparación: {exc}")
+                # Garantizar al menos una hoja visible para que openpyxl pueda guardar
+                if written_sheets == 0:
+                    pd.DataFrame({'Error': [str(exc)]}).to_excel(writer, sheet_name='Error', index=False)
 
 
 

@@ -12,6 +12,7 @@ src/app/
 │   ├── models/        ← Business entities (request/response)
 │   ├── repositories/  ← Abstract classes (Ports — interfaces)
 │   └── mappers/       ← Data transformation between layers
+├── application/       ← Use-case layer (currently scaffolded in `application/use-cases/`)
 ├── infrastructure/    ← Technical implementation (Adapters)
 │   ├── dto/           ← Data Transfer Objects (API contracts)
 │   ├── repositories/  ← Concrete repository implementations
@@ -65,7 +66,7 @@ AuthImplementationRepository (infrastructure — Adapter)
 | `presentation/guards/auth.guard.ts` | Presentation | Protects admin routes |
 | `presentation/guards/login.guard.ts` | Presentation | Redirects authenticated users |
 | `presentation/pages/auth/login/login.ts` | Presentation | SSO login page |
-| `public/silent-check-sso.html` | Static | Required for silent check-sso flow |
+| `src/assets/silent-check-sso.html` | Static | Required for silent check-sso flow |
 
 ### 2.3 AuthRepository (Domain Port)
 
@@ -74,7 +75,7 @@ export abstract class AuthRepository {
   abstract isAuthenticated(): boolean;
   abstract verifyToken(): Promise<boolean>;      // refresh + validate token
   abstract getToken(): string;
-  abstract signIn(): void;                        // redirect to Keycloak login
+  abstract signIn(redirectUri?: string): void;    // redirect to Keycloak login
   abstract completeSignIn(): Promise<boolean>;    // init + persist token
   abstract login(params): Promise<any>;           // legacy form login
   abstract register(params): Promise<any>;
@@ -161,10 +162,10 @@ User visits /                     User visits /admin
 
 ### 2.7 Silent Check SSO
 
-`public/silent-check-sso.html` must be served as a static asset. Keycloak loads it in a hidden iframe to silently detect an existing session without page redirects.
+`src/assets/silent-check-sso.html` must be served as a static asset. Keycloak loads it in a hidden iframe to silently detect an existing session without page redirects.
 
 ```html
-<!-- public/silent-check-sso.html -->
+<!-- src/assets/silent-check-sso.html -->
 <script>parent.postMessage(location.href, location.origin);</script>
 ```
 
@@ -173,7 +174,7 @@ The URL is configured in `KeycloakService.init()`:
 silentCheckSsoRedirectUri: `${window.location.origin}/assets/silent-check-sso.html`
 ```
 
-> ⚠️ When using Angular SSR with `dist/browser/`, ensure `silent-check-sso.html` is present in the served assets root.
+> ⚠️ In this repo, `angular.json` copies `src/assets` during build. Ensure `silent-check-sso.html` is available under `/assets/` in the deployed SSR/static output.
 
 ### 2.8 Keycloak Configuration (Environment)
 
@@ -187,6 +188,8 @@ keycloak: {
   postLogoutRedirectUri: 'http://localhost:4200/', // Post-logout redirect
 }
 ```
+
+`environment.example.ts` does not include the `keycloak` block; add it explicitly in local `environment.ts` / `environment.prod.ts`.
 
 > 📝 The Keycloak client must be configured as **public** (no secret) with the `redirectUri` registered as a valid redirect URI in the Keycloak admin console.
 
@@ -275,6 +278,7 @@ Both guards are SSR-safe: they return `true` immediately on the server and only 
 ```typescript
 { path: '', component: Login, canActivate: [loginGuard] },
 { path: 'admin', component: Admin, canActivate: [authGuard], children: [...] },
+{ path: 'shared/audit/url-validations/:id/info', loadComponent: () => import('...') },
 ```
 
 ---
@@ -286,6 +290,8 @@ Port → Adapter bindings are declared in `app.config.ts`:
 ```typescript
 { provide: AuthRepository, useClass: AuthImplementationRepository }
 ```
+
+Current `app.config.ts` also binds `TranslationRepository`, `TargetRepository`, `AuditRepository`, `AuditSchemaRepository`, and `AuditUrlValidationRepository` to their `*ImplementationRepository` adapters.
 
 `KeycloakService` is `providedIn: 'root'` and requires no explicit binding.
 

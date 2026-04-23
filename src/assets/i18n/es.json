@@ -313,7 +313,10 @@
         "taskId": "ID de Tarea:",
         "acceptButton": "Aceptar",
         "viewListButton": "Ver Lista de Auditorías"
-      }
+      },
+      "documentationContext": "Contexto de documentación",
+      "documentationContextPlaceholder": "Ej: Nuestro sitio vende tours de lujo en el Caribe. El público objetivo son viajeros de alto poder adquisitivo...",
+      "optional": "opcional"
     },
     "modal": {
       "title": "Reporte de Auditoría",

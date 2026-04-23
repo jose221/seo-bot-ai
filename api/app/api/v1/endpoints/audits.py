@@ -47,6 +47,7 @@ async def run_audit_task(
     from app.core.database import db_manager
 
     audit = None  # Inicializar para evitar UnboundLocalError
+    documentation_context = None
     _cache = Cache(table_name="audits_reports")
     try:
         # Usar el context manager síncrono del gestor de BD
@@ -56,6 +57,9 @@ async def run_audit_task(
             if not audit:
                 print(f"❌ No se encontró audit {audit_id}")
                 return
+
+            # Capturar documentation_context antes de que la sesión se cierre
+            documentation_context = audit.documentation_context
 
             # Actualizar estado
             audit.status = AuditStatus.IN_PROGRESS
@@ -103,6 +107,7 @@ async def run_audit_task(
                         'cls': lighthouse_result.get('cls')
                     },
                     token=token,
+                    documentation_context=documentation_context,
                     **req_ai_analysis_params
                 )
 
@@ -220,7 +225,8 @@ async def create_audit(
     audit = AuditReport(
         web_page_id=webpage.id,
         user_id=current_user.id,
-        status=AuditStatus.PENDING
+        status=AuditStatus.PENDING,
+        documentation_context=audit_request.documentation_context
     )
 
     session.add(audit)
@@ -1429,7 +1435,7 @@ async def list_audits(
     total = count_result.scalar()
 
     # Solo las columnas necesarias para la tabla + columnas ligeras de web_page via JOIN
-    # Se excluyen: lighthouse_data, ai_suggestions, seo_analysis (JSONB muy pesados)
+    # Se excluyen: lighthouse_data, seo_analysis (JSONB muy pesados); ai_suggestions se incluye
     statement = select(
         AuditReport.id,
         AuditReport.web_page_id,
@@ -1442,6 +1448,7 @@ async def list_audits(
         AuditReport.lcp,
         AuditReport.fid,
         AuditReport.cls,
+        AuditReport.ai_suggestions,
         AuditReport.report_pdf_path,
         AuditReport.report_excel_path,
         AuditReport.report_word_path,
@@ -1520,7 +1527,7 @@ async def list_audits(
             fid=row.fid,
             cls=row.cls,
             lighthouse_data=None,
-            ai_suggestions=None,
+            ai_suggestions=row.ai_suggestions,
             report_pdf_path=pdf_path,
             report_excel_path=excel_path,
             report_word_path=word_path,

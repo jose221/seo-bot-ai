@@ -48,7 +48,13 @@ class Settings(BaseSettings):
 
     # Herandro Services API client
     HSA_BASE_URL: str = "https://herandro-services-api.herandro.com.mx"
-    HSA_TIMEOUT_SECONDS: float = 30.0
+    HSA_TIMEOUT_SECONDS: float = 900.0
+
+    # Redis Cache
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_DB: int = 0
+    REDIS_PASSWORD: str = ""
 
     class Config:
         env_file = ".env"

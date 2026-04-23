@@ -3,6 +3,7 @@ import {StatusType} from '@/app/domain/types/status.type';
 export interface CreateAuditRequestDto {
   include_ai_analysis: boolean
   web_page_id: string
+  documentation_context?: string
 }
 
 export interface FilterAuditRequestDto {
