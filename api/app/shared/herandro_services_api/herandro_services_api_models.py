@@ -159,7 +159,7 @@ class HsaResponsesRequestModel(BaseModel):
     input: str
     session_id: str | None = None
     collection_name: str | list[str] | None = None
-    model: str = "deepseek-chat"
+    model: str = "deepseek-v4-flash"
     mode_debug: bool | None = False
     stream: bool | None = False
 

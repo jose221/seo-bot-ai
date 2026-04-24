@@ -235,7 +235,7 @@ class SchemaAuditService:
 
         request = ChatCompletionRequest(
             messages=[ChatMessage(role=MessageRole.USER, content=prompt_content)],
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             stream=False
         )
 
@@ -270,7 +270,7 @@ class SchemaAuditService:
 
         request = ChatCompletionRequest(
             messages=[ChatMessage(role=MessageRole.USER, content=prompt_content)],
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             stream=False
         )
 

@@ -184,7 +184,7 @@ class AIClient:
 
     request = ChatCompletionRequest(
       messages=[system_message, user_message],
-      model="deepseek-chat",
+      model="deepseek-v4-flash",
       stream=False
     )
 
@@ -228,7 +228,7 @@ class AIClient:
 
     request = ChatCompletionRequest(
       messages=[user_message],
-      model="deepseek-chat",
+      model="deepseek-v4-flash",
       stream=False,
       mcp_tools=[
         {

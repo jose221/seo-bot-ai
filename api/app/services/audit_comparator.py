@@ -288,7 +288,7 @@ class AuditComparator:
 
         request = ChatCompletionRequest(
             messages=[user_message],
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             stream=False,
             tools=["web_search"]
         )
@@ -318,7 +318,7 @@ class AuditComparator:
 
         request = ChatCompletionRequest(
             messages=[user_message],
-            model="deepseek-chat", # Usar modelo capaz de explicaciones detalladas
+            model="deepseek-v4-flash", # Usar modelo capaz de explicaciones detalladas
             stream=False
         )
 
@@ -386,7 +386,7 @@ class AuditComparator:
 
         request = ChatCompletionRequest(
             messages=[user_message],
-            model="deepseek-chat",
+            model="deepseek-v4-flash",
             stream=False,
             # tools=["web_search"] # Desactivar web_search para reducir complejidad si ya tenemos los datos
         )

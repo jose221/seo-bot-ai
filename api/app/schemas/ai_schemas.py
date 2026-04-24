@@ -32,8 +32,8 @@ class ChatCompletionRequest(BaseModel):
     """Request para la API de Chat Completions"""
     messages: List[ChatMessage]
     model: str = Field(
-        default="deepseek-chat",
-        description="Modelo a usar: deepseek-chat, lowest, etc."
+        default="deepseek-v4-flash",
+        description="Modelo a usar: deepseek-v4-flash, lowest, etc."
     )
     stream: bool = Field(default=False, description="Si hacer streaming de respuesta")
     mcp_tools: Optional[Union[List[MCPTool], List[dict]]] = Field(
@@ -59,7 +59,7 @@ class ChatCompletionRequest(BaseModel):
                         "content": "Analiza este HTML y dame sugerencias SEO"
                     }
                 ],
-                "model": "deepseek-chat",
+                "model": "deepseek-v4-flash",
                 "stream": False,
                 "tools":[ "web_search","url_validator", "action_plan"]
             }

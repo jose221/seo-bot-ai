@@ -107,7 +107,7 @@ async def run_audit_task(
                 ai_analysis_data = {
                     'analysis': ai_analysis_content, # GUARDAR SOLO EL TEXTO
                     'generated_at': datetime.utcnow().isoformat(),
-                    'model': 'deepseek-chat'
+                    'model': 'deepseek-v4-flash'
                 }
             except Exception as ai_error:
                 print(f"⚠️  Error en análisis de IA: {ai_error}")
