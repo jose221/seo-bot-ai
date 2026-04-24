@@ -13,8 +13,9 @@ from app.services.schema_validators import SchemaValidatorPipeline
 logger = logging.getLogger(__name__)
 
 # Límites para minificación de esquemas antes de enviar a la IA
-_MAX_SCHEMA_ITEMS = 40       # máximo de objetos en una lista raíz de esquemas (sin contar @graph)
-_MAX_ARRAY_ITEMS = 15        # máximo de ítems en arrays internos (reviews, mainEntity, containsPlace…)
+# Establecidos a valores muy altos ya que la IA ahora acepta >1M de tokens
+_MAX_SCHEMA_ITEMS = 100       # máximo de objetos en una lista raíz de esquemas (sin contar @graph)
+_MAX_ARRAY_ITEMS = 100        # máximo de ítems en arrays internos (reviews, mainEntity, containsPlace…)
 
 # Claves cuyos arrays se truncan SIEMPRE (independiente del @type del nodo padre)
 _ALWAYS_TRUNCABLE_KEYS = {
