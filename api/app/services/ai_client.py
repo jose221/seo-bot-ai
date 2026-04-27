@@ -56,7 +56,8 @@ class AIClient:
 
     payload = request.model_dump(exclude_none=True)
     logger.info(f"Initiating AI chat completion request to {url}")
-    logger.debug(f"Request payload: {json.dumps(payload)}")
+    logger.info(f"Request payload keys: {list(payload.keys())}")
+    logger.info(f"Request headers: {headers}")
 
     try:
       # Desactivamos el pool de conexiones y forzamos HTTP/1.1

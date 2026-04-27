@@ -648,3 +648,10 @@ class CommentListResponse(BaseModel):
     page_size: int
     items: List[CommentResponse]
 
+
+class DeleteAuditResponse(BaseModel):
+    """Respuesta para eliminación de auditoría"""
+    success: bool
+    message: str
+    audit_id: UUID
+

@@ -1548,7 +1548,7 @@ async def list_audits(
     )
 
 
-@router.delete("/audits/{audit_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/audits/{audit_id}", response_model=audit_schemas.DeleteAuditResponse)
 async def delete_audit(
         audit_id: UUID,
         current_user: User = Depends(get_current_user),
@@ -1573,7 +1573,11 @@ async def delete_audit(
     await session.delete(audit)
     await session.commit()
 
-    return None
+    return {
+        "success": True,
+        "message": "Auditoría eliminada exitosamente",
+        "audit_id": audit_id
+    }
 
 
 @router.post("/audits/compare", response_model=audit_schemas.ComparisonTaskResponse, status_code=status.HTTP_202_ACCEPTED)
