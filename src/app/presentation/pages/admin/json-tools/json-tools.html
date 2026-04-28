@@ -1,0 +1,105 @@
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-10 col-xl-9">
+      <div class="card rounded-4 border-0 shadow-sm">
+        <div class="card-body p-4 p-md-5">
+          <div class="text-center mb-4">
+            <div class="json-tools-icon mx-auto mb-3">
+              <i class="bi bi-braces-asterisk text-primary fs-2"></i>
+            </div>
+            <h2 class="fw-bold text-primary mb-1">Herramientas JSON</h2>
+            <p class="text-muted mb-0">Convierte JSON a formato minificado o Toon para IA, con opción de muestra recursiva.</p>
+          </div>
+
+          <form [formGroup]="form" (ngSubmit)="transform()" novalidate>
+            <div class="row g-3 mb-4">
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Optimización</label>
+                <div class="json-tools-options">
+                  <label class="json-tools-option" [class.active]="form.get('optimization')?.value === 'minified'">
+                    <input type="radio" class="visually-hidden" value="minified" formControlName="optimization">
+                    JSON minificado
+                  </label>
+                  <label class="json-tools-option" [class.active]="form.get('optimization')?.value === 'toon'">
+                    <input type="radio" class="visually-hidden" value="toon" formControlName="optimization">
+                    Formato Toon IA
+                  </label>
+                </div>
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Alcance</label>
+                <div class="json-tools-options">
+                  <label class="json-tools-option" [class.active]="form.get('scope')?.value === 'sample'">
+                    <input type="radio" class="visually-hidden" value="sample" formControlName="scope">
+                    Muestra (1 elemento por arreglo)
+                  </label>
+                  <label class="json-tools-option" [class.active]="form.get('scope')?.value === 'all'">
+                    <input type="radio" class="visually-hidden" value="all" formControlName="scope">
+                    Todos los elementos
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <label class="form-label fw-semibold mb-0" for="jsonInput">JSON de entrada</label>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge text-bg-light border json-tools-counter">Entrada: {{ inputLength() }} chars</span>
+                  <button type="button" class="btn btn-sm btn-outline-secondary" (click)="formatInput()">
+                    <i class="bi bi-braces me-1"></i>Formatear
+                  </button>
+                </div>
+              </div>
+              <textarea
+                id="jsonInput"
+                rows="12"
+                class="form-control font-monospace border-2"
+                formControlName="input"
+                placeholder='{"users":[{"name":"Ana"},{"name":"Luis"}]}'
+                [ngClass]="{ 'is-invalid': submitted() && form.get('input')?.invalid }"
+                spellcheck="false"></textarea>
+              @if (submitted() && form.get('input')?.invalid) {
+                <div class="invalid-feedback d-block">El JSON de entrada es obligatorio.</div>
+              }
+            </div>
+
+            @if (parseError()) {
+              <div class="alert alert-danger mb-4" role="alert">
+                <i class="bi bi-exclamation-triangle me-2"></i>{{ parseError() }}
+              </div>
+            }
+
+            <div class="d-grid d-md-flex justify-content-md-end mb-4">
+              <button type="submit" class="btn btn-primary px-4">
+                <i class="bi bi-magic me-2"></i>Convertir
+              </button>
+            </div>
+
+            <div>
+              <div class="d-flex flex-wrap justify-content-between align-items-center mb-1 gap-2">
+                <label class="form-label fw-semibold mb-0" for="jsonOutput">Resultado</label>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge text-bg-light border json-tools-counter">Salida: {{ outputLength() }} chars</span>
+                  @if (sizeDelta(); as delta) {
+                    <span class="badge json-tools-counter" [ngClass]="delta.isReduction ? 'text-bg-success' : 'text-bg-warning'">
+                      {{ delta.isReduction ? 'Reducción' : 'Incremento' }}: {{ delta.diff }} chars ({{ delta.isReduction ? '-' : '+' }}{{ delta.percent }}%)
+                    </span>
+                  }
+                </div>
+              </div>
+              <textarea
+                id="jsonOutput"
+                rows="12"
+                class="form-control font-monospace border-2 bg-light"
+                [value]="output()"
+                readonly
+                spellcheck="false"></textarea>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -15,6 +15,7 @@ import {AuditUrlValidationList} from '@/app/presentation/pages/admin/audit/audit
 import {AuditUrlValidationForm} from '@/app/presentation/pages/admin/audit/audit-url-validation-form/audit-url-validation-form';
 import {loginGuard} from '@/app/presentation/guards/login.guard';
 import {MetricsDashboardComponent} from '@/app/presentation/components/metrics-dashboard/metrics-dashboard.component';
+import {JsonTools} from '@/app/presentation/pages/admin/json-tools/json-tools';
 
 export const routes: Routes = [
   { path: '', component: Login, canActivate: [loginGuard] },
@@ -37,6 +38,7 @@ export const routes: Routes = [
       {path: 'audit/url-validations/create', component: AuditUrlValidationForm},
       {path: 'audit/url-validations/:id/info', loadComponent: () => import('@/app/presentation/pages/admin/audit/audit-url-validation-info/audit-url-validation-info')},
       {path: 'metrics', component: MetricsDashboardComponent},
+      {path: 'json-tools', component: JsonTools},
     ]
   },
   {path: 'shared/audit/url-validations/:id/info', loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info')},

@@ -18,6 +18,7 @@ export interface CreateCompareAuditRequestDto {
   include_ai_analysis: boolean
   web_page_id: string
   web_page_id_to_compare: string[]
+  documentation_context?: string
 }
 
 export interface FilterCompareAuditRequestDto {

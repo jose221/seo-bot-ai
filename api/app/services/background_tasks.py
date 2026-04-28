@@ -195,6 +195,7 @@ async def run_comparison_task(
     """
     comparison = None
     _cache = Cache(table_name="audits_reports_compare_")
+    documentation_context = None
 
     try:
         # Actualizar estado a IN_PROGRESS
@@ -204,6 +205,7 @@ async def run_comparison_task(
                 print(f"❌ No se encontró comparison {comparison_id}")
                 return
 
+            documentation_context = comparison.documentation_context
             comparison.status = ComparisonStatus.IN_PROGRESS
             session.add(comparison)
 
@@ -268,7 +270,8 @@ async def run_comparison_task(
                         try:
                             req_ai_analysis_params = dict(
                                 base_url=base_webpage.url,
-                                compare_url=competitor_webpage.url
+                                compare_url=competitor_webpage.url,
+                                documentation_context=documentation_context
                             )
                             ai_analysis = await _cache.loadFromCacheAsync(
                                 params=req_ai_analysis_params,
@@ -278,6 +281,7 @@ async def run_comparison_task(
                                 **req_ai_analysis_params,
                                 base_audit=base_audit,
                                 compare_audit=competitor_audit,
+                                documentation_context=documentation_context,
                                 token=token
                             )
                             # Handle AI response format
@@ -314,7 +318,8 @@ async def run_comparison_task(
                 base_audit=base_audit,
                 compare_audits=competitors_audit,
                 token=token,
-                base_url=base_webpage.url
+                base_url=base_webpage.url,
+                documentation_context=documentation_context
             )
 
             if isinstance(ai_schema_comparison, dict):
@@ -356,8 +361,9 @@ async def run_comparison_task(
                  print("🔍 Generando explicación detallada de la propuesta...")
                  detailed_ai_response = await comparator.generate_ai_detailed_proposal_report(
                      schema_proposal=ai_schema_comparison_text,
+                     documentation_context=documentation_context,
                      token=token
-                 )
+                  )
 
                  detailed_content = detailed_ai_response.get('content', '')
                  d_usage = detailed_ai_response.get('usage', {})
@@ -1048,4 +1054,3 @@ async def run_url_validation_single_url_task(
                     session.add(validation)
         except Exception as inner:
             print(f"❌ Error al guardar estado de fallo: {inner}")
-

@@ -51,6 +51,15 @@
             {{ 'admin.navbar.urlValidations' | translate }}
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link text-primary"
+             routerLink="/admin/json-tools"
+             routerLinkActive="active fw-semibold"
+             [routerLinkActiveOptions]="{exact: false}"
+             [attr.aria-current]="isActive('/admin/json-tools') ? 'page' : null">
+            {{ 'admin.navbar.jsonTools' | translate }}
+          </a>
+        </li>
       </ul>
       <div class="d-flex align-items-center gap-3">
         <form class="d-flex">
@@ -79,4 +88,3 @@
 <div class="container-fluid bg-light py-5">
   <router-outlet></router-outlet>
 </div>
-

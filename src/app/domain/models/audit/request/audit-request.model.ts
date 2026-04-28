@@ -23,7 +23,8 @@ export class CreateCompareAuditRequestModel {
   constructor(
     public include_ai_analysis: boolean,
     public web_page_id: string,
-    public web_page_id_to_compare: string[]
+    public web_page_id_to_compare: string[],
+    public documentation_context?: string
   ) {
   }
 }

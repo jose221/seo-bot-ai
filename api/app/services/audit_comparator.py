@@ -243,6 +243,7 @@ class AuditComparator:
         compare_audit: AuditReport,
         base_url: str,
         compare_url: str,
+        documentation_context: Optional[str],
         token: str
     ) -> Dict[str, Any]:
         """
@@ -276,7 +277,8 @@ class AuditComparator:
             base_url=base_url,
             compare_url=compare_url,
             base_schemas=base_schemas,
-            compare_schemas=compare_schemas
+            compare_schemas=compare_schemas,
+            documentation_context=documentation_context
         )
 
         from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
@@ -299,6 +301,7 @@ class AuditComparator:
     async def generate_ai_detailed_proposal_report(
             self,
             schema_proposal: str,
+            documentation_context: Optional[str],
             token: str
     ):
         """
@@ -307,7 +310,10 @@ class AuditComparator:
         template_detailed = self.ai_client.jinja_env.get_template("schema_proposal_detail.jinja")
 
         # Renderizar prompt
-        prompt_content = template_detailed.render(schema_proposal=schema_proposal)
+        prompt_content = template_detailed.render(
+            schema_proposal=schema_proposal,
+            documentation_context=documentation_context
+        )
 
         from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
 
@@ -346,7 +352,8 @@ class AuditComparator:
             base_audit: AuditReport,
             compare_audits: List[AuditReport],
             token: str,
-            base_url: str = "NA"
+            base_url: str = "NA",
+            documentation_context: Optional[str] = None
     ):
         template_schemas_compare = self.ai_client.jinja_env.get_template("schemas_markup_comparison.jinja")
         competitors = []
@@ -374,7 +381,8 @@ class AuditComparator:
             "base_url": base_url,
             "business_type": "Sitio Web", # Generic fallback
             "schemas": base_schemas,
-            "competitors": competitors
+            "competitors": competitors,
+            "documentation_context": documentation_context
         }
         prompt_content = template_schemas_compare.render(**params)
         from app.schemas.ai_schemas import ChatMessage, MessageRole, ChatCompletionRequest
@@ -589,4 +597,3 @@ def get_audit_comparator() -> AuditComparator:
     if _audit_comparator is None:
         _audit_comparator = AuditComparator()
     return _audit_comparator
-

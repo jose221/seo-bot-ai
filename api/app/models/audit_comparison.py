@@ -60,6 +60,13 @@ class AuditComparison(SQLModel, table=True):
     proposal_report_pdf_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
     proposal_report_word_path: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
+    # Contexto de documentación extra para los agentes de IA
+    documentation_context: Optional[str] = Field(
+        default=None,
+        sa_column=Column(String, nullable=True),
+        description="Contexto/documentación adicional que se inyecta en los agentes de IA durante la comparación"
+    )
+
     # Metadata
     include_ai_analysis: bool = Field(default=True)
     input_tokens: Optional[int] = Field(default=0, description="Tokens de entrada usados por la IA")

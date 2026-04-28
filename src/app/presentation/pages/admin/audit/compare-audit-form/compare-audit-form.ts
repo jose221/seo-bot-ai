@@ -39,7 +39,8 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   protected readonly form = inject(FormBuilder).group({
     web_page_id_to_compare: new FormControl<string[]>([], Validators.required),
     web_page_id: ['', Validators.required],
-    include_ai_analysis: [true]
+    include_ai_analysis: [true],
+    documentation_context: ['']
   });
   private readonly formRepository = inject(AuditRepository);
   private readonly targetRepository = inject(TargetRepository)
@@ -91,6 +92,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
         web_page_id: rerunData.web_page_id ?? '',
         web_page_id_to_compare: rerunData.web_page_id_to_compare ?? [],
         include_ai_analysis: rerunData.include_ai_analysis ?? true,
+        documentation_context: rerunData.documentation_context ?? '',
       });
     }
 

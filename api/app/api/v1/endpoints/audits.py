@@ -1628,6 +1628,7 @@ async def audits_compare(
         user_id=current_user.id,
         competitor_web_page_ids=[str(id) for id in audit_request.web_page_id_to_compare],
         include_ai_analysis=audit_request.include_ai_analysis,
+        documentation_context=audit_request.documentation_context,
         status=ComparisonStatus.PENDING
     )
 
@@ -1654,4 +1655,3 @@ async def audits_compare(
         status=comparison.status,
         message=f"Comparación iniciada para {base_webpage.url} vs {len(audit_request.web_page_id_to_compare)} competidores"
     )
-

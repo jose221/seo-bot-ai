@@ -1,0 +1,55 @@
+:host {
+  display: block;
+}
+
+.json-tools-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(13, 110, 253, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.json-tools-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.json-tools-option {
+  display: inline-flex;
+  align-items: center;
+  border: 2px solid #dee2e6;
+  border-radius: 50rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #495057;
+  background: #fff;
+
+  &:hover {
+    border-color: #0d6efd;
+    color: #0d6efd;
+    background: rgba(13, 110, 253, 0.05);
+  }
+
+  &.active {
+    border-color: #0d6efd;
+    background: #0d6efd;
+    color: #fff;
+  }
+}
+
+textarea.form-control {
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.json-tools-counter {
+  font-size: 0.75rem;
+  font-weight: 600;
+}

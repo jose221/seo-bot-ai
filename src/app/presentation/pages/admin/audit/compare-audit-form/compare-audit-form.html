@@ -142,6 +142,19 @@
               </div>
               <div class="form-text"><span>{{ 'audits.compare.includeAI.help' | translate }}</span></div>
             </div>
+            <div class="mb-4">
+              <label class="form-label fw-semibold small text-muted" for="documentationContext">
+                <i class="bi bi-journal-text me-1"></i>{{ 'audits.form.documentationContext' | translate }}
+                <span class="text-muted fw-normal ms-1">({{ 'audits.form.optional' | translate }})</span>
+              </label>
+              <textarea
+                class="form-control shadow-sm"
+                id="documentationContext"
+                formControlName="documentation_context"
+                rows="4"
+                [placeholder]="'audits.form.documentationContextPlaceholder' | translate">
+              </textarea>
+            </div>
             <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5">
               <button class="btn btn-outline-secondary btn-lg px-4" type="reset">
                 {{ 'general.actions.clear' | translate }}
@@ -188,4 +201,3 @@
   </app-footer-modal>
 
 </app-default-modal>
-

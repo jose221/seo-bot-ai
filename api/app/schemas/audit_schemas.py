@@ -42,13 +42,18 @@ class AuditCompare(BaseModel):
         default=True,
         description="Si incluir análisis de IA (consume más tiempo)"
     )
+    documentation_context: Optional[str] = Field(
+        default=None,
+        description="Contexto o documentación extra que se inyecta en los agentes de IA para mejorar las recomendaciones"
+    )
 
     class Config:
         json_schema_extra = {
             "example": {
                 "web_page_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
                 "web_page_id_to_compare": ["3fa85f64-5717-4562-b3fc-2c963f66afa6"],
-                "include_ai_analysis": True
+                "include_ai_analysis": True,
+                "documentation_context": "Somos una clínica dental especializada en ortodoncia invisible para adultos en CDMX."
             }
         }
 
@@ -654,4 +659,3 @@ class DeleteAuditResponse(BaseModel):
     success: bool
     message: str
     audit_id: UUID
-

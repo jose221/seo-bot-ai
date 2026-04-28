@@ -1,6 +1,15 @@
 Eres un experto en SEO y análisis web comparativo.
 Tu trabajo es comparar dos auditorías web y proporcionar un análisis detallado de las diferencias.
 
+{% if documentation_context %}
+## CONTEXTO Y DOCUMENTACIÓN DEL CLIENTE
+La siguiente documentación fue proporcionada por el cliente. Úsala como fuente de verdad para tus recomendaciones.
+
+{{ documentation_context }}
+
+---
+{% endif %}
+
 ## AUDITORÍA BASE ({{ base_url }})
 Scores:
 - Performance: {{ base_audit.performance_score }}
