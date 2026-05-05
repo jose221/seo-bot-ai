@@ -12,11 +12,27 @@ DESKTOP_DROP_DIR="$HOME/Desktop/SEO-Bot-AI-Desktop"
 DESKTOP_APP_PATH="$DESKTOP_DROP_DIR/mac-arm64/SEO Bot AI.app"
 BASE_PYTHON_BIN="${SEO_BOT_DESKTOP_PYTHON:-}"
 DEBUG_MODE=0
+CLEAN_MODE=0
+CLEANUP_PATHS=(
+  "$ROOT_DIR/.angular"
+  "$ROOT_DIR/dist"
+  "$ROOT_DIR/release/desktop"
+  "$ROOT_DIR/api/.desktop-python"
+  "$HOME/Desktop/seo-bot-ai-auth-debug.log"
+)
+CLEANUP_CACHE_PATHS=(
+  "$HOME/Library/Caches/electron"
+  "$HOME/Library/Caches/electron-builder"
+  "$HOME/Library/Caches/pip"
+)
 
 for arg in "$@"; do
   case "$arg" in
     --debug)
       DEBUG_MODE=1
+      ;;
+    --clean)
+      CLEAN_MODE=1
       ;;
     *)
       fail "Argumento no soportado: $arg"
@@ -35,6 +51,26 @@ fail() {
 
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "No encontre el comando requerido: $1"
+}
+
+clean_path() {
+  local target="$1"
+
+  if [[ -e "$target" || -L "$target" ]]; then
+    rm -rf "$target"
+  fi
+}
+
+run_clean() {
+  log "Limpiando artefactos previos del proyecto"
+  for target in "${CLEANUP_PATHS[@]}"; do
+    clean_path "$target"
+  done
+
+  log "Limpiando caches de desktop"
+  for target in "${CLEANUP_CACHE_PATHS[@]}"; do
+    clean_path "$target"
+  done
 }
 
 log "Validando prerequisitos"
@@ -63,6 +99,10 @@ fi
 
 cd "$ROOT_DIR"
 
+if [[ "$CLEAN_MODE" -eq 1 ]]; then
+  run_clean
+fi
+
 log "Instalando dependencias Node"
 npm install
 
@@ -71,10 +111,10 @@ rm -rf "$DESKTOP_VENV_DIR"
 "$BASE_PYTHON_BIN" -m venv --copies "$DESKTOP_VENV_DIR"
 
 log "Actualizando pip/setuptools/wheel"
-"$PYTHON_BIN" -m pip install --upgrade pip setuptools wheel
+"$PYTHON_BIN" -m pip install --no-cache-dir --upgrade pip setuptools wheel
 
 log "Instalando dependencias Python del backend"
-PLAYWRIGHT_BROWSERS_PATH=0 "$PYTHON_BIN" -m pip install -r "$API_DIR/requirements.txt"
+PLAYWRIGHT_BROWSERS_PATH=0 "$PYTHON_BIN" -m pip install --no-cache-dir -r "$API_DIR/requirements.txt"
 
 log "Instalando Chromium de Playwright dentro del paquete"
 PLAYWRIGHT_BROWSERS_PATH=0 "$PLAYWRIGHT_BIN" install chromium
