@@ -6,22 +6,10 @@ import { FilterListConfig } from '@/app/domain/models/general/filter-list.model'
 import { TableColumn } from '@/app/domain/models/general/table-column.model';
 import { PaginatorHelper } from '@/app/helper/paginator.helper';
 import { RouterLink } from '@angular/router';
-import { DatePipe, NgClass } from '@angular/common';
+import { NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
-import { MarkdownModule } from 'ngx-markdown';
 import { AuditSchemaRepository } from '@/app/domain/repositories/audit-schema/audit-schema.repository';
 import { AuditSchemaItemResponseModel, FindAuditSchemaResponseModel } from '@/app/domain/models/audit-schema/response/audit-schema-response.model';
-import { environment } from '@/environments/environment';
-import {
-  BodyModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
-import { DefaultModal } from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
-import {
-  FooterModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
-import {
-  HeaderModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
 import { FilterList } from '@/app/presentation/components/general/filter-list/filter-list';
 import { PaginatorList } from '@/app/presentation/components/general/paginator-list/paginator-list';
 import { TableComponent } from '@/app/presentation/components/general/table/table.component';
@@ -29,18 +17,12 @@ import { TableComponent } from '@/app/presentation/components/general/table/tabl
 @Component({
   selector: 'app-audit-schema-list',
   imports: [
-    BodyModalComponent,
-    DefaultModal,
     FilterList,
-    FooterModalComponent,
-    HeaderModalComponent,
     PaginatorList,
     RouterLink,
     TableComponent,
     TranslatePipe,
     NgClass,
-    DatePipe,
-    MarkdownModule,
   ],
   templateUrl: './audit-schema-list.html',
   styleUrl: './audit-schema-list.scss',
@@ -51,10 +33,6 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
   private intervalId: any;
   autoReload = signal<boolean>(true);
   readonly RELOAD_INTERVAL = 12000;
-
-  public showDetail = signal<boolean>(false);
-  public selectedItem = signal<FindAuditSchemaResponseModel>({} as FindAuditSchemaResponseModel);
-  public loadingDetail = signal<boolean>(false);
 
   configFilter = signal<FilterListConfig>({
     limit: 8,
@@ -185,16 +163,7 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
   }
 
   async toShow(item: AuditSchemaItemResponseModel) {
-    this.loadingDetail.set(true);
-    this.showDetail.set(true);
-    try {
-      const response = await this._auditSchemaRepository.find(item.id);
-      this.selectedItem.set(response);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.loadingDetail.set(false);
-    }
+    this._router.navigate(['/admin/audit/schemas', item.id]);
   }
 
   private getSchemaJsonForRerun(item: FindAuditSchemaResponseModel): string {
@@ -261,51 +230,5 @@ export class AuditSchemaList extends ListDefaultBase<AuditSchemaItemResponseMode
     }
   }
 
-  downloadReport(itemOrType: AuditSchemaItemResponseModel | 'pdf' | 'word', type?: 'pdf' | 'word') {
-    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    let path: string | null | undefined;
-
-    if (typeof itemOrType === 'string') {
-      // Called from modal: downloadReport('pdf')
-      const t = itemOrType;
-      path = t === 'pdf' ? this.selectedItem().report_pdf_path : this.selectedItem().report_word_path;
-    } else {
-      // Called from card: downloadReport(item, 'pdf')
-      path = type === 'pdf' ? itemOrType.report_pdf_path : itemOrType.report_word_path;
-    }
-
-    if (!path) {
-      this._sweetAlertUtil.error('general.messages.error', `El reporte no está disponible`);
-      return;
-    }
-    window.open(`${baseUrl}/${path}`, '_blank');
-  }
-
-  getStatusClass(status: string): string {
-    return this.statusUtil.getStatusClass(status as any);
-  }
-
-  getStatusIcon(status: string): string {
-    const icons: Record<string, string> = {
-      completed: 'bi-check-circle',
-      pending: 'bi-clock',
-      failed: 'bi-x-circle',
-      processing: 'bi-arrow-repeat',
-    };
-    return icons[status] ?? 'bi-circle';
-  }
-
-  getValidationStatusClass(isValid: boolean): string {
-    return isValid ? 'text-success' : 'text-danger';
-  }
-
-  getValidationIcon(isValid: boolean): string {
-    return isValid ? 'bi-check-circle-fill' : 'bi-x-circle-fill';
-  }
-
-  closeDetail() {
-    this.showDetail.set(false);
-    this.selectedItem.set({} as FindAuditSchemaResponseModel);
-  }
 }
 

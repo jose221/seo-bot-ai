@@ -6,46 +6,26 @@ import {FilterListConfig} from '@/app/domain/models/general/filter-list.model';
 import {TableColumn} from '@/app/domain/models/general/table-column.model';
 import {AuditRepository} from '@/app/domain/repositories/audit/audit.repository';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
-import {
-  BodyModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
-import {DateFormatPipe} from '@/app/pipes/date-format-pipe';
-import {DefaultModal} from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
 import {FilterList} from '@/app/presentation/components/general/filter-list/filter-list';
-import {
-  FooterModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
-import {
-  HeaderModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
 import {PaginatorList} from '@/app/presentation/components/general/paginator-list/paginator-list';
 import {RouterLink} from '@angular/router';
 import {TableComponent} from '@/app/presentation/components/general/table/table.component';
 import {TranslatePipe} from '@ngx-translate/core';
-import {DatePipe, DecimalPipe, NgClass} from '@angular/common';
+import {NgClass} from '@angular/common';
 import {
   CompareAuditResponseModel,
-  FindCompareAuditResponseModel
+  FindCompareAuditResponseModel,
 } from '@/app/domain/models/audit/response/audit-response.model';
-import {MarkdownModule} from 'ngx-markdown';
-import {environment} from '@/environments/environment';
 
 @Component({
   selector: 'app-compare-audit-list',
   imports: [
-    BodyModalComponent,
-    DefaultModal,
     FilterList,
-    FooterModalComponent,
-    HeaderModalComponent,
     PaginatorList,
     RouterLink,
     TableComponent,
     TranslatePipe,
     NgClass,
-    DatePipe,
-    DecimalPipe,
-    MarkdownModule
   ],
   templateUrl: './compare-audit-list.html',
   styleUrl: './compare-audit-list.scss',
@@ -146,7 +126,6 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     ]
   );
   public showMessageComparison = signal<boolean>(false)
-  public responseCompareAudit = signal<FindCompareAuditResponseModel>({} as FindCompareAuditResponseModel)
   _auditRepository = inject(AuditRepository)
   constructor() {
     super();
@@ -200,21 +179,17 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
     await this._router.navigate(['/admin/modules/update', item?.id])
   }
   async toShow(item: CompareAuditResponseModel){
-    console.log('item:', item);
-    const response =await this._auditRepository.findComparisons(item.id)
-    this.responseCompareAudit.set(response)
-    this.showMessageComparison.set(true)
-    console.log('response:', response);
+    this._router.navigate(['/admin/audit/comparisons', item.id]);
   }
 
   private async resolveCompetitorWebPageIds(response: FindCompareAuditResponseModel): Promise<string[]> {
-    const auditIds = response.comparison_result?.comparisons
-      ?.map((comparison) => comparison.summary?.compare_audit_id)
+    const auditIds = (response.comparison_result?.comparisons ?? [])
+      .map((comparison: any) => comparison.summary?.compare_audit_id as string | undefined)
       .filter((id): id is string => Boolean(id)) ?? [];
 
     const uniqueAuditIds = Array.from(new Set(auditIds));
     const competitorWebPageIds = await Promise.all(
-      uniqueAuditIds.map(async (auditId) => {
+      uniqueAuditIds.map(async (auditId: string) => {
         try {
           const audit = await this._auditRepository.find(auditId);
           return audit.web_page_id;
@@ -289,30 +264,6 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
         await this.init();
       }
     }
-  }
-
-  downloadReport(type: 'pdf' | 'excel' | 'word') {
-    const baseUrl = environment.apiUrl.replace('/api/v1', '');
-    let reportPath: string | null | undefined;
-
-    if (type === 'pdf') {
-      reportPath = this.responseCompareAudit().report_pdf_path;
-    } else if (type === 'excel') {
-      reportPath = this.responseCompareAudit().report_excel_path;
-    } else {
-      reportPath = this.responseCompareAudit().report_word_path;
-    }
-
-    if (!reportPath) {
-      this._sweetAlertUtil.error(
-        'general.messages.error',
-        `El reporte ${type.toUpperCase()} no está disponible`
-      );
-      return;
-    }
-
-    const fullUrl = `${baseUrl}/${reportPath}`;
-    window.open(fullUrl, '_blank');
   }
 
 }

@@ -12,20 +12,6 @@ import {FilterList} from '@/app/presentation/components/general/filter-list/filt
 import {TranslatePipe} from '@ngx-translate/core';
 import {RouterLink} from '@angular/router';
 import {StatusAuditUtil} from '@/app/presentation/utils/status-audit.util';
-import {DefaultModal} from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
-import {
-  BodyModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
-import {
-  HeaderModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
-import {
-  FooterModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
-import {DateFormatPipe} from '@/app/pipes/date-format-pipe';
-import {NgClass} from '@angular/common';
-import {MarkdownComponent} from 'ngx-markdown';
-import {environment} from '@/environments/environment';
 
 @Component({
   selector: 'app-audit-list',
@@ -35,13 +21,6 @@ import {environment} from '@/environments/environment';
     FilterList,
     TranslatePipe,
     RouterLink,
-    DefaultModal,
-    BodyModalComponent,
-    HeaderModalComponent,
-    FooterModalComponent,
-    DateFormatPipe,
-    NgClass,
-    MarkdownComponent
   ],
   templateUrl: './audit-list.html',
   styleUrl: './audit-list.scss',
@@ -210,8 +189,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
   }
   showItem = signal<AuditResponseModel|any>({} as AuditResponseModel)
   async toShow(item: AuditResponseModel){
-    console.log('item:', item);
-    this.showItem.set(item);
+    this._router.navigate(['/admin/audit', item.id]);
   }
 
   async toRerun(item: AuditResponseModel) {
@@ -223,24 +201,6 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
     });
   }
 
-  downloadReport(type: 'pdf' | 'excel' | 'word') {
-    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    let reportPath: string | null | undefined;
-
-    if (type === 'pdf') {
-      reportPath = this.showItem().report_pdf_path;
-    } else if (type === 'excel') {
-      reportPath = this.showItem().report_excel_path;
-    } else {
-      reportPath = this.showItem().report_word_path;
-    }
-
-    if (!reportPath) {
-      this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
-      return;
-    }
-    window.open(`${baseUrl}/${reportPath}`, '_blank');
-  }
   async toDelete(item: AuditResponseModel){
     const result = await this._sweetAlertUtil.fire({
       title: 'general.messages.confirmDelete',

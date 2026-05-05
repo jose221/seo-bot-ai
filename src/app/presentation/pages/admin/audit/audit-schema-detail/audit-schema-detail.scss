@@ -1,0 +1,239 @@
+// ──────────────────────────────────────────────
+// Audit Schema List – Styles
+// ──────────────────────────────────────────────
+
+:host {
+  display: block;
+}
+
+// ── Section headers ──────────────────────────
+.schema-section-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  padding: 0.85rem 1.25rem;
+}
+
+// ── Meta bar ─────────────────────────────────
+.schema-meta-bar {
+  padding: 0.75rem 1rem;
+  background: #f8f9fa;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.schema-meta-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8125rem;
+}
+
+.schema-status-badge {
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+}
+
+// ── Token chips ───────────────────────────────
+.schema-token-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.75rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 50rem;
+  font-size: 0.8125rem;
+}
+
+// ── Validation cards ──────────────────────────
+.schema-validation-card {
+  padding: 1rem;
+  border-radius: 0.6rem;
+  border: 2px solid #dee2e6;
+  background: #fff;
+  transition: border-color 0.2s ease;
+
+  &.schema-valid {
+    border-color: #28a745;
+    background: rgba(40, 167, 69, 0.04);
+  }
+
+  &.schema-invalid {
+    border-color: #dc3545;
+    background: rgba(220, 53, 69, 0.04);
+  }
+}
+
+.schema-errors-list {
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+.schema-error-item {
+  display: flex;
+  align-items: flex-start;
+  line-height: 1.4;
+  margin-bottom: 0.15rem;
+}
+
+// ── Types card ───────────────────────────────
+.schema-types-card {
+  padding: 0.875rem;
+  border-radius: 0.6rem;
+  border: 1px solid #dee2e6;
+  background: #fafbfc;
+}
+
+// ── Delta cards ──────────────────────────────
+%schema-delta-base {
+  padding: 0.875rem;
+  border-radius: 0.6rem;
+  border-left: 4px solid;
+}
+
+.schema-delta-card {
+  @extend %schema-delta-base;
+  height: 100%;
+
+  &.schema-delta-success {
+    border-left-color: #28a745;
+    background: rgba(40, 167, 69, 0.05);
+  }
+
+  &.schema-delta-warning {
+    border-left-color: #ffc107;
+    background: rgba(255, 193, 7, 0.06);
+  }
+
+  &.schema-delta-info {
+    border-left-color: #17a2b8;
+    background: rgba(23, 162, 184, 0.05);
+  }
+
+  &.schema-delta-secondary {
+    border-left-color: #6c757d;
+    background: rgba(108, 117, 125, 0.05);
+  }
+}
+
+// ── Changed fields ────────────────────────────
+.schema-changed-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.schema-changed-field-item {
+  display: flex;
+  align-items: center;
+  padding: 0.3rem 0.5rem;
+  background: #f8f9fa;
+  border-radius: 0.35rem;
+  font-size: 0.8125rem;
+}
+
+// ── Progress columns ─────────────────────────
+.schema-progress-col {
+  padding: 1rem;
+  border-radius: 0.6rem;
+  border: 1px solid #dee2e6;
+  height: 100%;
+
+  &.schema-progress-success {
+    border-top: 3px solid #28a745;
+  }
+
+  &.schema-progress-warning {
+    border-top: 3px solid #ffc107;
+  }
+
+  &.schema-progress-secondary {
+    border-top: 3px solid #6c757d;
+  }
+}
+
+.schema-progress-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #495057;
+  display: flex;
+  align-items: center;
+}
+
+// ── AI content ────────────────────────────────
+.schema-ai-content {
+  max-height: 620px;
+  overflow-y: auto;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+
+  // Smooth scroll
+  scroll-behavior: smooth;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c0c0c0;
+    border-radius: 10px;
+  }
+
+  // Markdown overrides
+  h1, h2, h3, h4 {
+    margin-top: 1.25rem;
+    color: #0d6efd;
+  }
+
+  code {
+    background: #f8f9fa;
+    padding: 0.15rem 0.35rem;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    color: #e83e8c;
+  }
+
+  pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    font-size: 0.8125rem;
+    overflow-x: auto;
+
+    code {
+      background: transparent;
+      color: inherit;
+      padding: 0;
+    }
+  }
+
+  blockquote {
+    border-left: 4px solid #0d6efd;
+    padding-left: 1rem;
+    color: #6c757d;
+    font-style: italic;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+
+    th, td {
+      border: 1px solid #dee2e6;
+      padding: 0.4rem 0.75rem;
+    }
+
+    th {
+      background: #f8f9fa;
+      font-weight: 600;
+    }
+  }
+}
+

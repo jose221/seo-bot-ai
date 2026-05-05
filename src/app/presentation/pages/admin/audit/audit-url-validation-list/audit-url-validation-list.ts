@@ -5,26 +5,13 @@ import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
 import { FilterListConfig } from '@/app/domain/models/general/filter-list.model';
 import { TableColumn } from '@/app/domain/models/general/table-column.model';
 import { PaginatorHelper } from '@/app/helper/paginator.helper';
-import { RouterLink, Router } from '@angular/router';
-import { DatePipe, NgClass } from '@angular/common';
+import { RouterLink } from '@angular/router';
+import { NgClass } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
-import { MarkdownModule } from 'ngx-markdown';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import {
   AuditUrlValidationItemResponseModel,
-  FindAuditUrlValidationResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
-import { environment } from '@/environments/environment';
-import {
-  BodyModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
-import { DefaultModal } from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
-import {
-  FooterModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
-import {
-  HeaderModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
 import { FilterList } from '@/app/presentation/components/general/filter-list/filter-list';
 import { PaginatorList } from '@/app/presentation/components/general/paginator-list/paginator-list';
 import { TableComponent } from '@/app/presentation/components/general/table/table.component';
@@ -32,18 +19,12 @@ import { TableComponent } from '@/app/presentation/components/general/table/tabl
 @Component({
   selector: 'app-audit-url-validation-list',
   imports: [
-    BodyModalComponent,
-    DefaultModal,
     FilterList,
-    FooterModalComponent,
-    HeaderModalComponent,
     PaginatorList,
     RouterLink,
     TableComponent,
     TranslatePipe,
     NgClass,
-    DatePipe,
-    MarkdownModule,
   ],
   templateUrl: './audit-url-validation-list.html',
   styleUrl: './audit-url-validation-list.scss',
@@ -57,12 +38,6 @@ export class AuditUrlValidationList
   private intervalId: any;
   autoReload = signal<boolean>(true);
   readonly RELOAD_INTERVAL = 12000;
-
-  public showDetail = signal<boolean>(false);
-  public selectedItem = signal<FindAuditUrlValidationResponseModel>(
-    {} as FindAuditUrlValidationResponseModel
-  );
-  public loadingDetail = signal<boolean>(false);
 
   configFilter = signal<FilterListConfig>({
     limit: 8,
@@ -202,16 +177,7 @@ export class AuditUrlValidationList
   }
 
   async toShow(item: AuditUrlValidationItemResponseModel) {
-    this.loadingDetail.set(true);
-    this.showDetail.set(true);
-    try {
-      const response = await this._repository.find(item.id);
-      this.selectedItem.set(response);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      this.loadingDetail.set(false);
-    }
+    this._router.navigate(['/admin/audit/url-validations', item.id]);
   }
 
   async toRerun(item: AuditUrlValidationItemResponseModel) {
@@ -276,56 +242,6 @@ export class AuditUrlValidationList
     }
   }
 
-  downloadReport(type: 'pdf' | 'word' | 'global_pdf' | 'global_word') {
-    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    let path: string | null = null;
-
-    switch (type) {
-      case 'pdf':
-        path = this.selectedItem().report_pdf_path;
-        break;
-      case 'word':
-        path = this.selectedItem().report_word_path;
-        break;
-      case 'global_pdf':
-        path = this.selectedItem().global_report_pdf_path;
-        break;
-      case 'global_word':
-        path = this.selectedItem().global_report_word_path;
-        break;
-    }
-
-    if (!path) {
-      this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
-      return;
-    }
-    window.open(`${baseUrl}/${path}`, '_blank');
-  }
-
-  getSeverityClass(severity: string | null): string {
-    if (!severity) return 'bg-secondary';
-    const map: Record<string, string> = {
-      critical: 'bg-danger',
-      high: 'bg-warning text-dark',
-      medium: 'bg-info text-dark',
-      low: 'bg-success',
-    };
-    return map[severity.toLowerCase()] ?? 'bg-secondary';
-  }
-
-  getStatusClass(status: string): string {
-    return this.statusUtil.getStatusClass(status as any);
-  }
-
-  closeDetail() {
-    this.showDetail.set(false);
-    this.selectedItem.set({} as FindAuditUrlValidationResponseModel);
-  }
-
-  getResultsWithErrors(results: any[]): number {
-    return results.filter(r => r.validation_errors && !r.validation_errors.is_valid).length;
-  }
-
   parseResultsJson(raw: any): any[] {
     if (!raw) return [];
     if (Array.isArray(raw)) return raw;
@@ -336,15 +252,4 @@ export class AuditUrlValidationList
       return [];
     }
   }
-
-  formatJson(raw: any): string {
-    if (!raw) return '';
-    try {
-      const obj = typeof raw === 'string' ? JSON.parse(raw) : raw;
-      return JSON.stringify(obj, null, 2);
-    } catch {
-      return String(raw);
-    }
-  }
 }
-
