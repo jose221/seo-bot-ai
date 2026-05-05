@@ -75,7 +75,7 @@ class HerandroServicesApiClient:
         try:
             async with self._new_client() as client:
                 response = await client.post(
-                    "/v3/agent/ai/chat/completions",
+                    "/agent/v1/chat/completions",
                     json=request.model_dump(),
                     headers=self._auth_headers(),
                 )

@@ -1,6 +1,6 @@
 """
 Schemas para integración con API de IA de Herandro.
-Mapea exactamente la estructura de /v3/agent/ai/chat/completions
+Mapea exactamente la estructura de /agent/v1/chat/completions
 """
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union

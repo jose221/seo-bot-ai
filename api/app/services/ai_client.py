@@ -45,7 +45,7 @@ class AIClient:
     request: ChatCompletionRequest,
     token: str
   ) -> ChatCompletionResponse:
-    url = f"{self.base_url}/v3/agent/ai/chat/completions"
+    url = f"{self.base_url}/agent/v1/chat/completions"
 
     # Se fuerza la cabecera para mantener la conexion viva a nivel TCP
     headers = {

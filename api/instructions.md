@@ -119,7 +119,7 @@ A. Endpoint: CHAT COMPLETIONS
 
 Método: POST
 
-Ruta: /v3/agent/ai/chat/completions
+Ruta: /agent/v1/chat/completions
 
 Request Body (Configuración Estándar para el Bot):
 

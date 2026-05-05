@@ -17,7 +17,7 @@
 ## Integraciones Externas
 - Keycloak: JWKS + issuer validation + UMA decision endpoint (`resource_guard(...)` en `app/core/security.py`).
 - Herandro Auth proxy: `app/services/auth_provider.py` (`/auth/login`, `/auth/register/user`, `/auth/verify-token`).
-- Herandro AI: `app/services/ai_client.py` hacia `/v3/agent/ai/chat/completions` con prompts Jinja en `app/prompts/*.jinja`.
+- Herandro AI: `app/services/ai_client.py` hacia `/agent/v1/chat/completions` con prompts Jinja en `app/prompts/*.jinja`.
 - Cliente HSA server-to-server: `app/shared/herandro_services_api/herandro_services_api_client.py` toma token desde `ContextVar` del request.
 - Cache externa HTTP en `app/services/cache.py` (usa `HERANDRO_API_URL`), además de caché local de sitemaps en `storage/sitemaps/*.json`.
 
