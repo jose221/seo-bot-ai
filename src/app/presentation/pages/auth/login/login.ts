@@ -4,6 +4,7 @@ import {TranslateModule} from '@ngx-translate/core';
 import {LanguageSelector} from '@/app/presentation/components/general/language-selector/language-selector';
 import {AuthRepository} from '@/app/domain/repositories/auth/auth.repository';
 import {ActivatedRoute, Router} from '@angular/router';
+import {environment} from '@/environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -57,7 +58,12 @@ export class Login implements OnInit {
   signIn() {
     this.error.set('');
     const returnUrl = this.getSafeReturnUrl();
-    const redirectUri = `${window.location.origin}/?returnUrl=${encodeURIComponent(returnUrl)}`;
+    const redirectUri = `${window.location.origin}${returnUrl}`;
+    console.info('[login] Redirecting to Keycloak', {
+      requestedRedirectUri: redirectUri,
+      configuredRedirectUri: environment.keycloak.redirectUri,
+      returnUrl,
+    });
     this.authRepository.signIn(redirectUri);
   }
 }

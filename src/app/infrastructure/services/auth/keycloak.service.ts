@@ -63,6 +63,14 @@ export class KeycloakService {
     }
 
     try {
+      console.info('[KeycloakService] init', {
+        url: kcConfig.url,
+        realm: kcConfig.realm,
+        clientId: kcConfig.clientId,
+        currentUrl: window.location.href,
+        silentCheckSsoRedirectUri: `${window.location.origin}/assets/silent-check-sso.html`,
+        hasAuthCallback,
+      });
       const authenticated = await this.keycloak.init({
         onLoad: 'check-sso',
         silentCheckSsoRedirectUri: this.isBrowser
@@ -95,6 +103,11 @@ export class KeycloakService {
     if (!this.isBrowser || !this.keycloak) return;
 
     const uri = redirectUri ?? environment.keycloak.redirectUri;
+    console.info('[KeycloakService] login', {
+      redirectUri: uri,
+      configuredRedirectUri: environment.keycloak.redirectUri,
+      currentUrl: window.location.href,
+    });
     this.keycloak.login({ redirectUri: uri });
   }
 
@@ -106,6 +119,11 @@ export class KeycloakService {
     if (!this.isBrowser || !this.keycloak) return;
 
     const uri = redirectUri ?? environment.keycloak.postLogoutRedirectUri;
+    console.info('[KeycloakService] logout', {
+      redirectUri: uri,
+      configuredRedirectUri: environment.keycloak.postLogoutRedirectUri,
+      currentUrl: window.location.href,
+    });
     this.keycloak.logout({ redirectUri: uri });
   }
 

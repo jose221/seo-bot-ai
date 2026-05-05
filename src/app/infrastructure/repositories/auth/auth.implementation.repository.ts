@@ -40,8 +40,8 @@ export class AuthImplementationRepository implements AuthRepository {
   private storeAuthDebug(reason: string, details?: unknown): void {
     if (!isPlatformBrowser(this.platformId)) return;
     const payload = { reason, details, at: new Date().toISOString() };
-    //sessionStorage.setItem('auth:lastError', JSON.stringify(payload));
-    //console.error('[auth]', payload);
+    sessionStorage.setItem('auth:lastError', JSON.stringify(payload));
+    console.error('[auth]', payload);
   }
 
   /** Redirige al usuario al formulario de login de Keycloak. */

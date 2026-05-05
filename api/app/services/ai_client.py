@@ -124,7 +124,7 @@ class AIClient:
           )
 
         logger.info("Successfully parsed AI response")
-        return ChatCompletionResponse(**obj_response)
+        return ChatCompletionResponse.model_validate(obj_response)
 
     except httpx.TimeoutException as e:
       logger.exception("Timeout occurred while waiting for AI API response")
