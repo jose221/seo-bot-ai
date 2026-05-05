@@ -11,7 +11,7 @@ import {PaginatorList} from '@/app/presentation/components/general/paginator-lis
 import {RouterLink} from '@angular/router';
 import {TableComponent} from '@/app/presentation/components/general/table/table.component';
 import {TranslatePipe} from '@ngx-translate/core';
-import {NgClass} from '@angular/common';
+
 import {
   CompareAuditResponseModel,
   FindCompareAuditResponseModel,
@@ -25,7 +25,6 @@ import {
     RouterLink,
     TableComponent,
     TranslatePipe,
-    NgClass,
   ],
   templateUrl: './compare-audit-list.html',
   styleUrl: './compare-audit-list.scss',
