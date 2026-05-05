@@ -2,6 +2,7 @@
 
 # Compiled output
 /dist
+/release
 /tmp
 /out-tsc
 /bazel-out
@@ -47,7 +48,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Desktop build artifacts
+/api/.desktop-python
+
 # Environment configuration files
 src/environments/environment.ts
 src/environments/environment.prod.ts
-

@@ -73,6 +73,55 @@ Services:
 - Frontend: Port 3100
 - API: Port 3101
 
+## Desktop app (macOS, API local + Angular local)
+
+This repository now includes an Electron wrapper to run the project as a local desktop app:
+
+- **FastAPI** runs locally on `http://127.0.0.1:8000`
+- **Angular build** is served locally on `http://127.0.0.1:4200`
+- Electron opens a native macOS window (webview-style app experience)
+
+### Prerequisites for desktop mode
+
+1. Python dependencies for API:
+```bash
+cd api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+playwright install chromium
+cd ..
+```
+2. Node dependencies (includes Electron):
+```bash
+npm install
+```
+
+### Run desktop app in development
+
+```bash
+npm run desktop:dev
+```
+
+By default, Electron looks for Python in:
+1. `api/.venv/bin/python3`
+2. `api/myenv/bin/python3`
+3. `python3` from your system PATH
+
+You can force a specific interpreter with:
+```bash
+SEO_BOT_PYTHON=/absolute/path/to/python3 npm run desktop:dev
+```
+
+### Build `.app` / `.dmg` for macOS
+
+```bash
+npm run desktop:dist
+```
+
+`desktop:dist` generates installable artifacts in `dist/` using `electron-builder`.
+The macOS app icon is configured at `desktop/resources/icon.icns`.
+
 ## Project Structure
 
 ```

@@ -1,13 +1,18 @@
 {
   "name": "seo-bot-ai",
   "version": "0.0.0",
+  "main": "desktop/main.cjs",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
     "build": "ng build --configuration production",
+    "build:desktop:web": "ng build --configuration desktop",
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
-    "serve:ssr:seo-bot-ai": "node dist/seo-bot-ai/server/server.mjs"
+    "serve:ssr:seo-bot-ai": "node dist/seo-bot-ai/server/server.mjs",
+    "desktop:dev": "npm run build:desktop:web && electron .",
+    "desktop:dist": "npm run build:desktop:web && electron-builder --mac dmg",
+    "desktop:deploy": "bash ./deploy-desktop.sh"
   },
   "prettier": {
     "printWidth": 100,
@@ -39,6 +44,8 @@
     "bootstrap": "^5.3.8",
     "chart.js": "^4.5.1",
     "chartjs-plugin-datalabels": "^2.2.0",
+    "cytoscape": "^3.33.3",
+    "d3-selection": "^3.0.0",
     "express": "^5.1.0",
     "keycloak-js": "^26.2.3",
     "marked": "^17.0.1",
@@ -57,6 +64,8 @@
     "@types/express": "^5.0.1",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^20.17.19",
+    "electron": "^37.0.0",
+    "electron-builder": "^26.0.12",
     "jasmine-core": "~5.9.0",
     "jsdom": "^27.1.0",
     "karma": "~6.4.0",
@@ -66,5 +75,37 @@
     "karma-jasmine-html-reporter": "~2.1.0",
     "typescript": "~5.9.2",
     "vitest": "^4.0.8"
+  },
+  "build": {
+    "appId": "com.herandro.seobotai",
+    "productName": "SEO Bot AI",
+    "files": [
+      "desktop/**/*",
+      "dist/seo-bot-ai/browser/**/*",
+      "public/favicon.ico",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "api",
+        "to": "api",
+        "filter": [
+          ".env",
+          "**/*",
+          "!myenv{,/**}",
+          "!.venv{,/**}",
+          "!__pycache__/**",
+          "!**/*.pyc",
+          "!.pytest_cache/**"
+        ]
+      }
+    ],
+    "mac": {
+      "icon": "desktop/resources/icon.icns",
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.developer-tools"
+    }
   }
 }
