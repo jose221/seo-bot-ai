@@ -9,19 +9,15 @@ import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-ur
 import { TargetRepository } from '@/app/domain/repositories/target/target.repository';
 import { CreateAuditUrlValidationRequestModel } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import { CreateAuditUrlValidationResponseModel } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
-import { CompareAuditResponseModel, SearchAuditResponseModel } from '@/app/domain/models/audit/response/audit-response.model';
 import {
-  DefaultModal
-} from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
-import {
-  HeaderModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
-import {
-  BodyModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
-import {
-  FooterModalComponent
-} from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
+  CompareAuditResponseModel,
+  SearchAuditResponseModel,
+} from '@/app/domain/models/audit/response/audit-response.model';
+import { DefaultModal } from '@/app/presentation/components/general/bootstrap/general-modals/default-modal/default-modal';
+import { HeaderModalComponent } from '@/app/presentation/components/general/bootstrap/general-modals/sections/header-modal/header-modal.component';
+import { BodyModalComponent } from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
+import { FooterModalComponent } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
+import { requiredTrimmed, urlList } from '@/app/presentation/utils/form-validators.util';
 
 const SOURCE_TYPES = ['audit_page', 'audit_comparison'];
 
@@ -42,11 +38,12 @@ const SOURCE_TYPES = ['audit_page', 'audit_comparison'];
   styleUrl: './audit-url-validation-form.scss',
 })
 export class AuditUrlValidationForm extends ValidationFormBase implements OnInit {
-
   readonly sourceTypes = SOURCE_TYPES;
 
   showConfirmation = signal<boolean>(false);
-  createdItem = signal<CreateAuditUrlValidationResponseModel>({} as CreateAuditUrlValidationResponseModel);
+  createdItem = signal<CreateAuditUrlValidationResponseModel>(
+    {} as CreateAuditUrlValidationResponseModel,
+  );
 
   // Audit search
   auditList = signal<SearchAuditResponseModel[]>([]);
@@ -63,10 +60,13 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
   protected readonly form = inject(FormBuilder).group({
     source_type: ['audit_page', Validators.required],
     source_id: ['', Validators.required],
-    name_validation: ['', Validators.required],
-    description_validation: ['', Validators.required],
-    ai_instruction: [''],
-    urls: ['', Validators.required],
+    name_validation: ['', [requiredTrimmed(), Validators.minLength(4), Validators.maxLength(120)]],
+    description_validation: [
+      '',
+      [requiredTrimmed(), Validators.minLength(10), Validators.maxLength(300)],
+    ],
+    ai_instruction: ['', [Validators.maxLength(1200)]],
+    urls: ['', [requiredTrimmed(), urlList({ maxUrls: 200 })]],
   });
 
   private readonly _repository = inject(AuditUrlValidationRepository);
@@ -81,7 +81,8 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
   async ngOnInit(): Promise<void> {
     const sourceType = this._route.snapshot.queryParamMap.get('source_type');
     const sourceId = this._route.snapshot.queryParamMap.get('source_id');
-    const rerunData = (history.state?.rerunData ?? null) as Partial<CreateAuditUrlValidationRequestModel> | null;
+    const rerunData = (history.state?.rerunData ??
+      null) as Partial<CreateAuditUrlValidationRequestModel> | null;
 
     if (sourceType) {
       this.form.patchValue({ source_type: sourceType });
@@ -160,7 +161,7 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
     this.loading.set(true);
     try {
       const response = await this._repository.create(
-        this.form.value as CreateAuditUrlValidationRequestModel
+        this.form.value as CreateAuditUrlValidationRequestModel,
       );
       this.createdItem.set(response);
       this.showConfirmation.set(true);
@@ -174,7 +175,6 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
   countUrls(): number {
     const val = this.form.get('urls')?.value as string;
     if (!val?.trim()) return 0;
-    return val.split('\n').filter(u => u.trim()).length;
+    return val.split('\n').filter((u) => u.trim()).length;
   }
 }
-

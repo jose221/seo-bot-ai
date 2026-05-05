@@ -2,6 +2,7 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { NgClass } from '@angular/common';
 import { encode } from '@toon-format/toon';
+import { jsonSyntax, requiredTrimmed } from '@/app/presentation/utils/form-validators.util';
 
 type OptimizationMode = 'minified' | 'toon';
 type OutputScope = 'sample' | 'all';
@@ -16,7 +17,7 @@ export class JsonTools {
   private readonly fb = inject(FormBuilder);
 
   protected readonly form = this.fb.group({
-    input: ['', Validators.required],
+    input: ['', [requiredTrimmed(), jsonSyntax()]],
     optimization: ['toon' as OptimizationMode, Validators.required],
     scope: ['sample' as OutputScope, Validators.required],
   });
@@ -63,9 +64,10 @@ export class JsonTools {
       const scope = this.form.get('scope')?.value as OutputScope;
       const optimization = this.form.get('optimization')?.value as OptimizationMode;
       const dataToTransform = scope === 'sample' ? this.createRecursiveSample(parsed) : parsed;
-      const transformed = optimization === 'minified'
-        ? JSON.stringify(dataToTransform)
-        : encode(dataToTransform, { keyFolding: 'safe', delimiter: ',' });
+      const transformed =
+        optimization === 'minified'
+          ? JSON.stringify(dataToTransform)
+          : encode(dataToTransform, { keyFolding: 'safe', delimiter: ',' });
 
       this.output.set(transformed);
     } catch (error: unknown) {
@@ -94,8 +96,10 @@ export class JsonTools {
     }
 
     if (value && typeof value === 'object') {
-      const entries = Object.entries(value as Record<string, unknown>)
-        .map(([key, nestedValue]) => [key, this.createRecursiveSample(nestedValue)]);
+      const entries = Object.entries(value as Record<string, unknown>).map(([key, nestedValue]) => [
+        key,
+        this.createRecursiveSample(nestedValue),
+      ]);
       return Object.fromEntries(entries);
     }
 

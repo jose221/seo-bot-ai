@@ -1,42 +1,53 @@
-.table-responsive {
-  padding: 0;
-
-  .card {
-    box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
-
-    .card-header {
-      background-color: #f8f9fc;
-      border-bottom: 1px solid #e3e6f0;
-    }
-  }
-
-  .table {
-    margin-bottom: 0;
-
-    th {
-      background-color: #f8f9fc;
-      border-top: none;
-      font-weight: 700;
-      color: #5a5c69;
-      font-size: 0.875rem;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 0.2s ease, color 0.2s ease;
-
-      &:hover {
-        background-color: #e3e6f0;
-        color: #3a3c45;
-      }
-
-      &:active {
-        background-color: #d1d3e0;
-      }
-    }
-
-    td {
-      color: #5a5c69;
-      font-size: 0.875rem;
-    }
-  }
+.table-shell {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 22px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 35px rgba(15, 23, 42, 0.06);
 }
 
+.table-responsive {
+  padding: 0;
+}
+
+.table {
+  margin-bottom: 0;
+
+  thead th {
+    padding: 1rem 1.15rem;
+    background: linear-gradient(180deg, #f8fbff, #eef4ff);
+    border-top: none;
+    border-bottom-color: rgba(15, 23, 42, 0.08);
+    color: #334155;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background-color 0.18s ease,
+      color 0.18s ease;
+
+    &:hover {
+      background: #e6efff;
+      color: #0d6efd;
+    }
+  }
+
+  tbody td {
+    padding: 1rem 1.15rem;
+    color: #334155;
+    border-color: rgba(15, 23, 42, 0.06);
+    font-size: 0.92rem;
+    vertical-align: middle;
+  }
+
+  tbody tr:hover {
+    background: rgba(13, 110, 253, 0.03);
+  }
+
+  .btn {
+    border-radius: 12px;
+  }
+}

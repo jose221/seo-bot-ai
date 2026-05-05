@@ -1,205 +1,253 @@
-<div class="row justify-content-center">
-  <div class="col-lg-8 col-xl-7">
-    <div class="d-flex flex-wrap gap-2 mb-4">
-      <a class="btn btn-outline-primary d-flex flex-fill align-items-center gap-2 flex-sm-grow-0" role="button" routerLink="/admin/target">
-        {{ 'targets.list' | translate }}
+<section class="app-page">
+  <div class="app-page__header">
+    <div>
+      <span class="app-page__eyebrow">
+        <i class="bi bi-window-sidebar"></i>
+        Configuración
+      </span>
+      <h1 class="app-page__title">{{ 'targets.form.title' | translate }}</h1>
+      <p class="app-page__subtitle">{{ 'targets.form.subtitle' | translate }}</p>
+    </div>
+
+    <div class="app-page__actions">
+      <a class="btn btn-outline-secondary" routerLink="/admin/target">
+        <i class="bi bi-arrow-left me-2"></i>{{ 'targets.list' | translate }}
       </a>
     </div>
-    <div class="card rounded-3 border-0 shadow-sm">
-      <div class="card-body p-4 p-md-5">
-        <div class="text-center mb-4">
-          <h2 class="fw-bold text-primary mb-2">{{ 'targets.form.title' | translate }}</h2>
-          <p class="text-muted">{{ 'targets.form.subtitle' | translate }}</p>
-        </div>
-        @if (error()) {
-          <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{error() | translate}}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          </div>
-        }
-        <form id="siteConfigForm" [formGroup]="form" (ngSubmit)="onSubmit()" class="user">
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="siteName">
-              {{ 'targets.form.name.label' | translate }}
-              <span class="text-danger">*</span>
-            </label>
-            <input
-              formControlName="name"
-              class="border-2 form-control form-control-lg form-control form-control"
-              type="text"
-              id="siteName"
-              [placeholder]="'targets.form.name.placeholder' | translate"
-              aria-describedby="validationName"
-              [ngClass]="{'is-invalid': messages('name').length > 0}"
-            >
-            @if (!messages('name').length) {
-              <div class="form-text"><span>{{ 'targets.form.name.help' | translate }}</span></div>
-            }
-            @for(msg of messages('name'); track msg){
-              <div id="validationName" class="invalid-feedback">
-                {{msg}}
-              </div>
-            }
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="siteName">
-              {{ 'targets.form.techStack.label' | translate }}
-              <span class="text-danger">*</span>
-            </label>
-            <input
-              formControlName="tech_stack"
-              class="border-2 form-control form-control-lg form-control form-control"
-              type="text"
-              id="techStack"
-              [placeholder]="'targets.form.techStack.placeholder' | translate"
-              aria-describedby="validationTechStack"
-              [ngClass]="{'is-invalid': messages('tech_stack').length > 0}"
-            >
-            @if (!messages('tech_stack').length) {
-              <div class="form-text"><span>{{ 'targets.form.techStack.help' | translate }}</span></div>
-            }
-            @for(msg of messages('tech_stack'); track msg){
-              <div id="validationTechStack" class="invalid-feedback">
-                {{msg}}
-              </div>
-            }
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="siteUrl">{{ 'targets.form.url.label' | translate }} <span class="text-danger">*</span></label>
-            <input
-              class="border-2 form-control form-control-lg form-control form-control"
-              type="url"
-              id="url"
-              [placeholder]="'targets.form.url.placeholder' | translate"
-              aria-describedby="validationUrl"
-              formControlName="url"
-              [ngClass]="{'is-invalid': messages('url').length > 0}"
-            >
-            @if (!messages('url').length) {
-              <div class="form-text"><span>{{ 'targets.form.url.help' | translate }}</span></div>
-            }
-            @for(msg of messages('url'); track msg){
-              <div id="validationUrl" class="invalid-feedback">
-                {{msg}}
-              </div>
-            }
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="instructions">
-              {{ 'targets.form.instructions.label' | translate }}
-              <span class="text-danger">*</span>
-            </label>
-            <textarea
-              class="border-2 form-control form-control-lg form-control form-control"
-              id="instructions"
-              [placeholder]="'targets.form.instructions.placeholder' | translate"
-              aria-describedby="validationInstructions"
-              formControlName="instructions"
-              [ngClass]="{'is-invalid': messages('instructions').length > 0}"
-              rows="4">
-            </textarea>
-            @if (!messages('instructions').length) {
-              <div class="form-text"><span>{{ 'targets.form.instructions.help' | translate }}</span></div>
-            }
-            @for(msg of messages('instructions'); track msg){
-              <div id="validationInstructions" class="invalid-feedback">
-                {{msg}}
-              </div>
-            }
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="manualHtmlContent">
-              {{ 'targets.form.manualHtmlContent.label' | translate }}
-            </label>
-            <textarea
-              class="border-2 form-control form-control-lg form-control form-control"
-              id="manualHtmlContent"
-              [placeholder]="'targets.form.manualHtmlContent.placeholder' | translate"
-              aria-describedby="validationManualHtmlContent"
-              formControlName="manual_html_content"
-              [ngClass]="{'is-invalid': messages('manual_html_content').length > 0}"
-              rows="10">
-            </textarea>
-            @if (!messages('manual_html_content').length) {
-              <div class="form-text"><span>{{ 'targets.form.manualHtmlContent.help' | translate }}</span></div>
-            }
-            @for(msg of messages('manual_html_content'); track msg){
-              <div id="validationManualHtmlContent" class="invalid-feedback">
-                {{msg}}
-              </div>
-            }
-          </div>
+  </div>
 
-          <!-- Provider -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="provider">
-              Proveedor
-            </label>
-            <input
-              class="border-2 form-control form-control-lg"
-              type="text"
-              id="provider"
-              placeholder="Ej: Pricetravel, Facebook, Google..."
-              formControlName="provider"
-            >
-            <div class="form-text">Empresa o proveedor asociado al target (opcional)</div>
-          </div>
-
-          <!-- Tags con autocomplete -->
-          <div class="mb-4">
-            <label class="form-label fw-semibold" for="tagInput">
-              Tags
-            </label>
-            <!-- Tags seleccionados -->
-            <div class="d-flex flex-wrap gap-2 mb-2">
-              @for (tag of tags(); track tag) {
-                <span class="badge bg-primary d-flex align-items-center gap-1 fs-6 fw-normal px-3 py-2">
-                  <i class="bi bi-tag-fill me-1"></i>{{ tag }}
-                  <button type="button" class="btn-close btn-close-white ms-1" style="font-size:0.6rem;" (click)="removeTag(tag)" aria-label="Eliminar tag"></button>
-                </span>
-              }
+  <div class="row justify-content-center">
+    <div class="col-xl-10">
+      <div class="surface-panel surface-panel--soft">
+        <div class="surface-panel__body p-4 p-lg-5">
+          @if (error()) {
+            <div class="alert alert-danger d-flex gap-2 align-items-start mb-4">
+              <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+              <span>{{ error() | translate }}</span>
             </div>
-            <div class="position-relative">
-              <input
-                type="text"
-                id="tagInput"
-                class="border-2 form-control form-control-lg"
-                placeholder="Escribe un tag y presiona Enter, o selecciona uno existente..."
-                [value]="tagInput()"
-                (input)="onTagInputChange($any($event.target).value)"
-                (focus)="onTagInputFocus()"
-                (blur)="showTagDropdown.set(false)"
-                (keydown)="onTagKeydown($event)"
-                autocomplete="off"
-              >
-              @if (showTagDropdown()) {
-                <div class="dropdown-menu show w-100 shadow-sm border-0" style="max-height:200px;overflow-y:auto;top:100%;z-index:1055;">
-                  @for (tag of filteredTags(); track tag) {
-                    <button type="button" class="dropdown-item d-flex align-items-center gap-2"
-                      (mousedown)="selectTag(tag)">
-                      <i class="bi bi-tag text-primary"></i>{{ tag }}
-                    </button>
+          }
+
+          <form id="siteConfigForm" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            <div class="app-form-grid">
+              <section class="form-section">
+                <h2 class="form-section__title">Identidad del sitio</h2>
+                <p class="form-section__subtitle">
+                  Define nombre, stack y punto de entrada principal para auditorías.
+                </p>
+
+                <div class="row g-4">
+                  <div class="col-md-6">
+                    <label class="form-label" for="siteName">
+                      {{ 'targets.form.name.label' | translate }} <span class="text-danger">*</span>
+                    </label>
+                    <input
+                      formControlName="name"
+                      class="form-control form-control-lg"
+                      type="text"
+                      id="siteName"
+                      maxlength="80"
+                      [placeholder]="'targets.form.name.placeholder' | translate"
+                      [ngClass]="{ 'is-invalid': messages('name').length > 0 }"
+                    />
+                    @if (messages('name').length) {
+                      <div class="invalid-feedback d-block">{{ messages('name')[0] }}</div>
+                    } @else {
+                      <div class="field-hint">{{ 'targets.form.name.help' | translate }}</div>
+                    }
+                  </div>
+
+                  <div class="col-md-6">
+                    <label class="form-label" for="techStack">
+                      {{ 'targets.form.techStack.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <input
+                      formControlName="tech_stack"
+                      class="form-control form-control-lg"
+                      type="text"
+                      id="techStack"
+                      maxlength="120"
+                      [placeholder]="'targets.form.techStack.placeholder' | translate"
+                      [ngClass]="{ 'is-invalid': messages('tech_stack').length > 0 }"
+                    />
+                    @if (messages('tech_stack').length) {
+                      <div class="invalid-feedback d-block">{{ messages('tech_stack')[0] }}</div>
+                    } @else {
+                      <div class="field-hint">{{ 'targets.form.techStack.help' | translate }}</div>
+                    }
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" for="siteUrl">
+                      {{ 'targets.form.url.label' | translate }} <span class="text-danger">*</span>
+                    </label>
+                    <input
+                      class="form-control form-control-lg"
+                      type="url"
+                      id="siteUrl"
+                      maxlength="2048"
+                      [placeholder]="'targets.form.url.placeholder' | translate"
+                      formControlName="url"
+                      [ngClass]="{ 'is-invalid': messages('url').length > 0 }"
+                    />
+                    @if (messages('url').length) {
+                      <div class="invalid-feedback d-block">{{ messages('url')[0] }}</div>
+                    } @else {
+                      <div class="field-hint">{{ 'targets.form.url.help' | translate }}</div>
+                    }
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" for="provider">Proveedor</label>
+                    <input
+                      class="form-control form-control-lg"
+                      type="text"
+                      id="provider"
+                      maxlength="120"
+                      placeholder="Ej: Pricetravel, Google, Meta"
+                      formControlName="provider"
+                    />
+                    <div class="field-hint">
+                      Relaciona el target con la marca, cadena o proveedor cuando aplique.
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-section">
+                <h2 class="form-section__title">Contexto de scraping y análisis</h2>
+                <p class="form-section__subtitle">
+                  Documenta comportamiento especial de la página y, si hace falta, pega HTML manual.
+                </p>
+
+                <div class="row g-4">
+                  <div class="col-12">
+                    <label class="form-label" for="instructions">
+                      {{ 'targets.form.instructions.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <textarea
+                      class="form-control"
+                      id="instructions"
+                      rows="5"
+                      maxlength="1500"
+                      [placeholder]="'targets.form.instructions.placeholder' | translate"
+                      formControlName="instructions"
+                      [ngClass]="{ 'is-invalid': messages('instructions').length > 0 }"
+                    >
+                    </textarea>
+                    @if (messages('instructions').length) {
+                      <div class="invalid-feedback d-block">{{ messages('instructions')[0] }}</div>
+                    } @else {
+                      <div class="field-hint">
+                        {{ 'targets.form.instructions.help' | translate }}
+                      </div>
+                    }
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" for="manualHtmlContent">
+                      {{ 'targets.form.manualHtmlContent.label' | translate }}
+                    </label>
+                    <textarea
+                      class="form-control code-area"
+                      id="manualHtmlContent"
+                      rows="10"
+                      maxlength="25000"
+                      [placeholder]="'targets.form.manualHtmlContent.placeholder' | translate"
+                      formControlName="manual_html_content"
+                      [ngClass]="{ 'is-invalid': messages('manual_html_content').length > 0 }"
+                    >
+                    </textarea>
+                    @if (messages('manual_html_content').length) {
+                      <div class="invalid-feedback d-block">
+                        {{ messages('manual_html_content')[0] }}
+                      </div>
+                    } @else {
+                      <div class="field-hint">
+                        {{ 'targets.form.manualHtmlContent.help' | translate }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-section">
+                <h2 class="form-section__title">Tags operativos</h2>
+                <p class="form-section__subtitle">
+                  Agrupa targets por vertical, proveedor o experimento para filtrar mejor en
+                  auditorías.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                  @for (tag of tags(); track tag) {
+                    <span class="badge text-bg-primary px-3 py-2 rounded-pill">
+                      <i class="bi bi-tag-fill me-2"></i>{{ tag }}
+                      <button
+                        type="button"
+                        class="btn-close btn-close-white ms-2"
+                        (click)="removeTag(tag)"
+                        aria-label="Eliminar tag"
+                      ></button>
+                    </span>
                   }
                 </div>
-              }
+
+                <div class="position-relative">
+                  <input
+                    type="text"
+                    id="tagInput"
+                    class="form-control form-control-lg"
+                    placeholder="Escribe un tag y presiona Enter o coma"
+                    [value]="tagInput()"
+                    (input)="onTagInputChange($any($event.target).value)"
+                    (focus)="onTagInputFocus()"
+                    (blur)="showTagDropdown.set(false)"
+                    (keydown)="onTagKeydown($event)"
+                    autocomplete="off"
+                  />
+                  @if (showTagDropdown()) {
+                    <div class="dropdown-menu show w-100 shadow-sm border-0 tag-dropdown">
+                      @for (tag of filteredTags(); track tag) {
+                        <button
+                          type="button"
+                          class="dropdown-item d-flex align-items-center gap-2"
+                          (mousedown)="selectTag(tag)"
+                        >
+                          <i class="bi bi-tag text-primary"></i>{{ tag }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+                <div class="field-hint mt-2">
+                  Mantén nomenclatura corta y consistente para que los filtros del dashboard sean
+                  útiles.
+                </div>
+              </section>
             </div>
-            <div class="form-text">Escribe y presiona Enter o coma para agregar un tag nuevo. Haz clic en sugerencias para reutilizar existentes.</div>
-          </div>
-          <div class="d-grid d-md-flex gap-2 justify-content-md-end mt-5">
-            <button class="btn btn-outline-secondary btn-lg px-4" type="submit">
-              <svg class="bi bi-arrow-counterclockwise me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z"></path><path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"></path></svg> {{ 'general.actions.clear' | translate }} </button><button class="btn btn-primary btn-lg shadow-sm px-5" type="submit"><svg class="bi bi-check-circle me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewbox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16"></path><path d="M10.97 4.97a.235.235 0 0 0-.02.022L7.477 9.417 5.384 7.323a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05"></path></svg>
-              {{ 'targets.form.saveButton' | translate }}
-            </button>
-          </div>
-        </form>
+
+            <div class="d-flex flex-wrap justify-content-end gap-3 mt-4">
+              <button
+                class="btn btn-outline-secondary btn-lg px-4"
+                type="button"
+                (click)="resetForm()"
+              >
+                <i class="bi bi-arrow-counterclockwise me-2"></i
+                >{{ 'general.actions.clear' | translate }}
+              </button>
+              <button class="btn btn-primary btn-lg px-5" type="submit" [disabled]="loading()">
+                @if (loading()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                } @else {
+                  <i class="bi bi-check-circle me-2"></i>
+                }
+                {{ 'targets.form.saveButton' | translate }}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
-    <div class="alert alert-success d-none mt-4 alert-dismissible fade" role="alert" id="successAlert">
-      <svg class="bi bi-check-circle-fill me-2" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
-    </svg>
-      <strong>{{'general.messages.success' | translate}}</strong>
-      <span>{{'targets.form.successMessage' | translate}}</span>
-      <button class="btn-close" type="button" data-bs-dismiss="alert" [attr.aria-label]="'general.actions.close' | translate"></button>
-    </div>
   </div>
-</div>
+</section>

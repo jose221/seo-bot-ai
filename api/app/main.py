@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
 from starlette.middleware.base import RequestResponseEndpoint
 
 from app.core.config import settings
@@ -107,7 +107,17 @@ else:
     print(f"❌ Storage NO disponible en {storage_path}")
 
 # Configurar Prometheus
-Instrumentator().instrument(app).expose(app, endpoint="/metrics")
+instrumentator = Instrumentator(
+    should_group_status_codes=False,
+    should_ignore_untemplated=False,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/metrics"],
+)
+instrumentator.add(metrics.requests())
+instrumentator.add(metrics.latency())
+instrumentator.add(metrics.request_size())
+instrumentator.add(metrics.response_size())
+instrumentator.instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
 
 
 @app.get("/")
@@ -129,5 +139,4 @@ async def health_check():
         "status": "healthy",
         "service": settings.PROJECT_NAME,
     }
-
 

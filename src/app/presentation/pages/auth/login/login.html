@@ -1,44 +1,79 @@
-<div class="login-wrap min-vh-100 d-flex align-items-center justify-content-center py-5">
-  <div class="login-card shadow-lg">
+<div class="login-shell">
+  <div class="container-xl">
+    <div class="login-layout">
+      <section class="login-hero">
+        <div class="login-hero__content">
+          <span class="app-page__eyebrow">
+            <i class="bi bi-stars"></i>
+            SEO Operations Hub
+          </span>
+          <h1>Auditoría SEO, schemas y validaciones en un mismo flujo.</h1>
+          <p>
+            Centraliza páginas, auditorías comparativas y validaciones masivas con una interfaz más
+            clara para trabajo operativo.
+          </p>
 
-    <!-- Header -->
-    <div class="login-card__header text-center">
-      <div class="login-card__avatar">
-        <i class="bi bi-shield-lock-fill"></i>
-      </div>
-      <h2 class="login-card__title mt-3">{{ 'login.title' | translate }}</h2>
-      <p class="login-card__subtitle">{{ 'login.subtitle' | translate }}</p>
-    </div>
+          <div class="login-hero__stats">
+            <div class="login-stat">
+              <strong>SSO</strong>
+              <span>Acceso institucional seguro con Keycloak</span>
+            </div>
+            <div class="login-stat">
+              <strong>Batch</strong>
+              <span>Validaciones y análisis para múltiples URLs</span>
+            </div>
+            <div class="login-stat">
+              <strong>IA</strong>
+              <span>Contexto y reportes asistidos para SEO técnico</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
-    <!-- Error -->
-    @if (error()) {
-      <div class="alert alert-danger mx-4 mt-3 mb-0 d-flex gap-2 align-items-center">
-        <i class="bi bi-x-circle-fill flex-shrink-0"></i>
-        <span>{{ error() | translate }}</span>
-      </div>
-    }
+      <section class="login-panel surface-panel">
+        <div class="login-card__header">
+          <div>
+            <span class="login-card__kicker">{{ 'admin.navbar.brand' | translate }}</span>
+            <h2 class="login-card__title">{{ 'login.title' | translate }}</h2>
+            <p class="login-card__subtitle">{{ 'login.subtitle' | translate }}</p>
+          </div>
+          <div class="login-card__icon">
+            <i class="bi bi-shield-lock-fill"></i>
+          </div>
+        </div>
 
-    <div class="login-card__body">
+        <div class="login-card__body">
+          <div class="d-flex justify-content-end mb-4">
+            <app-language-selector />
+          </div>
 
-      <!-- Selector de idioma -->
-      <div class="d-flex justify-content-end mb-3">
-        <app-language-selector />
-      </div>
+          @if (error()) {
+            <div class="alert alert-danger d-flex gap-2 align-items-start mb-4">
+              <i class="bi bi-x-octagon-fill mt-1"></i>
+              <span>{{ error() | translate }}</span>
+            </div>
+          }
 
-      <!-- Botón SSO Keycloak -->
-      <button
-        type="button"
-        class="btn btn-primary w-100 login-btn"
-        (click)="signIn()"
-        [disabled]="loading()">
-        @if (loading()) {
-          <span class="spinner-border spinner-border-sm me-2" role="status"></span>
-          {{ 'login.loading' | translate }}
-        } @else {
-          <i class="bi bi-box-arrow-in-right me-2"></i>{{ 'login.signInWithSso' | translate }}
-        }
-      </button>
+          <button
+            type="button"
+            class="btn btn-primary btn-lg w-100 login-btn"
+            (click)="signIn()"
+            [disabled]="loading()"
+          >
+            @if (loading()) {
+              <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+              {{ 'login.loading' | translate }}
+            } @else {
+              <i class="bi bi-box-arrow-in-right me-2"></i>{{ 'login.signInWithSso' | translate }}
+            }
+          </button>
 
+          <p class="login-card__footnote mb-0">
+            Acceso restringido a usuarios autorizados. La sesión se valida antes de entrar al
+            workspace.
+          </p>
+        </div>
+      </section>
     </div>
   </div>
 </div>

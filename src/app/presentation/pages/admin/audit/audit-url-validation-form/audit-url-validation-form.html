@@ -1,35 +1,29 @@
-<div class="container py-5">
+<section class="app-page">
+  <div class="app-page__header">
+    <div>
+      <span class="app-page__eyebrow">
+        <i class="bi bi-link-45deg"></i>
+        Batch validation
+      </span>
+      <h1 class="app-page__title">{{ 'auditUrlValidations.form.title' | translate }}</h1>
+      <p class="app-page__subtitle">{{ 'auditUrlValidations.form.subtitle' | translate }}</p>
+    </div>
+
+    <div class="app-page__actions">
+      <a class="btn btn-outline-secondary" routerLink="/admin/audit/url-validations">
+        <i class="bi bi-list-ul me-2"></i>{{ 'auditUrlValidations.buttons.list' | translate }}
+      </a>
+      <a class="btn btn-outline-secondary" routerLink="/admin/audit">
+        <i class="bi bi-clipboard-check me-2"></i
+        >{{ 'auditUrlValidations.buttons.audits' | translate }}
+      </a>
+    </div>
+  </div>
+
   <div class="row justify-content-center">
-    <div class="col-lg-10 col-xl-9">
-
-      <!-- Nav buttons -->
-      <div class="d-flex flex-wrap gap-2 mb-4">
-        <a class="btn btn-outline-primary d-flex align-items-center gap-2 flex-fill flex-sm-grow-0"
-           routerLink="/admin/audit/url-validations">
-          <i class="bi bi-link-45deg"></i>
-          {{ 'auditUrlValidations.buttons.list' | translate }}
-        </a>
-        <a class="btn btn-outline-secondary d-flex align-items-center gap-2 flex-fill flex-sm-grow-0"
-           routerLink="/admin/audit">
-          <i class="bi bi-clipboard-check"></i>
-          {{ 'auditUrlValidations.buttons.audits' | translate }}
-        </a>
-      </div>
-
-      <!-- Form card -->
-      <div class="card rounded-4 border-0 shadow-sm">
-        <div class="card-body p-4 p-md-5">
-
-          <!-- Title -->
-          <div class="text-center mb-5">
-            <div class="url-validation-icon-wrap mx-auto mb-3">
-              <i class="bi bi-link-45deg text-primary fs-2"></i>
-            </div>
-            <h2 class="fw-bold text-primary mb-1">{{ 'auditUrlValidations.form.title' | translate }}</h2>
-            <p class="text-muted">{{ 'auditUrlValidations.form.subtitle' | translate }}</p>
-          </div>
-
-          <!-- Error alert -->
+    <div class="col-xl-10">
+      <div class="surface-panel surface-panel--soft">
+        <div class="surface-panel__body p-4 p-lg-5">
           @if (error()) {
             <div class="alert alert-danger d-flex gap-2 mb-4" role="alert">
               <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1"></i>
@@ -38,198 +32,253 @@
           }
 
           <form [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            <div class="app-form-grid">
+              <section class="form-section">
+                <h2 class="form-section__title">Definición del lote</h2>
+                <p class="form-section__subtitle">
+                  Asigna nombre, descripción y una fuente base para comparar el schema detectado.
+                </p>
 
-            <!-- Name + Description -->
-            <div class="row g-3 mb-4">
-              <div class="col-md-6">
-                <label class="form-label fw-semibold" for="name_validation">
-                  {{ 'auditUrlValidations.form.nameValidation.label' | translate }}
-                  <span class="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="name_validation"
-                  class="form-control form-control-lg border-2"
-                  formControlName="name_validation"
-                  [placeholder]="'auditUrlValidations.form.nameValidation.placeholder' | translate"
-                  [ngClass]="{ 'is-invalid': messages('name_validation').length > 0 }">
-                @if (messages('name_validation').length > 0) {
-                  <div class="invalid-feedback">{{ messages('name_validation')[0] }}</div>
-                } @else {
-                  <div class="form-text">{{ 'auditUrlValidations.form.nameValidation.help' | translate }}</div>
-                }
-              </div>
+                <div class="row g-4">
+                  <div class="col-md-6">
+                    <label class="form-label" for="name_validation">
+                      {{ 'auditUrlValidations.form.nameValidation.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="name_validation"
+                      class="form-control form-control-lg"
+                      formControlName="name_validation"
+                      maxlength="120"
+                      [placeholder]="
+                        'auditUrlValidations.form.nameValidation.placeholder' | translate
+                      "
+                      [ngClass]="{ 'is-invalid': messages('name_validation').length > 0 }"
+                    />
+                    @if (messages('name_validation').length > 0) {
+                      <div class="invalid-feedback d-block">
+                        {{ messages('name_validation')[0] }}
+                      </div>
+                    } @else {
+                      <div class="field-hint">
+                        {{ 'auditUrlValidations.form.nameValidation.help' | translate }}
+                      </div>
+                    }
+                  </div>
 
-              <div class="col-md-6">
-                <label class="form-label fw-semibold" for="description_validation">
-                  {{ 'auditUrlValidations.form.descriptionValidation.label' | translate }}
-                  <span class="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="description_validation"
-                  class="form-control form-control-lg border-2"
-                  formControlName="description_validation"
-                  [placeholder]="'auditUrlValidations.form.descriptionValidation.placeholder' | translate"
-                  [ngClass]="{ 'is-invalid': messages('description_validation').length > 0 }">
-                @if (messages('description_validation').length > 0) {
-                  <div class="invalid-feedback">{{ messages('description_validation')[0] }}</div>
-                } @else {
-                  <div class="form-text">{{ 'auditUrlValidations.form.descriptionValidation.help' | translate }}</div>
-                }
-              </div>
-            </div>
+                  <div class="col-md-6">
+                    <label class="form-label" for="description_validation">
+                      {{ 'auditUrlValidations.form.descriptionValidation.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="description_validation"
+                      class="form-control form-control-lg"
+                      formControlName="description_validation"
+                      maxlength="300"
+                      [placeholder]="
+                        'auditUrlValidations.form.descriptionValidation.placeholder' | translate
+                      "
+                      [ngClass]="{ 'is-invalid': messages('description_validation').length > 0 }"
+                    />
+                    @if (messages('description_validation').length > 0) {
+                      <div class="invalid-feedback d-block">
+                        {{ messages('description_validation')[0] }}
+                      </div>
+                    } @else {
+                      <div class="field-hint">
+                        {{ 'auditUrlValidations.form.descriptionValidation.help' | translate }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              </section>
 
-            <!-- Source Type + Source ID row -->
-            <div class="row g-3 mb-4">
-              <div class="col-md-5">
-                <label class="form-label fw-semibold" for="source_type">
-                  {{ 'auditUrlValidations.form.sourceType.label' | translate }}
-                  <span class="text-danger">*</span>
-                </label>
-                <select
-                  id="source_type"
-                  class="form-select form-select-lg border-2"
-                  formControlName="source_type"
-                  [ngClass]="{ 'is-invalid': messages('source_type').length > 0 }">
-                  @for (st of sourceTypes; track st) {
-                    <option [value]="st">{{ st }}</option>
-                  }
-                </select>
-                @if (messages('source_type').length > 0) {
-                  <div class="invalid-feedback">{{ messages('source_type')[0] }}</div>
-                } @else {
-                  <div class="form-text">{{ 'auditUrlValidations.form.sourceType.help' | translate }}</div>
-                }
-              </div>
+              <section class="form-section">
+                <h2 class="form-section__title">Referencia</h2>
+                <p class="form-section__subtitle">
+                  Elige si la validación se apoya en una auditoría individual o en una comparación
+                  completa.
+                </p>
 
-              <div class="col-md-7">
-                <label class="form-label fw-semibold" for="source_id">
-                  {{ 'auditUrlValidations.form.sourceId.label' | translate }}
-                  <span class="text-danger">*</span>
-                </label>
-
-                <!-- Filtro por Tag solo cuando es audit_page -->
-                @if (form.get('source_type')?.value === 'audit_page' && availableTags().length > 0) {
-                  <div class="mb-2">
-                    <span class="small text-muted fw-semibold"><i class="bi bi-tags me-1"></i>{{ 'auditUrlValidations.form.filterByTag' | translate }}:</span>
-                    <div class="d-flex flex-wrap gap-1 mt-1">
-                      <button type="button"
-                        class="btn btn-xs btn-sm rounded-pill py-0 px-2"
-                        style="font-size:0.75rem;"
-                        [class.btn-primary]="selectedTag() === ''"
-                        [class.btn-outline-secondary]="selectedTag() !== ''"
-                        (click)="onTagFilter('')">
-                        {{ 'auditUrlValidations.form.allTags' | translate }}
-                      </button>
-                      @for (tag of availableTags(); track tag) {
-                        <button type="button"
-                          class="btn btn-xs btn-sm rounded-pill py-0 px-2"
-                          style="font-size:0.75rem;"
-                          [class.btn-primary]="selectedTag() === tag"
-                          [class.btn-outline-secondary]="selectedTag() !== tag"
-                          (click)="onTagFilter(tag)">
-                          {{ tag }}
-                        </button>
+                <div class="row g-4">
+                  <div class="col-md-4">
+                    <label class="form-label" for="source_type">
+                      {{ 'auditUrlValidations.form.sourceType.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <select
+                      id="source_type"
+                      class="form-select form-select-lg"
+                      formControlName="source_type"
+                      [ngClass]="{ 'is-invalid': messages('source_type').length > 0 }"
+                    >
+                      @for (st of sourceTypes; track st) {
+                        <option [value]="st">{{ st }}</option>
                       }
+                    </select>
+                    <div class="field-hint">
+                      {{ 'auditUrlValidations.form.sourceType.help' | translate }}
                     </div>
                   </div>
-                }
 
-                <!-- Select from audits if audit_page -->
-                @if (form.get('source_type')?.value === 'audit_page') {
-                  <select
-                    id="source_id"
-                    class="form-select form-select-lg border-2"
-                    formControlName="source_id"
-                    [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }">
-                    <option value="" disabled>
-                      @if (loadingAudits()) { {{ 'auditUrlValidations.form.loadingAudits' | translate }} }
-                      @else { {{ 'auditUrlValidations.form.selectAudit' | translate }} }
-                    </option>
-                    @for (audit of auditList(); track audit.id) {
-                      <option [value]="audit.id">
-                        {{ audit.web_page_name }} · {{ audit.web_page_url }} ({{ audit.status }})
-                      </option>
+                  <div class="col-md-8">
+                    <label class="form-label" for="source_id">
+                      {{ 'auditUrlValidations.form.sourceId.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+
+                    @if (
+                      form.get('source_type')?.value === 'audit_page' && availableTags().length > 0
+                    ) {
+                      <div class="chip-group mb-3">
+                        <button
+                          type="button"
+                          class="chip-button"
+                          [class.active]="selectedTag() === ''"
+                          (click)="onTagFilter('')"
+                        >
+                          {{ 'auditUrlValidations.form.allTags' | translate }}
+                        </button>
+                        @for (tag of availableTags(); track tag) {
+                          <button
+                            type="button"
+                            class="chip-button"
+                            [class.active]="selectedTag() === tag"
+                            (click)="onTagFilter(tag)"
+                          >
+                            <i class="bi bi-tag me-1"></i>{{ tag }}
+                          </button>
+                        }
+                      </div>
                     }
-                  </select>
-                } @else if (form.get('source_type')?.value === 'audit_comparison') {
-                  <select
-                    id="source_id"
-                    class="form-select form-select-lg border-2"
-                    formControlName="source_id"
-                    [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }">
-                    <option value="" disabled>
-                      @if (loadingComparisons()) { {{ 'auditUrlValidations.form.loadingComparisons' | translate }} }
-                      @else { {{ 'auditUrlValidations.form.selectComparison' | translate }} }
-                    </option>
-                    @for (comp of comparisonList(); track comp.id) {
-                      <option [value]="comp.id">
-                        {{ comp.base_url }} ({{ comp.status }})
-                      </option>
+
+                    @if (form.get('source_type')?.value === 'audit_page') {
+                      <select
+                        id="source_id"
+                        class="form-select form-select-lg"
+                        formControlName="source_id"
+                        [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }"
+                      >
+                        <option value="" disabled>
+                          @if (loadingAudits()) {
+                            {{ 'auditUrlValidations.form.loadingAudits' | translate }}
+                          } @else {
+                            {{ 'auditUrlValidations.form.selectAudit' | translate }}
+                          }
+                        </option>
+                        @for (audit of auditList(); track audit.id) {
+                          <option [value]="audit.id">
+                            {{ audit.web_page_name }} · {{ audit.web_page_url }} ({{
+                              audit.status
+                            }})
+                          </option>
+                        }
+                      </select>
+                    } @else if (form.get('source_type')?.value === 'audit_comparison') {
+                      <select
+                        id="source_id"
+                        class="form-select form-select-lg"
+                        formControlName="source_id"
+                        [ngClass]="{ 'is-invalid': messages('source_id').length > 0 }"
+                      >
+                        <option value="" disabled>
+                          @if (loadingComparisons()) {
+                            {{ 'auditUrlValidations.form.loadingComparisons' | translate }}
+                          } @else {
+                            {{ 'auditUrlValidations.form.selectComparison' | translate }}
+                          }
+                        </option>
+                        @for (comp of comparisonList(); track comp.id) {
+                          <option [value]="comp.id">{{ comp.base_url }} ({{ comp.status }})</option>
+                        }
+                      </select>
                     }
-                  </select>
-                }
-                @if (messages('source_id').length > 0) {
-                  <div class="invalid-feedback d-block">{{ messages('source_id')[0] }}</div>
-                } @else {
-                  <div class="form-text">{{ 'auditUrlValidations.form.sourceId.help' | translate }}</div>
-                }
-              </div>
+
+                    @if (messages('source_id').length > 0) {
+                      <div class="invalid-feedback d-block">{{ messages('source_id')[0] }}</div>
+                    } @else {
+                      <div class="field-hint">
+                        {{ 'auditUrlValidations.form.sourceId.help' | translate }}
+                      </div>
+                    }
+                  </div>
+                </div>
+              </section>
+
+              <section class="form-section">
+                <h2 class="form-section__title">URLs e instrucción de IA</h2>
+                <p class="form-section__subtitle">
+                  Valida la lista antes de enviar. El formulario ahora detecta URLs inválidas,
+                  duplicadas y lotes demasiado grandes.
+                </p>
+
+                <div class="mb-4">
+                  <div
+                    class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2"
+                  >
+                    <label class="form-label mb-0" for="urls">
+                      {{ 'auditUrlValidations.form.urls.label' | translate }}
+                      <span class="text-danger">*</span>
+                    </label>
+                    <span class="badge text-bg-primary rounded-pill px-3 py-2">
+                      <i class="bi bi-link-45deg me-1"></i>{{ countUrls() }}
+                      {{ 'auditUrlValidations.form.urls.count' | translate }}
+                    </span>
+                  </div>
+                  <textarea
+                    id="urls"
+                    class="form-control code-area"
+                    formControlName="urls"
+                    rows="8"
+                    [placeholder]="'auditUrlValidations.form.urls.placeholder' | translate"
+                    [ngClass]="{ 'is-invalid': messages('urls').length > 0 }"
+                    spellcheck="false"
+                  >
+                  </textarea>
+                  @if (messages('urls').length > 0) {
+                    <div class="invalid-feedback d-block">{{ messages('urls')[0] }}</div>
+                  } @else {
+                    <div class="field-hint">
+                      {{ 'auditUrlValidations.form.urls.help' | translate }}
+                    </div>
+                  }
+                </div>
+
+                <div>
+                  <label class="form-label" for="ai_instruction">
+                    {{ 'auditUrlValidations.form.aiInstruction.label' | translate }}
+                  </label>
+                  <textarea
+                    id="ai_instruction"
+                    class="form-control"
+                    formControlName="ai_instruction"
+                    rows="4"
+                    maxlength="1200"
+                    [placeholder]="'auditUrlValidations.form.aiInstruction.placeholder' | translate"
+                  >
+                  </textarea>
+                  <div class="field-hint">
+                    {{ 'auditUrlValidations.form.aiInstruction.help' | translate }}
+                  </div>
+                </div>
+              </section>
             </div>
 
-            <!-- URLs textarea -->
-            <div class="mb-4">
-              <div class="d-flex justify-content-between align-items-center mb-1">
-                <label class="form-label fw-semibold mb-0" for="urls">
-                  {{ 'auditUrlValidations.form.urls.label' | translate }}
-                  <span class="text-danger">*</span>
-                </label>
-                @if (countUrls() > 0) {
-                  <span class="badge bg-primary rounded-pill">
-                    <i class="bi bi-link-45deg me-1"></i>{{ countUrls() }} {{ 'auditUrlValidations.form.urls.count' | translate }}
-                  </span>
-                }
-              </div>
-              <textarea
-                id="urls"
-                class="form-control font-monospace border-2"
-                formControlName="urls"
-                rows="6"
-                [placeholder]="'auditUrlValidations.form.urls.placeholder' | translate"
-                [ngClass]="{ 'is-invalid': messages('urls').length > 0 }"
-                spellcheck="false">
-              </textarea>
-              @if (messages('urls').length > 0) {
-                <div class="invalid-feedback">{{ messages('urls')[0] }}</div>
-              } @else {
-                <div class="form-text">{{ 'auditUrlValidations.form.urls.help' | translate }}</div>
-              }
-            </div>
-
-            <!-- AI Instruction -->
-            <div class="mb-4">
-              <label class="form-label fw-semibold" for="ai_instruction">
-                {{ 'auditUrlValidations.form.aiInstruction.label' | translate }}
-              </label>
-              <textarea
-                id="ai_instruction"
-                class="form-control border-2"
-                formControlName="ai_instruction"
-                rows="3"
-                [placeholder]="'auditUrlValidations.form.aiInstruction.placeholder' | translate">
-              </textarea>
-              <div class="form-text">{{ 'auditUrlValidations.form.aiInstruction.help' | translate }}</div>
-            </div>
-
-            <!-- Submit -->
-            <div class="d-grid mt-4">
+            <div class="d-flex justify-content-end mt-4">
               <button
                 type="submit"
-                class="btn btn-primary btn-lg fw-semibold"
-                [disabled]="loading()">
+                class="btn btn-primary btn-lg fw-semibold px-5"
+                [disabled]="loading()"
+              >
                 @if (loading()) {
-                  <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  <span
+                    class="spinner-border spinner-border-sm me-2"
+                    role="status"
+                    aria-hidden="true"
+                  ></span>
                   {{ 'auditUrlValidations.form.submitting' | translate }}
                 } @else {
                   <i class="bi bi-play-circle me-2"></i>
@@ -237,15 +286,13 @@
                 }
               </button>
             </div>
-
           </form>
         </div>
       </div>
     </div>
   </div>
-</div>
+</section>
 
-<!-- Confirmation Modal -->
 @if (showConfirmation()) {
   <app-default-modal classModalDialog="modal-md" [expanded]="showConfirmation()">
     <app-header-modal>
@@ -258,41 +305,22 @@
           <div class="url-validation-icon-wrap mx-auto mb-3 bg-success bg-opacity-10">
             <i class="bi bi-check-circle-fill text-success fs-2"></i>
           </div>
-          <h5 class="fw-bold text-success">{{ 'auditUrlValidations.form.confirmModal.message' | translate }}</h5>
-          <p class="text-muted small">{{ 'auditUrlValidations.form.confirmModal.description' | translate }}</p>
-        </div>
-
-        @if (createdItem().id) {
-          <div class="bg-light rounded-3 p-3 text-start mb-3">
-            <div class="row g-2 small">
-              <div class="col-4 text-muted fw-semibold">ID:</div>
-              <div class="col-8 font-monospace text-truncate">{{ createdItem().id }}</div>
-              <div class="col-4 text-muted fw-semibold">{{ 'auditUrlValidations.form.confirmModal.name' | translate }}:</div>
-              <div class="col-8">{{ createdItem().name_validation }}</div>
-              <div class="col-4 text-muted fw-semibold">{{ 'auditUrlValidations.form.confirmModal.status' | translate }}:</div>
-              <div class="col-8">
-                <span class="badge bg-warning text-dark">{{ createdItem().status }}</span>
-              </div>
-            </div>
-          </div>
-        }
-
-        <div class="alert alert-info d-flex gap-2 text-start small mb-0">
-          <i class="bi bi-info-circle-fill flex-shrink-0 mt-1"></i>
-          <span>{{ 'auditUrlValidations.form.confirmModal.processingNote' | translate }}</span>
+          <p class="mb-1 fw-semibold">
+            {{ 'auditUrlValidations.form.confirmModal.message' | translate }}
+          </p>
+          <p class="text-muted mb-0">
+            {{ 'auditUrlValidations.form.confirmModal.description' | translate }}
+          </p>
         </div>
       </div>
     </app-body-modal>
     <app-footer-modal>
-      <a routerLink="/admin/audit/url-validations" class="btn btn-primary">
-        <i class="bi bi-list-ul me-2"></i>
+      <a class="btn btn-outline-secondary" routerLink="/admin/audit/url-validations/create">
+        {{ 'auditUrlValidations.form.confirmModal.newButton' | translate }}
+      </a>
+      <a class="btn btn-primary" routerLink="/admin/audit/url-validations">
         {{ 'auditUrlValidations.form.confirmModal.viewListButton' | translate }}
       </a>
-      <button type="button" class="btn btn-outline-secondary" (click)="showConfirmation.set(false)">
-        <i class="bi bi-plus-circle me-2"></i>
-        {{ 'auditUrlValidations.form.confirmModal.newButton' | translate }}
-      </button>
     </app-footer-modal>
   </app-default-modal>
 }
-

@@ -80,6 +80,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 La API estará disponible en:
 - Documentación Swagger: http://localhost:8000/docs
 - Documentación ReDoc: http://localhost:8000/redoc
+- Métricas Prometheus: http://localhost:8000/metrics
 
 ### Configuración con Docker
 
@@ -313,4 +314,3 @@ Este proyecto sigue un flujo de trabajo basado en feature branches. Para contrib
 ## Licencia
 
 Este proyecto está licenciado bajo la Licencia MIT. Ver el archivo [LICENSE](../LICENSE) para más detalles.
-

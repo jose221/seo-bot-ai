@@ -1,138 +1,196 @@
-<div class="container-form">
-  <div class="row">
-    <div class="col-12">
-      <div class="d-flex justify-content-end gap-2 p-3">
-        <a class="btn btn-outline-secondary btn-sm" routerLink="/admin/audit">
-          <i class="me-1 bi bi-list-check"></i>{{ 'audits.form.viewAudits' | translate }}
-        </a>
-        <a class="btn btn-outline-secondary btn-sm" routerLink="/admin/target">
-          <i class="me-1 bi bi-gear"></i>{{ 'audits.form.managePages' | translate }}
-        </a>
-      </div>
+<section class="app-page">
+  <div class="app-page__header">
+    <div>
+      <span class="app-page__eyebrow">
+        <i class="bi bi-shield-check"></i>
+        Nueva auditoría
+      </span>
+      <h1 class="app-page__title">{{ 'audits.form.title' | translate }}</h1>
+      <p class="app-page__subtitle">
+        Lanza una auditoría con contexto adicional y selecciona la página desde el catálogo actual.
+      </p>
+    </div>
+
+    <div class="app-page__actions">
+      <a class="btn btn-outline-secondary" routerLink="/admin/audit">
+        <i class="bi bi-list-check me-2"></i>{{ 'audits.form.viewAudits' | translate }}
+      </a>
+      <a class="btn btn-outline-secondary" routerLink="/admin/target">
+        <i class="bi bi-gear me-2"></i>{{ 'audits.form.managePages' | translate }}
+      </a>
     </div>
   </div>
-  <div class="row justify-content-center" style="margin-top:15vh;">
-    <div class="col-lg-6 col-xl-5">
-      <div class="text-center mb-5">
-        <i class="text-primary bi bi-shield-check" style="font-size:5rem;"></i>
-        <h1 class="fw-bold text-primary mt-3">{{ 'audits.form.title' | translate }}</h1>
-      </div>
-      @if (error()) {
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-          {{error() | translate}}
-          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-      }
-      <form id="auditForm" [formGroup]="form" (ngSubmit)="onSubmit()">
 
-        <!-- Filtro por Tag -->
-        @if (availableTags().length > 0) {
-          <div class="mb-3">
-            <label class="form-label fw-semibold small text-muted mb-2">
-              <i class="bi bi-tags me-1"></i>Filtrar páginas por tag (opcional)
-            </label>
-            <div class="d-flex flex-wrap gap-2">
-              <button type="button"
-                class="btn btn-sm rounded-pill"
-                [class.btn-primary]="selectedTag() === ''"
-                [class.btn-outline-secondary]="selectedTag() !== ''"
-                (click)="onTagFilter('')">
-                Todos
-              </button>
-              @for (tag of availableTags(); track tag) {
-                <button type="button"
-                  class="btn btn-sm rounded-pill"
-                  [class.btn-primary]="selectedTag() === tag"
-                  [class.btn-outline-secondary]="selectedTag() !== tag"
-                  (click)="onTagFilter(tag)">
-                  <i class="bi bi-tag me-1"></i>{{ tag }}
-                </button>
-              }
-            </div>
-          </div>
-        }
-
-        <div class="mb-3">
-          <select
-            class="shadow-sm form-select form-select-lg custom-select"
-            id="targetSelect"
-            formControlName="web_page_id"
-            aria-describedby="validationWebPageId"
-            [ngClass]="{'is-invalid': messages('web_page_id').length > 0}">
-            <option value="" selected disabled>{{ 'audits.form.selectPage' | translate }}</option>
-            @for (target of targetSearchList(); track target.id){
-              <option [value]="target.id">{{target.name}}</option>
-            }
-          </select>
-          @for(msg of messages('web_page_id'); track msg){
-            <div id="validationWebPageId" class="invalid-feedback">
-              {{msg}}
-            </div>
+  <div class="row justify-content-center">
+    <div class="col-xl-9">
+      <div class="surface-panel surface-panel--soft">
+        <div class="surface-panel__body p-4 p-lg-5">
+          @if (error()) {
+            <div class="alert alert-danger mb-4">{{ error() | translate }}</div>
           }
+
+          <form id="auditForm" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+            <div class="app-form-grid">
+              @if (availableTags().length > 0) {
+                <section class="form-section">
+                  <h2 class="form-section__title">Filtrado por tags</h2>
+                  <p class="form-section__subtitle">
+                    Reduce el catálogo antes de elegir la página base para la auditoría.
+                  </p>
+                  <div class="chip-group">
+                    <button
+                      type="button"
+                      class="chip-button"
+                      [class.active]="selectedTag() === ''"
+                      (click)="onTagFilter('')"
+                    >
+                      Todos
+                    </button>
+                    @for (tag of availableTags(); track tag) {
+                      <button
+                        type="button"
+                        class="chip-button"
+                        [class.active]="selectedTag() === tag"
+                        (click)="onTagFilter(tag)"
+                      >
+                        <i class="bi bi-tag me-1"></i>{{ tag }}
+                      </button>
+                    }
+                  </div>
+                </section>
+              }
+
+              <section class="form-section">
+                <h2 class="form-section__title">Configuración de ejecución</h2>
+                <p class="form-section__subtitle">
+                  Selecciona el target y agrega contexto para guiar la evaluación técnica y de IA.
+                </p>
+
+                <div class="row g-4">
+                  <div class="col-12">
+                    <label class="form-label" for="targetSelect">
+                      Página objetivo <span class="text-danger">*</span>
+                    </label>
+                    <select
+                      class="form-select form-select-lg"
+                      id="targetSelect"
+                      formControlName="web_page_id"
+                      [ngClass]="{ 'is-invalid': messages('web_page_id').length > 0 }"
+                    >
+                      <option value="" selected disabled>
+                        {{ 'audits.form.selectPage' | translate }}
+                      </option>
+                      @for (target of targetSearchList(); track target.id) {
+                        <option [value]="target.id">{{ target.name }}</option>
+                      }
+                    </select>
+                    @if (messages('web_page_id').length) {
+                      <div class="invalid-feedback d-block">{{ messages('web_page_id')[0] }}</div>
+                    }
+                  </div>
+
+                  <div class="col-12">
+                    <label class="form-label" for="documentationContext">
+                      <i class="bi bi-journal-text me-1"></i
+                      >{{ 'audits.form.documentationContext' | translate }}
+                      <span class="text-muted fw-normal ms-1"
+                        >({{ 'audits.form.optional' | translate }})</span
+                      >
+                    </label>
+                    <textarea
+                      class="form-control"
+                      id="documentationContext"
+                      formControlName="documentation_context"
+                      rows="5"
+                      maxlength="2000"
+                      [placeholder]="'audits.form.documentationContextPlaceholder' | translate"
+                    >
+                    </textarea>
+                    <div class="field-hint">
+                      Incluye autenticación requerida, waits, pasos previos o dependencias de
+                      render.
+                    </div>
+                  </div>
+
+                  <div class="col-12">
+                    <div class="audit-switch">
+                      <div>
+                        <div class="audit-switch__title">
+                          {{ 'audits.form.includeAI' | translate }}
+                        </div>
+                        <div class="audit-switch__hint">
+                          Actívalo para generar reporte contextual y observaciones accionables.
+                        </div>
+                      </div>
+                      <div class="form-check form-switch m-0">
+                        <input
+                          type="checkbox"
+                          formControlName="include_ai_analysis"
+                          class="form-check-input"
+                          id="aiAnalysisSwitch"
+                          role="switch"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+              <button class="btn btn-primary btn-lg px-5" type="submit" [disabled]="loading()">
+                @if (loading()) {
+                  <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                } @else {
+                  <i class="bi bi-search me-2"></i>
+                }
+                {{ 'audits.form.auditButton' | translate }}
+              </button>
+            </div>
+          </form>
         </div>
-        <div class="mb-3">
-          <label class="form-label fw-semibold small text-muted" for="documentationContext">
-            <i class="bi bi-journal-text me-1"></i>{{ 'audits.form.documentationContext' | translate }}
-            <span class="text-muted fw-normal ms-1">({{ 'audits.form.optional' | translate }})</span>
-          </label>
-          <textarea
-            class="form-control shadow-sm"
-            id="documentationContext"
-            formControlName="documentation_context"
-            rows="4"
-            [placeholder]="'audits.form.documentationContextPlaceholder' | translate">
-          </textarea>
-        </div>
-        <div class="d-flex justify-content-center mb-4">
-          <div class="form-check form-switch">
-            <input
-              type="checkbox"
-              formControlName="include_ai_analysis"
-              class="form-check-input"
-              id="aiAnalysisSwitch"
-              role="switch" style="width:3rem;height:1.5rem;cursor:pointer;">
-            <label class="ms-2 form-check-label" for="aiAnalysisSwitch" style="cursor:pointer;font-size:0.95rem;">
-              <i class="text-primary me-1 bi bi-cpu"></i>{{ 'audits.form.includeAI' | translate }}
-            </label>
-          </div>
-        </div>
-        <div class="d-flex justify-content-center gap-2">
-          <button class="btn btn-primary btn-lg shadow-sm px-4 py-2" type="submit">
-            <i class="me-2 bi bi-search"></i>{{ 'audits.form.auditButton' | translate }}
-          </button>
-        </div>
-      </form>
+      </div>
     </div>
   </div>
-</div>
+</section>
+
 <app-default-modal [expanded]="showMessageConfirmation()">
   <app-header-modal>
     <h5 class="text-primary modal-title" id="responseModalLabel">
       <i class="me-2 bi bi-check-circle-fill"></i>
       {{ 'audits.form.confirmModal.title' | translate }}
     </h5>
-    <button class="btn-close" aria-label="Close" (click)="showMessageConfirmation.set(false)" type="button"></button>
+    <button
+      class="btn-close"
+      aria-label="Close"
+      (click)="showMessageConfirmation.set(false)"
+      type="button"
+    ></button>
   </app-header-modal>
 
   <app-body-modal>
     <div class="alert alert-info mb-3" role="alert">
       <strong>{{ 'audits.form.confirmModal.message' | translate }} </strong>
-      <span id="modalMessage"> {{responseCreateAudit().message}}</span>
+      <span id="modalMessage"> {{ responseCreateAudit().message }}</span>
     </div>
     <div class="mb-2">
       <strong>{{ 'audits.form.confirmModal.status' | translate }} </strong>
-      <span class="badge bg-warning text-dark" id="modalStatus"> {{statusAuditUtil.getStatusText(responseCreateAudit().status)}}</span>
+      <span class="badge bg-warning text-dark" id="modalStatus">
+        {{ statusAuditUtil.getStatusText(responseCreateAudit().status) }}</span
+      >
     </div>
     <div class="mb-2">
       <strong>{{ 'audits.form.confirmModal.taskId' | translate }} </strong>
-      <code id="modalTaskId"> {{responseCreateAudit().task_id}}</code>
+      <code id="modalTaskId"> {{ responseCreateAudit().task_id }}</code>
     </div>
   </app-body-modal>
   <app-footer-modal>
-    <button class="btn btn-secondary" (click)="showMessageConfirmation.set(false)" type="button">{{ 'audits.form.confirmModal.acceptButton' | translate }}</button>
+    <button class="btn btn-secondary" (click)="showMessageConfirmation.set(false)" type="button">
+      {{ 'audits.form.confirmModal.acceptButton' | translate }}
+    </button>
     <a class="btn btn-primary" id="viewAuditsBtn" routerLink="/admin/audit">
-      <i class="me-1 bi bi-list-check"></i>{{ 'audits.form.confirmModal.viewListButton' | translate }}
+      <i class="me-1 bi bi-list-check"></i
+      >{{ 'audits.form.confirmModal.viewListButton' | translate }}
     </a>
   </app-footer-modal>
-
 </app-default-modal>

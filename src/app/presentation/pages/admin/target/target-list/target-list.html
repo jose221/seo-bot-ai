@@ -1,112 +1,154 @@
-<div class="row mb-5">
-  <div class="col-12 text-center">
-    <h1 class="display-4 fw-light mb-2"><i class="text-primary bi bi-globe2"></i> {{ 'targets.title' | translate }} </h1>
-    <p class="fs-6 text-muted">{{ 'targets.subtitle' | translate }}</p>
+<section class="app-page">
+  <div class="app-page__header">
+    <div>
+      <span class="app-page__eyebrow">
+        <i class="bi bi-globe2"></i>
+        Targets
+      </span>
+      <h1 class="app-page__title">{{ 'targets.title' | translate }}</h1>
+      <p class="app-page__subtitle">{{ 'targets.subtitle' | translate }}</p>
+    </div>
+
+    <div class="app-page__actions">
+      <a class="btn btn-primary" routerLink="/admin/target/create">
+        <i class="bi bi-plus-circle me-2"></i>{{ 'targets.buttons.new' | translate }}
+      </a>
+      <a class="btn btn-outline-secondary" routerLink="/admin/audit">
+        <i class="bi bi-clipboard-check me-2"></i>{{ 'targets.buttons.audits' | translate }}
+      </a>
+    </div>
   </div>
-</div>
-<!--header-->
-<div class="row mb-4">
-  <div class="col-12 mx-auto">
-    <div class="card rounded-3 border-0 shadow-sm">
-      <div class="card-body p-4">
-        <div class="row align-items-center g-3">
-          <div class="col-12 col-lg-7 align-items-center">
-            @if (!isLoading() && cItems().data.length > 0) {
-              <app-filter-list class="w-100" [data]="cItems()" (dataChange)="items.set($event)" [config]="configFilter()" ></app-filter-list>
+
+  <div class="app-stat-grid mb-4">
+    <div class="app-stat">
+      <div class="app-stat__label">Targets visibles</div>
+      <div class="app-stat__value">{{ items().data.length }}</div>
+    </div>
+    <div class="app-stat">
+      <div class="app-stat__label">Tags disponibles</div>
+      <div class="app-stat__value">{{ availableTags().length }}</div>
+    </div>
+    <div class="app-stat">
+      <div class="app-stat__label">Filtro activo</div>
+      <div class="app-stat__value">{{ selectedTag() || 'Todos' }}</div>
+    </div>
+  </div>
+
+  <div class="surface-panel surface-panel--soft mb-4">
+    <div class="surface-panel__body">
+      <div class="section-toolbar">
+        <div class="flex-grow-1">
+          @if (!isLoading() && cItems().data.length > 0) {
+            <app-filter-list
+              class="w-100"
+              [data]="cItems()"
+              (dataChange)="items.set($event)"
+              [config]="configFilter()"
+            ></app-filter-list>
+          }
+        </div>
+      </div>
+
+      @if (availableTags().length > 0) {
+        <div class="mt-4">
+          <div class="section-toolbar__meta mb-2">
+            <i class="bi bi-tags me-2"></i>Filtra el catálogo por proveedor temático o grupo de
+            páginas.
+          </div>
+          <div class="chip-group">
+            <button
+              type="button"
+              class="chip-button"
+              [class.active]="selectedTag() === ''"
+              (click)="onTagFilter('')"
+            >
+              Todos
+            </button>
+            @for (tag of availableTags(); track tag) {
+              <button
+                type="button"
+                class="chip-button"
+                [class.active]="selectedTag() === tag"
+                (click)="onTagFilter(tag)"
+              >
+                <i class="bi bi-tag me-1"></i>{{ tag }}
+              </button>
             }
           </div>
-          <div class="col-12 col-lg-5">
-            <div class="d-flex gap-2">
-              <a class="btn btn-primary rounded-2 flex-fill" routerLink="/admin/target/create">
-                <i class="me-1 bi bi-plus-circle"></i> {{ 'targets.buttons.new' | translate }}
-              </a>
-              <a class="btn btn-outline-secondary rounded-2 flex-fill" routerLink="/admin/audit">
-                <i class="me-1 bi bi-clipboard-check"></i> {{ 'targets.buttons.audits' | translate }}
-              </a>
-            </div>
-          </div>
         </div>
-        <!-- Filtro por Tag -->
-        @if (availableTags().length > 0) {
-          <div class="row mt-3">
-            <div class="col-12">
-              <div class="d-flex flex-wrap align-items-center gap-2">
-                <span class="text-muted small fw-semibold me-1"><i class="bi bi-tags me-1"></i>Filtrar por tag:</span>
-                <button type="button"
-                  class="btn btn-sm rounded-pill"
-                  [class.btn-primary]="selectedTag() === ''"
-                  [class.btn-outline-secondary]="selectedTag() !== ''"
-                  (click)="onTagFilter('')">
-                  Todos
+      }
+    </div>
+  </div>
+
+  @if (!isLoading() && items().data.length > 0) {
+    <div class="row g-4">
+      @for (item of items().data; track item.id) {
+        <div class="col-12 col-md-6 col-xxl-4">
+          <article class="card app-data-card target-card h-100">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start gap-3 mb-4">
+                <span
+                  class="badge status-badge-soft"
+                  [ngClass]="item.is_active ? 'text-bg-success' : 'text-bg-warning'"
+                >
+                  {{
+                    item.is_active
+                      ? ('general.status.active' | translate)
+                      : ('general.status.pending' | translate)
+                  }}
+                </span>
+                <button
+                  class="btn btn-outline-danger btn-sm"
+                  type="button"
+                  (click)="toDelete(item)"
+                >
+                  <i class="bi bi-trash"></i>
                 </button>
-                @for (tag of availableTags(); track tag) {
-                  <button type="button"
-                    class="btn btn-sm rounded-pill"
-                    [class.btn-primary]="selectedTag() === tag"
-                    [class.btn-outline-secondary]="selectedTag() !== tag"
-                    (click)="onTagFilter(tag)">
-                    <i class="bi bi-tag me-1"></i>{{ tag }}
-                  </button>
-                }
+              </div>
+
+              <h5 class="target-card__title">{{ item.name }}</h5>
+              <p class="target-card__stack">
+                <i class="bi bi-stack me-2"></i>{{ item.tech_stack || 'Sin stack definido' }}
+              </p>
+              <p class="target-card__description">{{ item.instructions }}</p>
+
+              <div class="target-card__link">
+                <i class="bi bi-link-45deg"></i>
+                <a [href]="item.url" target="_blank" rel="noreferrer">{{ item.url }}</a>
               </div>
             </div>
-          </div>
-        }
-      </div>
-    </div>
-  </div>
-</div>
-<!--elements list-->
-@if (!isLoading() && items().data.length > 0){
-  <div class="row mb-4">
-    <div class="col-12 mx-auto">
-      <div class="row g-3" id="gridView">
-        @for (item of items().data; track item.id){
-          <div class="col-12 col-md-6 col-lg-3">
-            <div class="card h-100 border-0 shadow-sm">
-              <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                  @if (item.is_active){
-                    <span class="badge bg-success">{{ 'general.status.active' | translate }}</span>
-                  }
-                  @else {
-                    <span class="badge bg-warning text-dark">{{ 'general.status.pending' | translate }}</span>
-                  }
-                  <div class="dropdown">
-                    <button class="btn btn-link btn-sm p-0 text-muted" type="button" data-bs-toggle="dropdown">
-                      <i class="bi bi-three-dots-vertical"></i>
-                    </button>
-                    <ul class="dropdown-menu">
-                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-pencil"></i>{{ 'general.actions.edit' | translate }}</a></li>
-                      <li><a class="dropdown-item" href="#"><i class="me-2 bi bi-eye"></i>{{ 'general.actions.view' | translate }}</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li><a class="dropdown-item text-danger" (click)="toDelete(item)" style="cursor: pointer;"><i class="me-2 bi bi-trash"></i>{{ 'general.actions.delete' | translate }}</a></li>
-                    </ul>
-                  </div>
-                </div>
-                <h5 class="mb-2 card-title">{{item.name}}</h5>
-                <p class="text-muted mb-2 small"><i class="me-1 bi bi-code-square"></i>{{item.tech_stack}}</p>
-                <p class="text-truncate mb-3 card-text small">{{item.instructions}}</p>
-                <a [href]="item.url" class="text-muted my-2 small" target="_blank" >{{ 'targets.fields.accessUrl' | translate }}</a>
-              </div>
-              <div  class="card-footer bg-transparent border-0 pb-4">
-                <div class="d-flex gap-2 mt-auto">
-                  <button (click)="toDelete(item)" class="btn btn-outline-danger btn-sm flex-fill" title="{{ 'general.actions.delete' | translate }}"
-                  ><i class="me-1 bi bi-trash"></i>
-                    {{ 'general.actions.delete' | translate }}
-                  </button>
-                  <button (click)="navigateToAudit(item.id)" class="btn btn-outline-info btn-sm flex-fill">
-                    <i class="me-1 bi bi-shield-check"></i>{{ 'general.actions.audit' | translate }}
-                  </button>
-                </div>
+
+            <div class="card-footer bg-transparent border-0 pt-0">
+              <div class="d-flex gap-2">
+                <a
+                  class="btn btn-outline-secondary w-100"
+                  [routerLink]="['/admin/target/update', item.id]"
+                >
+                  <i class="bi bi-pencil-square me-2"></i>{{ 'general.actions.edit' | translate }}
+                </a>
+                <button
+                  class="btn btn-primary w-100"
+                  type="button"
+                  (click)="navigateToAudit(item.id)"
+                >
+                  <i class="bi bi-shield-check me-2"></i>{{ 'general.actions.audit' | translate }}
+                </button>
               </div>
             </div>
-          </div>
-        }
-      </div>
-      <div  class="mt-5" >
-        <app-paginator-list [data]="items()" (dataChange)="items.set($event)"></app-paginator-list>
+          </article>
+        </div>
+      }
+    </div>
+
+    <div class="mt-4">
+      <app-paginator-list [data]="items()" (dataChange)="items.set($event)"></app-paginator-list>
+    </div>
+  } @else if (!isLoading()) {
+    <div class="surface-panel app-empty-state">
+      <div class="surface-panel__body">
+        <i class="bi bi-globe2"></i>
+        <p class="mt-3 mb-0">No hay targets disponibles con el filtro actual.</p>
       </div>
     </div>
-  </div>
-}
+  }
+</section>

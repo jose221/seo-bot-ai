@@ -42,7 +42,12 @@
     "email": "Debe ser un correo electrónico válido",
     "minlength": "Debe tener al menos {{requiredLength}} caracteres",
     "maxlength": "No debe exceder {{requiredLength}} caracteres",
-    "pattern": "El formato no es válido"
+    "pattern": "El formato no es válido",
+    "url": "Ingresa una URL válida que inicie con http:// o https://",
+    "invalidJson": "El contenido debe ser JSON válido",
+    "invalidUrls": "Hay {{count}} URL(s) inválidas. Ejemplo: {{sample}}",
+    "duplicateUrls": "Hay URLs repetidas. Ejemplo: {{sample}}",
+    "maxUrls": "Solo se permiten hasta {{max}} URLs por validación"
   },
   "general": {
     "loading": {

@@ -42,7 +42,12 @@
     "email": "Must be a valid email address",
     "minlength": "Must be at least {{requiredLength}} characters",
     "maxlength": "Must not exceed {{requiredLength}} characters",
-    "pattern": "Invalid format"
+    "pattern": "Invalid format",
+    "url": "Enter a valid URL starting with http:// or https://",
+    "invalidJson": "The content must be valid JSON",
+    "invalidUrls": "There are {{count}} invalid URL(s). Example: {{sample}}",
+    "duplicateUrls": "There are duplicated URLs. Example: {{sample}}",
+    "maxUrls": "Only up to {{max}} URLs are allowed per validation"
   },
   "general": {
     "loading": {

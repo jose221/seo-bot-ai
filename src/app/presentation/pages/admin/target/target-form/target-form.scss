@@ -1,0 +1,10 @@
+:host {
+  display: block;
+}
+
+.tag-dropdown {
+  top: calc(100% + 0.35rem);
+  border-radius: 16px;
+  max-height: 220px;
+  overflow-y: auto;
+}

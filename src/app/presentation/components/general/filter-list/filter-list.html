@@ -1,30 +1,60 @@
-<div class="row  align-items-center">
-  <div class="col-md-6 text-nowrap section-element">
-    <div id="dataTable_length" class="dataTables_length" aria-controls="dataTable">
-      <label class="form-label">Show&nbsp;
-        <select class="d-inline-block form-select form-select" (ngModelChange)="limitChange($event)" [ngModel]="internalConfig().limit">
+<div class="filter-toolbar">
+  <div class="filter-toolbar__group filter-toolbar__group--compact">
+    <div class="filter-toolbar__block">
+      <div class="filter-toolbar__meta">
+        <span class="filter-toolbar__eyebrow">Vista</span>
+        <strong class="filter-toolbar__title">Resultados por página</strong>
+      </div>
+
+      <div class="filter-control filter-control--select">
+        <span class="filter-control__icon">
+          <i class="bi bi-layout-three-columns"></i>
+        </span>
+        <select
+          class="form-select border-0"
+          (ngModelChange)="limitChange($event)"
+          [ngModel]="internalConfig().limit"
+          aria-label="Resultados por página"
+        >
           @if (this.listLimit.length > 0) {
             @for (limit of this.listLimit; track limit) {
-              <option [value]="limit" [selected]="limit === this.internalConfig().limit">{{ limit }}</option>
+              <option [value]="limit" [selected]="limit === this.internalConfig().limit">
+                {{ limit }} resultados
+              </option>
             }
           }
-        </select>&nbsp;
-      </label>
+        </select>
+      </div>
     </div>
   </div>
-  <div class="col-md-6 section-element">
-    @if (internalConfig().search) {
-      <div class="input-group input-group border rounded-2 overflow-hidden">
-        <input
-          type="search"
-          [name]="internalConfig().search?.key ?? 'search'"
-          (ngModelChange)="eventChange($event, 'search')"
-          [ngModel]="internalConfig().search?.value"
-          class="form-control form-control"
-          aria-controls="dataTable"
-          [placeholder]="internalConfig().search?.placeholder ?? 'Search'"
-        >
+
+  @if (internalConfig().search) {
+    <div class="filter-toolbar__group filter-toolbar__group--search">
+      <div class="filter-toolbar__block">
+        <div class="filter-toolbar__meta">
+          <span class="filter-toolbar__eyebrow">Filtro</span>
+          <strong class="filter-toolbar__title">{{
+            internalConfig().search?.label ?? 'Buscar'
+          }}</strong>
+        </div>
+
+        <div class="filter-control filter-control--search">
+          <span class="filter-control__icon">
+            <i class="bi bi-search"></i>
+          </span>
+          <input
+            type="search"
+            [name]="internalConfig().search?.key ?? 'search'"
+            (ngModelChange)="eventChange($event, 'search')"
+            [ngModel]="internalConfig().search?.value"
+            class="form-control border-0"
+            aria-controls="dataTable"
+            [placeholder]="
+              internalConfig().search?.placeholder ?? 'Buscar por nombre, URL o tecnología'
+            "
+          />
+        </div>
       </div>
-    }
-  </div>
+    </div>
+  }
 </div>

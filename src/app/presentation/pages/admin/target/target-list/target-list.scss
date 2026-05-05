@@ -1,0 +1,33 @@
+.target-card__title {
+  margin-bottom: 0.65rem;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+
+.target-card__stack,
+.target-card__description,
+.target-card__link {
+  color: #64748b;
+  font-size: 0.92rem;
+}
+
+.target-card__description {
+  min-height: 4.25rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.target-card__link {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-top: 1rem;
+
+  a {
+    color: inherit;
+    word-break: break-all;
+    text-decoration: none;
+  }
+}
