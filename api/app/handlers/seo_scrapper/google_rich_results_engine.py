@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 
 from playwright.async_api import async_playwright, Page, Browser
 import nodriver as uc
-import nodriver.cdp.input_ as cdp_input
 
 # Manejo de playwright-stealth
 stealth_async = None
@@ -43,12 +42,6 @@ class ValidationResult(BaseModel):
   screenshots: list[dict[str, str]] = Field(default_factory=list)
 
 class GoogleRichResultsEngine:
-  """
-  Hybrid validation engine for Google Rich Results.
-  Primary: Playwright (Stealth)
-  Fallback: Nodriver + Virtual Display
-  """
-
   def __init__(
     self,
     proxy_config: Optional[Dict[str, str]] = None,
@@ -118,12 +111,9 @@ class GoogleRichResultsEngine:
     )
 
   async def validate(self, input_type: InputType, content: str) -> ValidationResult:
-    """Entry point. Attempts Playwright first, falls back to Nodriver."""
     logger.info("Starting validation via Playwright...")
-
     result = await self._run_playwright(input_type, content)
 
-    # Dispara Nodriver si Playwright falla por bloqueos anti-bot de Google
     if not result.is_success and "block" in str(result.error_message).lower():
       logger.warning("Playwright blocked by Google. Initiating Nodriver fallback...")
       return await self._run_nodriver(input_type, content)
@@ -135,7 +125,6 @@ class GoogleRichResultsEngine:
     page = None
     try:
       async with async_playwright() as p:
-        logger.info("Launching Chromium for Google Rich Results")
         launch_args = {
           "headless": True,
           "args": ['--disable-blink-features=AutomationControlled', '--no-sandbox']
@@ -145,25 +134,23 @@ class GoogleRichResultsEngine:
           launch_args["proxy"] = self._proxy_config
 
         browser = await p.chromium.launch(**launch_args)
-        logger.info("Chromium launched")
         context = await browser.new_context(
           user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
         page.set_default_timeout(10000)
-        page.set_default_navigation_timeout(30000)
+        # Ampliamos el timeout global de navegación porque Google toma su tiempo analizando
+        page.set_default_navigation_timeout(90000)
 
         if stealth_async:
           await stealth_async(page)
 
-        logger.info("Opening Google Rich Results page")
         response = await page.goto(self.target_url, wait_until="domcontentloaded", timeout=30000)
         try:
           await page.wait_for_load_state("networkidle", timeout=5000)
         except Exception:
-          logger.debug("Rich Results page did not reach networkidle quickly; continuing")
+          pass
 
-        # Detección rápida de bloqueos HTTP o Captcha explícito
         if (response and response.status == 429) or "sorry" in page.url.lower():
           screenshot = await self._capture_playwright_screenshot(page, "playwright_blocked")
           return ValidationResult(
@@ -176,7 +163,7 @@ class GoogleRichResultsEngine:
 
         result_url = await self._interact_with_ui_playwright(page, input_type, content)
 
-        await page.wait_for_selector("div[data-record-element]", timeout=20000)
+        await page.wait_for_selector("div[data-record-element]", timeout=30000)
         final_html = await page.content()
 
         screenshots: list[dict[str, str]] = []
@@ -201,9 +188,7 @@ class GoogleRichResultsEngine:
         await browser.close()
 
   async def _interact_with_ui_playwright(self, page: Page, input_type: InputType, content: str) -> str:
-    """Handles Google UI interactions using Playwright locators."""
     if input_type == InputType.HTML:
-      logger.info("Submitting HTML content to Google Rich Results")
       await page.get_by_text("Código", exact=True).click()
       editor_area = page.locator(".CodeMirror")
       await editor_area.click()
@@ -212,76 +197,31 @@ class GoogleRichResultsEngine:
       await page.keyboard.insert_text(content)
       await page.get_by_role("button", name="Probar código").click()
     else:
-      logger.info("Submitting URL to Google Rich Results")
       url_input = page.locator("input[type='url']")
       await url_input.wait_for(state="visible", timeout=10000)
 
       await page.keyboard.press("Backspace")
       await self._type_text_like_keyboard(url_input, content)
+
+      # Requisito explícito: Esperar mínimo 3 segundos
+      logger.info("URL typed. Waiting 3 seconds before submission...")
       await asyncio.sleep(3)
-      await url_input.press("Enter")
-      logger.info("URL submitted with Enter")
 
-      if not await self._wait_for_playwright_result_progress(page):
-        logger.info("No progress detected after Enter; trying fallback click on Probar URL")
-        await self._click_url_submit_fallback(page)
-        if not await self._wait_for_playwright_result_progress(page):
-          raise Exception("Google Rich Results did not show progress after Enter/click")
+      # Click explicitly using the provided DOM structure
+      submit_btn = page.locator("div[role='button'][jsname='LZQqje']")
+      await submit_btn.click()
+      logger.info("Submit button clicked")
 
-    logger.info("Waiting for final Google Rich Results URL")
-    await page.wait_for_url("**/test/rich-results/result?id=*", timeout=45000)
+    logger.info("Waiting for Google processing modal to finish...")
+    # Esperar a que la URL cambie al patrón result?id=. El timeout es alto porque el análisis tarda.
+    await page.wait_for_url("**/test/rich-results/result?id=*", timeout=90000)
     return page.url
 
   async def _type_text_like_keyboard(self, url_input, text: str) -> None:
-    """Simula pulsaciones de teclado humanas reales."""
-    logger.info("Typing URL character by character")
     for char in text:
       await url_input.type(char, delay=random.randint(50, 80))
 
-  async def _wait_for_playwright_result_progress(self, page: Page) -> bool:
-    result_pattern = "**/test/rich-results/result?id=*"
-    progress_modal = page.locator("text=Probando la URL publicada")
-
-    url_task = asyncio.create_task(page.wait_for_url(result_pattern, timeout=8000))
-    modal_task = asyncio.create_task(progress_modal.wait_for(state="visible", timeout=8000))
-
-    done, pending = await asyncio.wait(
-      {url_task, modal_task},
-      return_when=asyncio.FIRST_COMPLETED
-    )
-
-    for task in pending:
-      task.cancel()
-
-    for task in done:
-      try:
-        await task
-        logger.info("Google Rich Results progress detected")
-        return True
-      except Exception:
-        continue
-
-    return "/test/rich-results/result?id=" in page.url
-
-  async def _click_url_submit_fallback(self, page: Page) -> None:
-    fallback_locators = [
-      page.locator("div[role='button'][jsname='LZQqje']").first,
-      page.locator("div[role='button']:has-text('probar URL')").first,
-      page.get_by_text("probar URL", exact=False).first,
-    ]
-
-    for locator in fallback_locators:
-      try:
-        await locator.click(timeout=5000)
-        logger.info("Fallback click on Probar URL succeeded")
-        return
-      except Exception:
-        continue
-
-    raise Exception("Could not click Probar URL button")
-
   async def _run_nodriver(self, input_type: InputType, content: str) -> ValidationResult:
-    """Fallback execution using Nodriver and Virtual Display for evasion."""
     browser = None
     display = None
     page = None
@@ -290,12 +230,11 @@ class GoogleRichResultsEngine:
       if sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
         try:
           from pyvirtualdisplay import Display
-          logger.info("Starting Xvfb for nodriver evasion...")
           display = Display(visible=False, size=(1920, 1080))
           display.start()
           os.environ['DISPLAY'] = display.new_display_var
         except ImportError:
-          logger.warning("pyvirtualdisplay not found. Nodriver might fail on server.")
+          pass
 
       browser_args = [
         "--window-size=1920,1080",
@@ -316,7 +255,6 @@ class GoogleRichResultsEngine:
         await code_tab.click()
         await asyncio.sleep(1)
 
-        # JS Evaluation en CodeMirror para Nodriver
         content_json = json.dumps(content)
         await page.evaluate(f"""
                     () => {{
@@ -330,44 +268,30 @@ class GoogleRichResultsEngine:
         await test_btn.click()
       else:
         url_input = await page.select("input[type='url']")
-
         await url_input.send_keys(content)
-        await asyncio.sleep(0.5)
 
-        # Despachar evento de hardware real (CDP Protocol) para la tecla Enter
-        await page.send(
-          cdp_input.dispatch_key_event(
-            type_="keyDown",
-            windows_virtual_key_code=13,
-            native_virtual_key_code=13,
-            mac_char_code=13,
-            key="Enter",
-            code="Enter",
-            text="\r",
-            unmodified_text="\r"
-          )
-        )
-        await page.send(
-          cdp_input.dispatch_key_event(
-            type_="keyUp",
-            windows_virtual_key_code=13,
-            native_virtual_key_code=13,
-            mac_char_code=13,
-            key="Enter",
-            code="Enter"
-          )
-        )
+        # Requisito explícito: Esperar mínimo 3 segundos antes de accionar
+        logger.info("URL typed in nodriver. Waiting 3 seconds...")
+        await asyncio.sleep(3)
+
+        # Usar el selector proporcionado jsname="LZQqje" en lugar de simular Enter
+        submit_btn = await page.select("div[jsname='LZQqje']")
+        await submit_btn.click()
+        logger.info("Clicked 'probar URL' button in nodriver")
 
       # Polling manual para captura de redirección
+      logger.info("Polling for URL change indicating analysis completion...")
       current_url = ""
-      for _ in range(30):
+      # Aumentamos los intentos de polling (80 iteraciones * 1.5s = 120 segundos máximo)
+      # para dar tiempo a que el modal de "Probando la URL" desaparezca.
+      for _ in range(80):
         current_url = await page.evaluate("window.location.href")
         if "/result?id=" in current_url:
           break
         await asyncio.sleep(1.5)
 
       if "/result?id=" not in current_url:
-        raise Exception("Timeout esperando que Google procese la URL.")
+        raise Exception("Timeout esperando que Google procese la URL. El modal no finalizó a tiempo.")
 
       final_html = await page.get_content()
       screenshots: list[dict[str, str]] = []
