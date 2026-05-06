@@ -33,45 +33,16 @@
 .admin-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.8rem;
   color: #0f172a;
 }
 
-.admin-brand__mark {
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #0d6efd;
-  background: rgba(13, 110, 253, 0.1);
-  border: 1px solid rgba(13, 110, 253, 0.12);
-  font-size: 1.05rem;
-}
-
-.admin-brand__text {
+.admin-brand__logo {
   display: block;
-
-  strong,
-  small {
-    display: block;
-    line-height: 1.15;
-  }
-
-  strong {
-    font-size: 0.98rem;
-    font-weight: 800;
-  }
-
-  small {
-    margin-top: 0.15rem;
-    color: #64748b;
-    font-size: 0.76rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
+  width: 168px;
+  height: 36px;
+  object-fit: contain;
+  object-position: left center;
+  flex-shrink: 0;
 }
 
 .admin-nav {
@@ -150,6 +121,11 @@
 
   .admin-header__bar {
     padding: 0.9rem;
+  }
+
+  .admin-brand__logo {
+    width: 148px;
+    height: 32px;
   }
 
   .admin-nav {
