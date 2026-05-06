@@ -23,6 +23,7 @@ import {
   RichResultsReportDetailResponseModel,
   RichResultsReportListItemModel,
   RichResultsReportStatusSummaryItemModel,
+  RichResultsReportTaskResponseModel,
 } from '@/app/domain/models/rich-results/response/rich-results-response.model';
 import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
@@ -32,6 +33,10 @@ import { environment } from '@/environments/environment';
 
 const LS_USERNAME_KEY = 'public_validator_username';
 type AuditUrlValidationInfoLayout = 'admin' | 'shared';
+type TrackedRichResultsTask = {
+  url: string;
+  status: string;
+};
 
 @Component({
   selector: 'app-public-audit-url-validation-info',
@@ -112,6 +117,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   richResultsBatchSubmitting = signal<boolean>(false);
   private richResultsPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly richResultsApiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
+  private readonly trackedRichResultsTasks = new Map<string, TrackedRichResultsTask>();
 
   availableTypes = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -242,6 +248,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       const saved = localStorage.getItem(LS_USERNAME_KEY);
       if (saved) this.commentUsername.set(saved);
       this.isLoggedIn.set(this._authRepository.isAuthenticated());
+      this._taskNotificationService.prepareNotifications();
       this.startRichResultsPolling();
     }
   }
@@ -704,8 +711,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
         page_size: 20,
       });
       const next = new Map(this.richResultsMap());
-      next.set(url, response.items.filter((item) => item.url === url));
+      const items = response.items.filter((item) => item.url === url);
+      next.set(url, items);
       this.richResultsMap.set(next);
+      this.trackPendingRichResults(items);
+      this.notifyCompletedRichResults(items);
       await this.loadRichResultsStatuses([url]);
     } catch (error) {
       console.error('Error loading rich results reports:', error);
@@ -780,7 +790,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
     this.updateUrlSet(this.richResultsCreatingSet, url, true);
     try {
-      await this._richResultsRepository.create(new CreateRichResultsReportRequestModel(url, true, true));
+      const response = await this._richResultsRepository.create(
+        new CreateRichResultsReportRequestModel(url, true, true),
+      );
+      this.trackRichResultsTask(response);
       await this.ensureRichResultsLoaded(url, true);
       this._sweetAlertUtil.fire({
         toast: true,
@@ -810,9 +823,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
     this.richResultsBatchSubmitting.set(true);
     try {
-      await this._richResultsRepository.createBatch(
+      const response = await this._richResultsRepository.createBatch(
         new CreateRichResultsBatchReportRequestModel(urls, true),
       );
+      response.items.forEach((item) => this.trackRichResultsTask(item));
 
       for (const url of urls) {
         await this.ensureRichResultsLoaded(url, true);
@@ -852,6 +866,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     this.updateUrlSet(this.richResultsDeletingSet, url, true);
     try {
       await this._richResultsRepository.delete(reportId, url);
+      this.trackedRichResultsTasks.delete(reportId);
       const details = new Map(this.richResultsDetailMap());
       details.delete(reportId);
       this.richResultsDetailMap.set(details);
@@ -883,6 +898,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     this.updateUrlSet(this.richResultsDeletingSet, url, true);
     try {
       await this._richResultsRepository.deleteByUrl(url);
+      for (const [taskId, task] of this.trackedRichResultsTasks.entries()) {
+        if (task.url === url) {
+          this.trackedRichResultsTasks.delete(taskId);
+        }
+      }
       const next = new Map(this.richResultsMap());
       next.set(url, []);
       this.richResultsMap.set(next);
@@ -924,6 +944,71 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     } catch (error) {
       console.error('Error loading rich results status summaries:', error);
     }
+  }
+
+  private trackRichResultsTask(task: RichResultsReportTaskResponseModel): void {
+    if (!task?.task_id || !task?.url) return;
+
+    this.trackedRichResultsTasks.set(task.task_id, {
+      url: task.url,
+      status: (task.status || 'pending').toLowerCase(),
+    });
+  }
+
+  private trackPendingRichResults(items: RichResultsReportListItemModel[]): void {
+    for (const item of items) {
+      const normalizedStatus = (item.status || '').toLowerCase();
+      if (!this.isRichResultsPending(normalizedStatus)) continue;
+      if (this.trackedRichResultsTasks.has(item.id)) continue;
+
+      this.trackedRichResultsTasks.set(item.id, {
+        url: item.url,
+        status: normalizedStatus,
+      });
+    }
+  }
+
+  private notifyCompletedRichResults(items: RichResultsReportListItemModel[]): void {
+    for (const item of items) {
+      const tracked = this.trackedRichResultsTasks.get(item.id);
+      if (!tracked) continue;
+
+      const nextStatus = (item.status || '').toLowerCase();
+      if (!this.isRichResultsTerminal(nextStatus)) {
+        this.trackedRichResultsTasks.set(item.id, {
+          url: item.url,
+          status: nextStatus,
+        });
+        continue;
+      }
+
+      if (!this.isRichResultsTerminal(tracked.status)) {
+        const isCompleted = nextStatus === 'completed';
+        this._taskNotificationService.notifyTaskResult({
+          title: isCompleted ? 'Reporte Rich Results listo' : 'Reporte Rich Results fallido',
+          body: isCompleted
+            ? `${item.url} ya terminó y está listo para revisarse.`
+            : `${item.url} terminó con error.`,
+          status: nextStatus,
+          route: this.getCurrentRoute(),
+          tag: `rich-results:${item.id}`,
+        });
+      }
+
+      this.trackedRichResultsTasks.delete(item.id);
+    }
+  }
+
+  private isRichResultsTerminal(status: string): boolean {
+    return status === 'completed' || status === 'failed';
+  }
+
+  private getCurrentRoute(): string | undefined {
+    if (!isPlatformBrowser(this._platformId)) {
+      return undefined;
+    }
+
+    return `${window.location.pathname}${window.location.search}${window.location.hash}`;
   }
 
   async rerunAll(): Promise<void> {
