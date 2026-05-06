@@ -155,7 +155,6 @@ async def run_audit_task(
                 session.add(audit)
 
         print(f"✅ Auditoría completada: {audit_id}")
-
     except Exception as e:
         print(f"❌ Error en auditoría {audit_id}: {str(e)}")
         import traceback
@@ -363,7 +362,6 @@ async def run_comparison_task(
                 session.add(comparison)
 
         print(f"✅ Comparación completada: {comparison_id}")
-
     except Exception as e:
         print(f"❌ Error en comparación {comparison_id}: {str(e)}")
         import traceback
@@ -494,7 +492,6 @@ async def run_schema_audit_task(
             session.add(schema_audit)
 
         print(f"✅ Auditoría de schemas completada: {schema_audit_id}")
-
     except Exception as e:
         print(f"❌ Error en auditoría de schemas {schema_audit_id}: {e}")
         import traceback
@@ -700,7 +697,6 @@ async def run_url_validation_task(
                 session.add(validation)
 
         print(f"✅ Validación de URLs completada: {validation_id} — Severidad global: {global_severity}")
-
     except Exception as e:
         print(f"❌ Error en validación de URLs {validation_id}: {e}")
         import traceback
@@ -904,7 +900,6 @@ async def run_url_validation_single_url_task(
             session.add(validation)
 
         print(f"✅ Re-análisis de URL individual completado: {target_url} — validación {validation_id}")
-
     except Exception as e:
         print(f"❌ Error en re-análisis de URL individual {validation_id}/{target_url}: {e}")
         import traceback

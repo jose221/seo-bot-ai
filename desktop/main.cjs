@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { spawn } = require('node:child_process');
 const express = require('express');
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, Notification, dialog, ipcMain } = require('electron');
 
 const FRONTEND_PORT = 4001;
 const API_PORT = 8010;
@@ -27,6 +27,10 @@ function getFrontendDistRoot() {
 
 function getIconPath() {
   return path.join(app.getAppPath(), 'desktop', 'resources', 'icon.png');
+}
+
+function getPreloadPath() {
+  return path.join(app.getAppPath(), 'desktop', 'preload.cjs');
 }
 
 function getApiPidFilePath() {
@@ -258,6 +262,7 @@ async function startApiServer() {
 
 async function createWindow() {
   const iconPath = getIconPath();
+  const preloadPath = getPreloadPath();
 
   if (process.platform === 'darwin' && fs.existsSync(iconPath) && app.dock) {
     app.dock.setIcon(iconPath);
@@ -273,6 +278,7 @@ async function createWindow() {
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
+      preload: fs.existsSync(preloadPath) ? preloadPath : undefined,
     },
   });
 
@@ -353,6 +359,38 @@ async function createWindow() {
 
   await mainWindow.loadURL(`http://127.0.0.1:${FRONTEND_PORT}`);
 }
+
+ipcMain.on('desktop-notifications:show', (event, payload) => {
+  if (!payload?.title || !Notification.isSupported()) {
+    return;
+  }
+
+  const notification = new Notification({
+    title: payload.title,
+    body: payload.body || '',
+    icon: fs.existsSync(getIconPath()) ? getIconPath() : undefined,
+    silent: false,
+  });
+
+  notification.on('click', () => {
+    const targetWindow = BrowserWindow.fromWebContents(event.sender);
+    if (!targetWindow) {
+      return;
+    }
+
+    if (targetWindow.isMinimized()) {
+      targetWindow.restore();
+    }
+
+    targetWindow.show();
+    targetWindow.focus();
+    targetWindow.webContents.send('desktop-notifications:click', {
+      route: payload.route,
+    });
+  });
+
+  notification.show();
+});
 
 function stopServices() {
   if (frontendServer) {

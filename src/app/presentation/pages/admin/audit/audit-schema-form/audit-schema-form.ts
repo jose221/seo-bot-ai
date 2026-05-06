@@ -22,6 +22,7 @@ import {
 import {
   FooterModalComponent
 } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
+import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 
 const PROGRAMMING_LANGUAGES = [
   'javascript', 'typescript', 'python', 'java', 'c#', 'php',
@@ -79,6 +80,7 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
   private readonly _auditRepository = inject(AuditRepository);
   private readonly _targetRepository = inject(TargetRepository);
   private readonly _route = inject(ActivatedRoute);
+  private readonly _taskNotificationService = inject(TaskNotificationService);
 
   constructor() {
     super();
@@ -174,6 +176,7 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
         this.form.value as CreateAuditSchemaRequestModel
       );
       this.createdItem.set(response);
+      this._taskNotificationService.registerPendingTask('schema', response.id);
       this.showConfirmation.set(true);
     } catch (e: any) {
       this.catchError(e);
@@ -202,4 +205,3 @@ export class AuditSchemaForm extends ValidationFormBase implements OnInit {
     } catch { /* ignore */ }
   }
 }
-

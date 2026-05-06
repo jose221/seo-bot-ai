@@ -15,6 +15,7 @@ import { FooterModalComponent } from '@/app/presentation/components/general/boot
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { CreateAuditResponseModel } from '@/app/domain/models/audit/response/audit-response.model';
 import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
+import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 
 @Component({
   selector: 'app-audit-form',
@@ -43,6 +44,7 @@ export class AuditForm extends ValidationFormBase implements OnInit {
   });
   private readonly formRepository = inject(AuditRepository);
   private readonly targetRepository = inject(TargetRepository);
+  private readonly taskNotificationService = inject(TaskNotificationService);
   public targetSearchList = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[]);
 
   // Tag filter
@@ -118,6 +120,7 @@ export class AuditForm extends ValidationFormBase implements OnInit {
       const response = await this.formRepository.create(this.form.value as CreateAuditRequestModel);
       console.log(response);
       this.responseCreateAudit.set(response);
+      this.taskNotificationService.registerPendingTask('audit', response.task_id);
       this.showMessageConfirmation.set(true);
     } catch (e: Error | any) {
       this.catchError(e);

@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit, computed, PLATFORM_ID } from '@angul
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
+import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
 import { TargetRepository } from '@/app/domain/repositories/target/target.repository';
 import {
@@ -35,6 +36,7 @@ const LS_USERNAME_KEY = 'public_validator_username';
 export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _repository = inject(AuditUrlValidationRepository);
+  private readonly _taskNotificationService = inject(TaskNotificationService);
   private readonly _authRepository = inject(AuthRepository);
   private readonly _targetRepository = inject(TargetRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
@@ -477,6 +479,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     try {
       this.rerunLoading.set(true);
       await this._repository.rerunValidation(id);
+      this._taskNotificationService.registerPendingTask('url-validation', id);
       this._sweetAlertUtil.fire({
         toast: true,
         position: 'top-end',
@@ -513,6 +516,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     try {
       this.rerunUrlTarget.set(url);
       await this._repository.rerunValidationUrl(id, url);
+      this._taskNotificationService.registerPendingTask('url-validation', id);
       this._sweetAlertUtil.fire({
         toast: true,
         position: 'top-end',

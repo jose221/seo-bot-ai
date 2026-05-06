@@ -25,6 +25,7 @@ import {
 import {TranslateModule} from '@ngx-translate/core';
 import {CreateCompareAuditResponseModel} from '@/app/domain/models/audit/response/audit-response.model';
 import {ActivatedRoute, RouterLink} from '@angular/router';
+import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 
 @Component({
   selector: 'app-compare-audit-form',
@@ -45,6 +46,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
   private readonly formRepository = inject(AuditRepository);
   private readonly targetRepository = inject(TargetRepository)
   private readonly route = inject(ActivatedRoute);
+  private readonly taskNotificationService = inject(TaskNotificationService);
   public targetSearchList = signal<SearchTargetResponseModel[]>([] as SearchTargetResponseModel[])
   public loadingCompareList = signal<boolean>(false);
 
@@ -118,6 +120,7 @@ export class CompareAuditForm  extends ValidationFormBase implements OnInit {
       );
       console.log(response)
       this.responseCompareAudit.set(response)
+      this.taskNotificationService.registerPendingTask('comparison', response.task_id);
       this.showMessageConfirmation.set(true);
     } catch (e: Error | any) {
       this.catchError(e)

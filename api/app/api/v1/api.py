@@ -15,4 +15,3 @@ api_router.include_router(targets.router, tags=["Targets"])
 api_router.include_router(audits.router, tags=["Auditorías"])
 api_router.include_router(downloads.router, tags=["Descargas"])
 api_router.include_router(sitemaps.router, tags=["Sitemaps"])
-

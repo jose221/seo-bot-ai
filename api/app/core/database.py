@@ -12,7 +12,15 @@ from contextlib import contextmanager, asynccontextmanager
 from app.core.config import get_settings
 
 # Importar todos los modelos para que SQLModel los registre
-from app.models import user, webpage, audit, audit_comparison, audit_schema_review  # noqa: F401
+from app.models import (  # noqa: F401
+    user,
+    webpage,
+    audit,
+    audit_comparison,
+    audit_schema_review,
+    audit_url_validation,
+    url_validation_comment,
+)
 
 
 class DatabaseManager:
@@ -166,5 +174,3 @@ def get_database_url_sync() -> str:
 def get_database_url_async() -> str:
     """Obtener URL de base de datos asíncrona"""
     return get_settings().DATABASE_URL_ASYNC
-
-

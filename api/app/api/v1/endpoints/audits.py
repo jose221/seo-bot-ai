@@ -169,7 +169,6 @@ async def run_audit_task(
                 # No llamar commit aquí, el context manager lo hace automáticamente
 
         print(f"✅ Auditoría completada: {audit_id}")
-
     except Exception as e:
         print(f"❌ Error en auditoría {audit_id}: {str(e)}")
         import traceback

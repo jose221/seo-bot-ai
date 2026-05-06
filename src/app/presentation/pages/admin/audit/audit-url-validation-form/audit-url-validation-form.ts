@@ -18,6 +18,7 @@ import { HeaderModalComponent } from '@/app/presentation/components/general/boot
 import { BodyModalComponent } from '@/app/presentation/components/general/bootstrap/general-modals/sections/body-modal/body-modal.component';
 import { FooterModalComponent } from '@/app/presentation/components/general/bootstrap/general-modals/sections/footer-modal/footer-modal.component';
 import { requiredTrimmed, urlList } from '@/app/presentation/utils/form-validators.util';
+import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 
 const SOURCE_TYPES = ['audit_page', 'audit_comparison'];
 
@@ -73,6 +74,7 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
   private readonly _auditRepository = inject(AuditRepository);
   private readonly _targetRepository = inject(TargetRepository);
   private readonly _route = inject(ActivatedRoute);
+  private readonly _taskNotificationService = inject(TaskNotificationService);
 
   constructor() {
     super();
@@ -164,6 +166,7 @@ export class AuditUrlValidationForm extends ValidationFormBase implements OnInit
         this.form.value as CreateAuditUrlValidationRequestModel,
       );
       this.createdItem.set(response);
+      this._taskNotificationService.registerPendingTask('url-validation', response.id);
       this.showConfirmation.set(true);
     } catch (e: any) {
       this.catchError(e);
