@@ -24,7 +24,6 @@ from app.schemas import audit_schemas
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
-from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
@@ -162,11 +161,8 @@ async def run_audit_task(
                 audit.completed_at = datetime.utcnow()
                 audit.seo_analysis = seo_analysis
 
-                #genera el reporte
-                report = ReportGenerator(audit=audit).generate_documents()
-                print(report)
-                audit.report_pdf_path = report.get('pdf_path')
-                audit.report_word_path = report.get('word_path')
+                audit.report_pdf_path = None
+                audit.report_word_path = None
                 audit.report_excel_path = None
 
                 session.add(audit)
@@ -1392,21 +1388,6 @@ async def get_audit(
             detail="Auditoría no encontrada"
         )
 
-    # Verificar y generar reportes si faltan
-    if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_word_path):
-        try:
-            print(f"🔄 Generando reportes faltantes para audit {audit.id}")
-            report_paths = ReportGenerator(audit=audit).generate_documents()
-            audit.report_pdf_path = report_paths.get('pdf_path')
-            audit.report_word_path = report_paths.get('word_path')
-            audit.report_excel_path = None
-
-            session.add(audit)
-            await session.commit()
-            await session.refresh(audit)
-        except Exception as e:
-            print(f"⚠️ Error generando reportes on-demand: {e}")
-
     return audit
 
 
@@ -1477,29 +1458,11 @@ async def list_audits(
     result = await session.execute(statement)
     rows = result.all()
 
-    # Verificar y generar reportes faltantes para auditorías completadas
-    audits_to_update = []
     items = []
     for row in rows:
         pdf_path = row.report_pdf_path
         excel_path = row.report_excel_path
         word_path = row.report_word_path
-
-        if row.status == AuditStatus.COMPLETED and (not pdf_path or not word_path):
-            try:
-                audit_obj = await session.get(AuditReport, row.id)
-                if audit_obj:
-                    report_paths = ReportGenerator(audit=audit_obj).generate_documents()
-                    audit_obj.report_pdf_path = report_paths.get('pdf_path')
-                    audit_obj.report_word_path = report_paths.get('word_path')
-                    audit_obj.report_excel_path = None
-                    session.add(audit_obj)
-                    audits_to_update.append(audit_obj)
-                    pdf_path = audit_obj.report_pdf_path
-                    excel_path = audit_obj.report_excel_path
-                    word_path = audit_obj.report_word_path
-            except Exception as e:
-                print(f"⚠️ Error generando reportes en listado para audit {row.id}: {e}")
 
         # Construir web_page anidado con la misma estructura que espera el frontend
         web_page_data = None
@@ -1537,9 +1500,6 @@ async def list_audits(
             completed_at=row.completed_at,
             web_page=web_page_data,
         ))
-
-    if audits_to_update:
-        await session.commit()
 
     return audit_schemas.AuditListResponse(
         items=items,

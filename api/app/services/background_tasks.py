@@ -15,7 +15,6 @@ from app.models.audit_url_validation import AuditUrlValidation, UrlValidationSta
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
-from app.services.report_generator import ReportGenerator
 from app.services.seo_analyzer import SEOAnalyzer, filter_open_graph_schemas
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
@@ -149,13 +148,8 @@ async def run_audit_task(
                 audit.completed_at = datetime.utcnow()
                 audit.seo_analysis = seo_analysis
 
-                # Generar reporte
-                report = ReportGenerator(audit=audit).generate_documents()
-                print(f"📄 Reporte generado: {report}")
-
-                # Guardar rutas de los reportes generados
-                audit.report_pdf_path = report.get('pdf_path')
-                audit.report_word_path = report.get('word_path')
+                audit.report_pdf_path = None
+                audit.report_word_path = None
                 audit.report_excel_path = None
 
                 session.add(audit)
@@ -347,35 +341,6 @@ async def run_comparison_task(
             "raw_schemas": {"base": base_schemas}
         }
 
-        # Generar reporte
-        from app.schemas import audit_schemas
-        response_obj = audit_schemas.AuditComparisonResponse(**comparison_result)
-        report = ReportGenerator(audit=base_audit).generate_comparison_documents(response_obj)
-        print(f"📄 Reporte de comparación generado: {report}")
-
-        # NUEVO: Generar Reporte Detallado de Propuesta de Schema
-        detailed_report_paths = {}
-        try:
-             # Solo si hay contenido en ai_schema_comparison_text
-             if ai_schema_comparison_text and len(ai_schema_comparison_text) > 100:
-                 print("🔍 Generando explicación detallada de la propuesta...")
-                 detailed_ai_response = await comparator.generate_ai_detailed_proposal_report(
-                     schema_proposal=ai_schema_comparison_text,
-                     documentation_context=documentation_context,
-                     token=token
-                  )
-
-                 detailed_content = detailed_ai_response.get('content', '')
-                 d_usage = detailed_ai_response.get('usage', {})
-                 total_input_tokens += d_usage.get('prompt_tokens', 0)
-                 total_output_tokens += d_usage.get('completion_tokens', 0)
-
-                 detailed_report_paths = ReportGenerator(audit=base_audit).generate_detailed_proposal_reports(detailed_content)
-                 print(f"📘 Reporte detallado generado: {detailed_report_paths}")
-
-        except Exception as e:
-            print(f"⚠️ Error generando reporte detallado de propuesta: {e}")
-
         # Guardar resultado
         with db_manager.sync_session_context() as session:
             comparison = session.get(AuditComparison, comparison_id)
@@ -388,14 +353,12 @@ async def run_comparison_task(
                 comparison.input_tokens = total_input_tokens
                 comparison.output_tokens = total_output_tokens
 
-                # Guardar rutas de los reportes generados
-                comparison.report_pdf_path = report.get('pdf_path')
-                comparison.report_word_path = report.get('word_path')
+                comparison.report_pdf_path = None
+                comparison.report_word_path = None
                 comparison.report_excel_path = None
 
-                # Guardar rutas de reporte detallado
-                comparison.proposal_report_pdf_path = detailed_report_paths.get('pdf_path')
-                comparison.proposal_report_word_path = detailed_report_paths.get('word_path')
+                comparison.proposal_report_pdf_path = None
+                comparison.proposal_report_word_path = None
 
                 session.add(comparison)
 
@@ -522,30 +485,8 @@ async def run_schema_audit_task(
                 "ai_report": ai_report_text
             }
 
-            # Resolver audit base para generación de reportes
-            report_audit = None
-            if schema_audit.source_type == SchemaAuditSourceType.AUDIT_PAGE:
-                report_audit = session.get(AuditReport, schema_audit.source_id)
-            elif schema_audit.source_type == SchemaAuditSourceType.AUDIT_COMPARISON:
-                comp = session.get(AuditComparison, schema_audit.source_id)
-                if comp:
-                    stmt = select(AuditReport).where(
-                        AuditReport.web_page_id == comp.base_web_page_id,
-                        sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
-                    ).order_by(desc(AuditReport.created_at)).limit(1)
-                    report_audit = session.execute(stmt).scalars().first()
-
-            if report_audit:
-                report_body = "\n\n".join([
-                    "# Auditoría de Schemas",
-                    ai_report_text or "Sin reporte IA de comparación.",
-                    "# Modelos de clases del esquema",
-                    cqrs_text or "Sin modelos generados."
-                ])
-                report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(report_body)
-                schema_audit.report_pdf_path = report_paths.get("pdf_path")
-                schema_audit.report_word_path = report_paths.get("word_path")
-
+            schema_audit.report_pdf_path = None
+            schema_audit.report_word_path = None
             schema_audit.input_tokens = total_input_tokens
             schema_audit.output_tokens = total_output_tokens
             schema_audit.status = SchemaAuditStatus.COMPLETED
@@ -720,51 +661,7 @@ async def run_url_validation_task(
         # Calcular severidad global
         global_severity = service.compute_global_severity(results)
 
-        # Generar Markdown consolidado
-        markdown_report = service.build_consolidated_markdown(
-            results=results,
-            name_validation=name_validation,
-            description_validation=description_validation,
-            global_severity=global_severity,
-        )
-
-        # Generar reportes PDF/Word individuales
-        report_paths = {}
-        try:
-            # Necesitamos un AuditReport para ReportGenerator — resolver desde el source
-            with db_manager.sync_session_context() as session:
-                validation = session.get(AuditUrlValidation, validation_id)
-                if not validation:
-                    raise Exception("Validación no encontrada al generar reportes")
-
-                report_audit = None
-                if validation.source_type == UrlValidationSourceType.AUDIT_PAGE:
-                    report_audit = session.get(AuditReport, validation.source_id)
-                elif validation.source_type == UrlValidationSourceType.AUDIT_COMPARISON:
-                    comp = session.get(AuditComparison, validation.source_id)
-                    if comp:
-                        stmt = select(AuditReport).where(
-                            AuditReport.web_page_id == comp.base_web_page_id,
-                            sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
-                        ).order_by(desc(AuditReport.created_at)).limit(1)
-                        report_audit = session.execute(stmt).scalars().first()
-
-                if report_audit:
-                    report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(
-                        markdown_report
-                    )
-                    print(f"📄 Reportes de validación generados: {report_paths}")
-                else:
-                    print("⚠️  No se encontró audit para generar reportes PDF/Word")
-
-        except Exception as rpt_err:
-            print(f"⚠️  Error generando reportes de validación: {rpt_err}")
-
-        # ------------------------------------------------------------------
-        # Generar REPORTE GLOBAL consolidado (IA + PDF + Word)
-        # ------------------------------------------------------------------
         global_report_ai_text = ""
-        global_report_paths = {}
         try:
             print(f"🌐 Generando reporte global con IA para {len(results)} URLs...")
             global_ai_result = await service.generate_global_report_ai(
@@ -780,41 +677,6 @@ async def run_url_validation_task(
             total_input_tokens += global_usage.get("prompt_tokens", 0)
             total_output_tokens += global_usage.get("completion_tokens", 0)
 
-            # Construir Markdown del reporte global
-            global_markdown = service.build_global_report_markdown(
-                ai_global_text=global_report_ai_text,
-                results=results,
-                name_validation=name_validation,
-                description_validation=description_validation,
-                global_severity=global_severity,
-            )
-
-            # Generar PDF/Word del reporte global
-            with db_manager.sync_session_context() as session:
-                validation = session.get(AuditUrlValidation, validation_id)
-                if not validation:
-                    raise Exception("Validación no encontrada al generar reporte global")
-
-                report_audit = None
-                if validation.source_type == UrlValidationSourceType.AUDIT_PAGE:
-                    report_audit = session.get(AuditReport, validation.source_id)
-                elif validation.source_type == UrlValidationSourceType.AUDIT_COMPARISON:
-                    comp = session.get(AuditComparison, validation.source_id)
-                    if comp:
-                        stmt = select(AuditReport).where(
-                            AuditReport.web_page_id == comp.base_web_page_id,
-                            sql_cast(AuditReport.status, String) == AuditStatus.COMPLETED.value
-                        ).order_by(desc(AuditReport.created_at)).limit(1)
-                        report_audit = session.execute(stmt).scalars().first()
-
-                if report_audit:
-                    global_report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(
-                        global_markdown
-                    )
-                    print(f"📄 Reporte global generado: {global_report_paths}")
-                else:
-                    print("⚠️  No se encontró audit para generar reporte global PDF/Word")
-
         except Exception as global_err:
             print(f"⚠️  Error generando reporte global: {global_err}")
             import traceback
@@ -829,12 +691,10 @@ async def run_url_validation_task(
                 validation.global_severity = global_severity
                 validation.input_tokens = total_input_tokens
                 validation.output_tokens = total_output_tokens
-                # Reportes individuales
-                validation.report_pdf_path = report_paths.get("pdf_path")
-                validation.report_word_path = report_paths.get("word_path")
-                # Reporte global
-                validation.global_report_pdf_path = global_report_paths.get("pdf_path")
-                validation.global_report_word_path = global_report_paths.get("word_path")
+                validation.report_pdf_path = None
+                validation.report_word_path = None
+                validation.global_report_pdf_path = None
+                validation.global_report_word_path = None
                 validation.global_report_ai_text = global_report_ai_text
                 validation.completed_at = datetime.utcnow()
                 session.add(validation)
@@ -1035,6 +895,10 @@ async def run_url_validation_single_url_task(
             validation.global_severity = new_global_severity
             validation.input_tokens = (validation.input_tokens or 0) + in_tok
             validation.output_tokens = (validation.output_tokens or 0) + out_tok
+            validation.report_pdf_path = None
+            validation.report_word_path = None
+            validation.global_report_pdf_path = None
+            validation.global_report_word_path = None
             validation.status = UrlValidationStatus.COMPLETED
             validation.completed_at = datetime.utcnow()
             session.add(validation)

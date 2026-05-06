@@ -8,7 +8,6 @@ from sqlalchemy import String, cast as sql_cast, desc
 from sqlmodel import select
 
 from app.core.config import settings
-from app.core.database import db_manager
 from app.models import (
     AuditComparison,
     AuditReport,
@@ -32,23 +31,6 @@ class ReportLifecycleService:
     REPORT_TTL = timedelta(hours=24)
     CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
     REPORT_EXTENSIONS = {".pdf", ".docx", ".xlsx"}
-    REPORT_PATH_FIELDS = {
-        AuditReport: ("report_pdf_path", "report_word_path", "report_excel_path"),
-        AuditComparison: (
-            "report_pdf_path",
-            "report_word_path",
-            "report_excel_path",
-            "proposal_report_pdf_path",
-            "proposal_report_word_path",
-        ),
-        AuditSchemaReview: ("report_pdf_path", "report_word_path"),
-        AuditUrlValidation: (
-            "report_pdf_path",
-            "report_word_path",
-            "global_report_pdf_path",
-            "global_report_word_path",
-        ),
-    }
 
     def __init__(self) -> None:
         self.reports_root = Path(settings.STORAGE_PATH) / "reports"
@@ -64,11 +46,10 @@ class ReportLifecycleService:
             "La auditoría no tiene datos suficientes para generar el PDF",
         )
 
-        report_paths = ReportGenerator(audit=audit).generate_documents()
+        pdf_path = ReportGenerator(audit=audit).generate_pdf()
         self._replace_paths(
             audit,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_pdf_path=pdf_path,
         )
         await self._persist_async(session, audit)
         return audit.report_pdf_path
@@ -84,11 +65,14 @@ class ReportLifecycleService:
             "La auditoría no tiene datos suficientes para generar el Word",
         )
 
-        report_paths = ReportGenerator(audit=audit).generate_documents()
+        source_pdf_path = self._consume_existing_path(audit, "report_pdf_path")
+        word_path = ReportGenerator(audit=audit).generate_docx(
+            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
+            keep_pdf=bool(source_pdf_path),
+        )
         self._replace_paths(
             audit,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_word_path=word_path,
         )
         await self._persist_async(session, audit)
         return audit.report_word_path
@@ -110,13 +94,10 @@ class ReportLifecycleService:
             "No se encontró una auditoría base para generar el PDF de comparación",
         )
 
-        report_paths = ReportGenerator(audit=base_audit).generate_comparison_documents(
-            comparison.comparison_result
-        )
+        pdf_path = ReportGenerator(audit=base_audit).generate_comparison_pdf(comparison.comparison_result)
         self._replace_paths(
             comparison,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_pdf_path=pdf_path,
         )
         await self._persist_async(session, comparison)
         return comparison.report_pdf_path
@@ -138,13 +119,15 @@ class ReportLifecycleService:
             "No se encontró una auditoría base para generar el Word de comparación",
         )
 
-        report_paths = ReportGenerator(audit=base_audit).generate_comparison_documents(
-            comparison.comparison_result
+        source_pdf_path = self._consume_existing_path(comparison, "report_pdf_path")
+        word_path = ReportGenerator(audit=base_audit).generate_comparison_word(
+            comparison.comparison_result,
+            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
+            keep_pdf=bool(source_pdf_path),
         )
         self._replace_paths(
             comparison,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_word_path=word_path,
         )
         await self._persist_async(session, comparison)
         return comparison.report_word_path
@@ -155,11 +138,10 @@ class ReportLifecycleService:
             return current_path
 
         report_audit, report_body = await self._build_schema_report_context_async(session, schema_audit)
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(report_body)
+        pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(report_body)
         self._replace_paths(
             schema_audit,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_pdf_path=pdf_path,
         )
         await self._persist_async(session, schema_audit)
         return schema_audit.report_pdf_path
@@ -170,11 +152,15 @@ class ReportLifecycleService:
             return current_path
 
         report_audit, report_body = await self._build_schema_report_context_async(session, schema_audit)
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(report_body)
+        source_pdf_path = self._consume_existing_path(schema_audit, "report_pdf_path")
+        word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
+            report_body,
+            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
+            keep_pdf=bool(source_pdf_path),
+        )
         self._replace_paths(
             schema_audit,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_word_path=word_path,
         )
         await self._persist_async(session, schema_audit)
         return schema_audit.report_word_path
@@ -194,13 +180,10 @@ class ReportLifecycleService:
             comparison,
             token,
         )
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(
-            detailed_content
-        )
+        pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(detailed_content)
         self._replace_paths(
             comparison,
-            proposal_report_pdf_path=report_paths["pdf_path"],
-            proposal_report_word_path=report_paths["word_path"],
+            proposal_report_pdf_path=pdf_path,
         )
         await self._persist_async(session, comparison)
         return comparison.proposal_report_pdf_path
@@ -220,13 +203,15 @@ class ReportLifecycleService:
             comparison,
             token,
         )
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(
-            detailed_content
+        source_pdf_path = self._consume_existing_path(comparison, "proposal_report_pdf_path")
+        word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
+            detailed_content,
+            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
+            keep_pdf=bool(source_pdf_path),
         )
         self._replace_paths(
             comparison,
-            proposal_report_pdf_path=report_paths["pdf_path"],
-            proposal_report_word_path=report_paths["word_path"],
+            proposal_report_word_path=word_path,
         )
         await self._persist_async(session, comparison)
         return comparison.proposal_report_word_path
@@ -237,11 +222,10 @@ class ReportLifecycleService:
             return current_path
 
         report_audit, markdown = await self._build_url_validation_report_context_async(session, validation)
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(markdown)
+        pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(markdown)
         self._replace_paths(
             validation,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_pdf_path=pdf_path,
         )
         await self._persist_async(session, validation)
         return validation.report_pdf_path
@@ -252,11 +236,15 @@ class ReportLifecycleService:
             return current_path
 
         report_audit, markdown = await self._build_url_validation_report_context_async(session, validation)
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(markdown)
+        source_pdf_path = self._consume_existing_path(validation, "report_pdf_path")
+        word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
+            markdown,
+            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
+            keep_pdf=bool(source_pdf_path),
+        )
         self._replace_paths(
             validation,
-            report_pdf_path=report_paths["pdf_path"],
-            report_word_path=report_paths["word_path"],
+            report_word_path=word_path,
         )
         await self._persist_async(session, validation)
         return validation.report_word_path
@@ -270,11 +258,10 @@ class ReportLifecycleService:
             session,
             validation,
         )
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(markdown)
+        pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(markdown)
         self._replace_paths(
             validation,
-            global_report_pdf_path=report_paths["pdf_path"],
-            global_report_word_path=report_paths["word_path"],
+            global_report_pdf_path=pdf_path,
         )
         await self._persist_async(session, validation)
         return validation.global_report_pdf_path
@@ -288,60 +275,31 @@ class ReportLifecycleService:
             session,
             validation,
         )
-        report_paths = ReportGenerator(audit=report_audit).generate_detailed_proposal_reports(markdown)
+        source_pdf_path = self._consume_existing_path(validation, "global_report_pdf_path")
+        word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
+            markdown,
+            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
+            keep_pdf=bool(source_pdf_path),
+        )
         self._replace_paths(
             validation,
-            global_report_pdf_path=report_paths["pdf_path"],
-            global_report_word_path=report_paths["word_path"],
+            global_report_word_path=word_path,
         )
         await self._persist_async(session, validation)
         return validation.global_report_word_path
 
     async def run_cleanup_loop(self) -> None:
         while True:
+            await asyncio.sleep(self.CLEANUP_INTERVAL_SECONDS)
             try:
                 self.cleanup_expired_reports()
             except Exception:
                 log.exception("Error cleaning up expired report files")
-            await asyncio.sleep(self.CLEANUP_INTERVAL_SECONDS)
 
     def cleanup_expired_reports(self) -> dict[str, int]:
-        stats = {
-            "db_paths_cleared": 0,
-            "referenced_files_deleted": 0,
-            "orphan_files_deleted": 0,
+        return {
+            "deleted_files": self._delete_expired_storage_files(),
         }
-        referenced_files: set[str] = set()
-
-        with db_manager.sync_session_context() as session:
-            for model, attrs in self.REPORT_PATH_FIELDS.items():
-                records = session.execute(select(model)).scalars().all()
-                for record in records:
-                    changed = False
-                    for attr in attrs:
-                        raw_path = getattr(record, attr)
-                        if not raw_path:
-                            continue
-
-                        file_path = Path(raw_path)
-                        normalized = self._normalize_path(file_path)
-                        if file_path.exists() and not self._is_expired(file_path):
-                            referenced_files.add(normalized)
-                            continue
-
-                        if file_path.exists():
-                            self._delete_file(file_path)
-                            stats["referenced_files_deleted"] += 1
-
-                        setattr(record, attr, None)
-                        stats["db_paths_cleared"] += 1
-                        changed = True
-
-                    if changed:
-                        session.add(record)
-
-        stats["orphan_files_deleted"] = self._delete_orphaned_files(referenced_files)
-        return stats
 
     async def _build_schema_report_context_async(
         self,
@@ -570,7 +528,7 @@ class ReportLifecycleService:
         except OSError:
             log.exception("No se pudo eliminar el archivo de reporte: %s", file_path)
 
-    def _delete_orphaned_files(self, referenced_files: set[str]) -> int:
+    def _delete_expired_storage_files(self) -> int:
         if not self.reports_root.exists():
             return 0
 
@@ -579,21 +537,13 @@ class ReportLifecycleService:
             if not file_path.is_file() or file_path.suffix.lower() not in self.REPORT_EXTENSIONS:
                 continue
 
-            normalized = self._normalize_path(file_path)
-            if normalized in referenced_files or not self._is_expired(file_path):
+            if not self._is_expired(file_path):
                 continue
 
             self._delete_file(file_path)
             deleted += 1
 
         return deleted
-
-    @staticmethod
-    def _normalize_path(file_path: Path) -> str:
-        try:
-            return str(file_path.resolve())
-        except OSError:
-            return str(file_path)
 
 
 _report_lifecycle_service: Optional[ReportLifecycleService] = None

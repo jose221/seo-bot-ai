@@ -3,7 +3,7 @@ import json
 import pandas as pd
 from datetime import datetime
 from pathlib import Path
-from typing import List, Union, Any, Dict
+from typing import List, Union, Any, Dict, Optional
 import openpyxl # Importar openpyxl para estilos
 from pdf2docx import Converter
 
@@ -500,9 +500,9 @@ class ReportGenerator:
     #  METODOS DE GENERACIÓN (Integrados)
     # =========================================================================
 
-    def generate_pdf(self) -> str:
+    def generate_pdf(self, filename: Optional[Path] = None) -> str:
         """Genera el reporte individual de Auditoría."""
-        filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.pdf"
+        filename = filename or self.base_dir / f"Reporte_SEO_{self.timestamp}.pdf"
         doc = SimpleDocTemplate(
             str(filename),
             pagesize=LETTER,
@@ -650,16 +650,19 @@ class ReportGenerator:
 
         return str(filename)
 
-    def generate_docx(self) -> str:
+    def generate_docx(self, pdf_path: Optional[Path] = None, keep_pdf: bool = True) -> str:
         """Genera el reporte en Word (DOCX) convirtiendo el PDF."""
-        pdf_filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.pdf"
-        docx_filename = self.base_dir / f"Reporte_SEO_{self.timestamp}.docx"
+        pdf_filename = pdf_path or self.base_dir / f"Reporte_SEO_{self.timestamp}.pdf"
+        docx_filename = pdf_filename.with_suffix(".docx")
+        generated_pdf = False
 
-        # Si el PDF no existe, lo creamos
         if not pdf_filename.exists():
-            self.generate_pdf()
+            self.generate_pdf(pdf_filename)
+            generated_pdf = True
 
         self._convert_pdf_to_word(pdf_filename, docx_filename)
+        if generated_pdf and not keep_pdf:
+            self._delete_file(pdf_filename)
         return str(docx_filename)
 
     def generate_documents(self) -> Dict[str, str]:
@@ -712,6 +715,36 @@ class ReportGenerator:
 
         return {"pdf_path": str(pdf_path), "word_path": str(word_path)}
 
+    def generate_comparison_pdf(self, comparison_data: Union[Dict, Any], filename: Optional[Path] = None) -> str:
+        if hasattr(comparison_data, 'model_dump'):
+            data = comparison_data.model_dump()
+        elif hasattr(comparison_data, 'dict'):
+            data = comparison_data.dict()
+        else:
+            data = comparison_data
+
+        pdf_path = filename or self.base_dir / f"Benchmark_Report_{self.timestamp}.pdf"
+        self._create_comparison_pdf(data, pdf_path)
+        return str(pdf_path)
+
+    def generate_comparison_word(
+        self,
+        comparison_data: Union[Dict, Any],
+        pdf_path: Optional[Path] = None,
+        keep_pdf: bool = True,
+    ) -> str:
+        source_pdf = pdf_path or self.base_dir / f"Benchmark_Report_{self.timestamp}.pdf"
+        generated_pdf = False
+        if not source_pdf.exists():
+            self.generate_comparison_pdf(comparison_data, source_pdf)
+            generated_pdf = True
+
+        word_path = source_pdf.with_suffix(".docx")
+        self._convert_pdf_to_word(source_pdf, word_path)
+        if generated_pdf and not keep_pdf:
+            self._delete_file(source_pdf)
+        return str(word_path)
+
     def generate_detailed_proposal_reports(self, detailed_proposal_text: str) -> Dict[str, str]:
         """
         Genera los reportes (PDF y Word) para la propuesta detallada de esquemas.
@@ -755,6 +788,54 @@ class ReportGenerator:
             "word_path": str(word_path)
         }
 
+    def generate_detailed_proposal_pdf(
+        self,
+        detailed_proposal_text: str,
+        filename: Optional[Path] = None,
+    ) -> str:
+        pdf_path = filename or self.base_dir / f"Esquema_Propuesta_Detalle_{self.timestamp}.pdf"
+
+        doc = SimpleDocTemplate(
+            str(pdf_path),
+            pagesize=LETTER,
+            topMargin=40,
+            bottomMargin=40,
+            leftMargin=0.5*inch,
+            rightMargin=0.5*inch
+        )
+        story = []
+
+        story.append(Paragraph("Informe Detallado de Propuesta de Esquema", self.styles["ReportTitle"]))
+        story.append(Paragraph(f"<b>URL Objetivo:</b> {self.url}", self.styles["Justify"]))
+        story.append(Paragraph(f"<b>Fecha:</b> {datetime.now().strftime('%d/%m/%Y')}", self.styles["Justify"]))
+        story.append(Spacer(1, 20))
+
+        if detailed_proposal_text:
+            story.extend(self._parse_markdown_to_flowables(detailed_proposal_text))
+        else:
+            story.append(Paragraph("<i>No se generó contenido detallado.</i>", self.styles["Justify"]))
+
+        doc.build(story)
+        return str(pdf_path)
+
+    def generate_detailed_proposal_word(
+        self,
+        detailed_proposal_text: str,
+        pdf_path: Optional[Path] = None,
+        keep_pdf: bool = True,
+    ) -> str:
+        source_pdf = pdf_path or self.base_dir / f"Esquema_Propuesta_Detalle_{self.timestamp}.pdf"
+        generated_pdf = False
+        if not source_pdf.exists():
+            self.generate_detailed_proposal_pdf(detailed_proposal_text, source_pdf)
+            generated_pdf = True
+
+        word_path = source_pdf.with_suffix(".docx")
+        self._convert_pdf_to_word(source_pdf, word_path)
+        if generated_pdf and not keep_pdf:
+            self._delete_file(source_pdf)
+        return str(word_path)
+
     def _convert_pdf_to_word(self, pdf_path: Path, word_path: Path):
         """Convierte un archivo PDF a Word (DOCX) usando pdf2docx."""
         try:
@@ -763,6 +844,16 @@ class ReportGenerator:
             cv.close()
         except Exception as e:
             raise RuntimeError(f"Error convirtiendo PDF a Word: {e}") from e
+
+    @staticmethod
+    def _delete_file(file_path: Path):
+        try:
+            if file_path.exists():
+                file_path.unlink()
+        except FileNotFoundError:
+            return
+        except OSError:
+            pass
 
     def _create_comparison_pdf(self, data: dict, filename: Path):
         doc = SimpleDocTemplate(
