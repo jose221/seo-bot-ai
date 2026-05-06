@@ -2,12 +2,16 @@ import { Injectable } from '@angular/core';
 import { RichResultsRepository } from '@/app/domain/repositories/rich-results/rich-results.repository';
 import { RichResultsService } from '@/app/infrastructure/services/rich-results/rich-results.service';
 import {
+  CreateRichResultsBatchReportRequestModel,
   CreateRichResultsReportRequestModel,
   FilterRichResultsReportsRequestModel,
+  GetRichResultsStatusesRequestModel,
 } from '@/app/domain/models/rich-results/request/rich-results-request.model';
 import {
+  RichResultsReportBatchResponseModel,
   RichResultsReportDetailResponseModel,
   RichResultsReportListResponseModel,
+  RichResultsReportStatusSummaryResponseModel,
   RichResultsReportTaskResponseModel,
 } from '@/app/domain/models/rich-results/response/rich-results-response.model';
 
@@ -17,6 +21,18 @@ export class RichResultsImplementationRepository implements RichResultsRepositor
 
   async create(params: CreateRichResultsReportRequestModel): Promise<RichResultsReportTaskResponseModel> {
     return this.primaryService.create(params);
+  }
+
+  async createBatch(
+    params: CreateRichResultsBatchReportRequestModel,
+  ): Promise<RichResultsReportBatchResponseModel> {
+    return this.primaryService.createBatch(params);
+  }
+
+  async getStatuses(
+    params: GetRichResultsStatusesRequestModel,
+  ): Promise<RichResultsReportStatusSummaryResponseModel> {
+    return this.primaryService.getStatuses(params);
   }
 
   async getAll(params?: FilterRichResultsReportsRequestModel): Promise<RichResultsReportListResponseModel> {

@@ -70,6 +70,40 @@ class RichResultsReportRequest(BaseModel):
         }
 
 
+class RichResultsBatchReportRequest(BaseModel):
+    urls: List[str] = Field(
+        ...,
+        min_length=1,
+        description="Lista de URLs para generar reportes Rich Results en lote.",
+    )
+    get_ai_result: bool = Field(
+        default=True,
+        description="Si es true, solicita también el análisis de IA para cada URL.",
+    )
+
+    @field_validator("urls")
+    @classmethod
+    def validate_urls(cls, value: List[str]) -> List[str]:
+        normalized: List[str] = []
+        seen = set()
+
+        for raw_url in value:
+            url = (raw_url or "").strip()
+            if not url:
+                continue
+            if not url.startswith(("http://", "https://")):
+                raise ValueError("Todas las URLs deben comenzar con http:// o https://")
+            if url in seen:
+                continue
+            seen.add(url)
+            normalized.append(url)
+
+        if not normalized:
+            raise ValueError("Se requiere al menos una URL válida")
+
+        return normalized
+
+
 class RichResultsReportResponse(BaseModel):
     success: bool
     input_type: str
@@ -90,6 +124,13 @@ class RichResultsReportTaskResponse(BaseModel):
     status: RichResultsReportStatus
     url: str
     message: str = "Reporte de Google Rich Results iniciado en segundo plano"
+
+
+class RichResultsBatchReportResponse(BaseModel):
+    total: int
+    created_count: int
+    items: List[RichResultsReportTaskResponse]
+    message: str
 
 
 class RichResultsReportListItem(BaseModel):
@@ -138,3 +179,20 @@ class DeleteRichResultsReportResponse(BaseModel):
     deleted_count: int
     report_id: Optional[UUID] = None
     url: Optional[str] = None
+
+
+class RichResultsReportStatusSummaryItem(BaseModel):
+    url: str
+    state: str
+    report_id: Optional[UUID] = None
+    report_status: Optional[RichResultsReportStatus] = None
+    success: Optional[bool] = None
+    blocked_by_google: Optional[bool] = None
+    has_error: bool = False
+    message: Optional[str] = None
+    error_message: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+
+class RichResultsReportStatusSummaryResponse(BaseModel):
+    items: List[RichResultsReportStatusSummaryItem]

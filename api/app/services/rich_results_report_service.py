@@ -22,6 +22,8 @@ from app.schemas.rich_results_schemas import (
     RichResultsReportListResponse,
     RichResultsReportRequest,
     RichResultsReportResponse,
+    RichResultsReportStatusSummaryItem,
+    RichResultsReportStatusSummaryResponse,
     RichResultsScreenshot,
 )
 from app.services.rich_results_service import get_rich_results_service
@@ -180,6 +182,58 @@ class RichResultsReportService:
             RichResultsReport.url == self._normalize_url(url),
         )
         return (await session.execute(statement)).scalars().first()
+
+    async def get_status_summaries(
+        self,
+        session,
+        *,
+        urls: list[str],
+    ) -> RichResultsReportStatusSummaryResponse:
+        normalized_urls = []
+        seen_urls = set()
+
+        for raw_url in urls:
+            normalized = self._normalize_url(raw_url)
+            if not normalized or normalized in seen_urls:
+                continue
+            normalized_urls.append(normalized)
+            seen_urls.add(normalized)
+
+        if not normalized_urls:
+            return RichResultsReportStatusSummaryResponse(items=[])
+
+        statement = (
+            select(RichResultsReport)
+            .where(RichResultsReport.url.in_(normalized_urls))
+            .order_by(desc(RichResultsReport.created_at))
+        )
+        reports = (await session.execute(statement)).scalars().all()
+
+        latest_by_url: dict[str, RichResultsReport] = {}
+        for report in reports:
+            if report.url not in latest_by_url:
+                latest_by_url[report.url] = report
+
+        items = []
+        for url in normalized_urls:
+            report = latest_by_url.get(url)
+            state = self._classify_state(report)
+            items.append(
+                RichResultsReportStatusSummaryItem(
+                    url=url,
+                    state=state,
+                    report_id=report.id if report else None,
+                    report_status=report.status if report else None,
+                    success=report.success if report else None,
+                    blocked_by_google=report.blocked_by_google if report else None,
+                    has_error=bool(report.error_message) if report else False,
+                    message=report.message if report else None,
+                    error_message=report.error_message if report else None,
+                    created_at=report.created_at if report else None,
+                )
+            )
+
+        return RichResultsReportStatusSummaryResponse(items=items)
 
     async def delete_report_by_id(
         self,
@@ -364,6 +418,28 @@ class RichResultsReportService:
             ai_error_message=report.ai_error_message,
             created_at=report.created_at,
         )
+
+    @staticmethod
+    def _classify_state(report: Optional[RichResultsReport]) -> str:
+        if report is None:
+            return "none"
+
+        if report.status in {RichResultsReportStatus.PENDING, RichResultsReportStatus.IN_PROGRESS}:
+            return "pending"
+
+        if report.status == RichResultsReportStatus.FAILED:
+            return "error"
+
+        if report.blocked_by_google:
+            return "warning"
+
+        if report.success:
+            return "ok"
+
+        if report.error_message:
+            return "error"
+
+        return "warning"
 
 
 _rich_results_report_service: Optional[RichResultsReportService] = None

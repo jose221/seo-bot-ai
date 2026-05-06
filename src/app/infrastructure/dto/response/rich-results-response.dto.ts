@@ -7,6 +7,34 @@ export class RichResultsReportTaskResponseDto {
   ) {}
 }
 
+export class RichResultsReportBatchResponseDto {
+  constructor(
+    public total: number,
+    public created_count: number,
+    public items: RichResultsReportTaskResponseDto[],
+    public message: string,
+  ) {}
+}
+
+export class RichResultsReportStatusSummaryItemDto {
+  constructor(
+    public url: string,
+    public state: string,
+    public report_id: string | null,
+    public report_status: string | null,
+    public success: boolean | null,
+    public blocked_by_google: boolean | null,
+    public has_error: boolean,
+    public message: string | null,
+    public error_message: string | null,
+    public created_at: string | null,
+  ) {}
+}
+
+export class RichResultsReportStatusSummaryResponseDto {
+  constructor(public items: RichResultsReportStatusSummaryItemDto[]) {}
+}
+
 export class RichResultsReportListItemDto {
   constructor(
     public id: string,

@@ -197,13 +197,13 @@
       @if (showFilters()) {
         <div class="filter-panel mb-4">
           <div class="row g-3">
-            <div class="col-12 col-sm-6 col-lg-4">
+            <div class="col-12 col-sm-6 col-lg-3">
               <label class="filter-label">Buscar URL</label>
               <input type="text" class="filter-input"
                      [ngModel]="searchTerm()" (ngModelChange)="searchTerm.set($event)"
                      placeholder="Filtrar por URL...">
             </div>
-            <div class="col-6 col-sm-6 col-lg-3">
+            <div class="col-6 col-sm-6 col-lg-2">
               <label class="filter-label">Severidad</label>
               <select class="filter-input"
                       [ngModel]="severityFilter()" (ngModelChange)="severityFilter.set($event)">
@@ -237,6 +237,42 @@
 
       <!-- ===== LISTADO DE URLS ===== -->
       <div class="schemas-list">
+        @if (isLoggedIn()) {
+          <div class="rich-results-batch-panel">
+            <div class="rich-results-batch-panel__header">
+              <div>
+                <h5 class="mb-1">Lote de Rich Results</h5>
+                <small class="text-muted">
+                  Selecciona varias URLs con checkbox para ejecutar Rich Results en lote.
+                </small>
+              </div>
+              <span class="sv-badge sv-info">{{ richResultsBatchCount() }} URL(s)</span>
+            </div>
+
+            <div class="rich-results-batch-panel__actions">
+              <button class="btn-action" type="button" (click)="addFilteredUrlsToRichResultsBatch()">
+                Seleccionar visibles
+              </button>
+              <button class="btn-action" type="button" (click)="clearRichResultsBatch()">
+                Limpiar selección
+              </button>
+              <button
+                class="btn-action btn-action--rerun"
+                type="button"
+                (click)="createRichResultsBatchReports()"
+                [disabled]="richResultsBatchSubmitting()"
+              >
+                @if (richResultsBatchSubmitting()) {
+                  <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                  Encolando...
+                } @else {
+                  Crear reporte masivo
+                }
+              </button>
+            </div>
+          </div>
+        }
+
         @for (schema of filteredSchemas(); track $index) {
           <div class="schema-card"
                [attr.id]="getSchemaDomId(schema.url)"
@@ -245,8 +281,20 @@
             <!-- Card Header (siempre visible, clickeable) -->
             <div class="schema-card-header" (click)="toggleCard($index)">
               <div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
+                @if (isLoggedIn()) {
+                  <label class="rich-results-url-checkbox" (click)="$event.stopPropagation()">
+                    <input
+                      type="checkbox"
+                      [checked]="isUrlSelectedForRichResultsBatch(schema.url)"
+                      (change)="toggleRichResultsBatchUrl(schema.url)"
+                    />
+                  </label>
+                }
                 <span class="sv-badge sv-badge--sm" [ngClass]="getSeverityClass(schema.severity)">
                   {{ schema.severity }}
+                </span>
+                <span class="sv-badge sv-badge--sm" [ngClass]="getRichResultsStateBadgeClass(schema.url)">
+                  {{ getRichResultsStateLabel(schema.url) }}
                 </span>
                 <a [href]="schema.url" target="_blank" class="schema-url" (click)="$event.stopPropagation()">
                   {{ schema.url }}
@@ -456,6 +504,17 @@
                       <small class="text-muted">Consulta los reportes generados para esta URL.</small>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
+                      <select
+                        class="filter-input rich-results-history-filter"
+                        [ngModel]="richResultsHistoryFilter()"
+                        (ngModelChange)="richResultsHistoryFilter.set($event)"
+                      >
+                        <option value="all">Todos</option>
+                        <option value="ok">OK</option>
+                        <option value="warning">Warning</option>
+                        <option value="error">Error</option>
+                        <option value="pending">Pendiente</option>
+                      </select>
                       <button class="btn-action" (click)="ensureRichResultsLoaded(schema.url, true)" [disabled]="isRichResultsLoading(schema.url)">
                         @if (isRichResultsLoading(schema.url)) {
                           <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -482,13 +541,16 @@
 
                   @if (isRichResultsLoading(schema.url) && getRichResults(schema.url).length === 0) {
                     <div class="text-muted small">Cargando reportes...</div>
-                  } @else if (getRichResults(schema.url).length > 0) {
+                  } @else if (getFilteredRichResults(schema.url).length > 0) {
                     <div class="d-flex flex-column gap-2">
-                      @for (report of getRichResults(schema.url); track report.id) {
+                      @for (report of getFilteredRichResults(schema.url); track report.id) {
                         <div class="border rounded p-3">
                           <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
                             <div class="d-flex flex-column gap-1">
                               <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="sv-badge" [ngClass]="getRichResultsHistoryStateClass(report)">
+                                  {{ getRichResultsHistoryStateLabel(report) }}
+                                </span>
                                 <span class="sv-badge" [ngClass]="getRichResultsStatusClass(report.status)">{{ report.status }}</span>
                                 <span class="sv-badge" [ngClass]="report.success ? 'sv-success' : 'sv-secondary'">
                                   {{ report.success ? 'success' : 'sin resultado' }}
@@ -533,10 +595,28 @@
                                   </div>
                                 }
                                 @if (detail.screenshots.length > 0) {
-                                  <div class="d-flex flex-wrap gap-2">
+                                  <div class="rich-results-screenshot-grid">
                                     @for (shot of detail.screenshots; track shot.url) {
-                                      <a [href]="shot.url" target="_blank" rel="noopener noreferrer" class="btn-action">
-                                        Screenshot
+                                      <a
+                                        [href]="getScreenshotPreviewUrl(shot.url)"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="rich-results-screenshot-card"
+                                      >
+                                        <img
+                                          [src]="getScreenshotPreviewUrl(shot.url)"
+                                          alt="Screenshot de Rich Results"
+                                          class="rich-results-screenshot-card__image"
+                                          loading="lazy"
+                                        />
+                                        <span class="rich-results-screenshot-card__label">
+                                          Abrir imagen completa
+                                        </span>
+                                        <small class="rich-results-screenshot-card__breadcrumb">
+                                          <span>{{ getScreenshotApiBase(shot.url) }}</span>
+                                          <i class="bi bi-chevron-right"></i>
+                                          <span>{{ getScreenshotApiPath(shot.url) }}</span>
+                                        </small>
                                       </a>
                                     }
                                   </div>
@@ -549,7 +629,7 @@
                     </div>
                   } @else {
                     <div class="text-muted small">
-                      No hay reportes Rich Results para esta URL.
+                      No hay reportes Rich Results para esta URL con el filtro actual.
                     </div>
                   }
                 </div>

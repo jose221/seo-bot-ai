@@ -4,17 +4,23 @@ import { HttpService } from '@/app/infrastructure/services/general/http.service'
 import { environment } from '@/environments/environment';
 import { RichResultsMapper } from '@/app/domain/mappers/rich-results/rich-results.mapper';
 import {
+  CreateRichResultsBatchReportRequestModel,
   CreateRichResultsReportRequestModel,
   FilterRichResultsReportsRequestModel,
+  GetRichResultsStatusesRequestModel,
 } from '@/app/domain/models/rich-results/request/rich-results-request.model';
 import {
+  RichResultsReportBatchResponseModel,
   RichResultsReportDetailResponseModel,
   RichResultsReportListResponseModel,
+  RichResultsReportStatusSummaryResponseModel,
   RichResultsReportTaskResponseModel,
 } from '@/app/domain/models/rich-results/response/rich-results-response.model';
 import {
+  RichResultsReportBatchResponseDto,
   RichResultsReportDetailResponseDto,
   RichResultsReportListResponseDto,
+  RichResultsReportStatusSummaryResponseDto,
   RichResultsReportTaskResponseDto,
 } from '@/app/infrastructure/dto/response/rich-results-response.dto';
 
@@ -38,6 +44,29 @@ export class RichResultsService extends BaseService {
       this.getToken,
     );
     return this.mapper.mapResponseTask(response);
+  }
+
+  async createBatch(
+    params: CreateRichResultsBatchReportRequestModel,
+  ): Promise<RichResultsReportBatchResponseModel> {
+    const response = await this.httpService.post<RichResultsReportBatchResponseDto>(
+      `${this.endpoint}/report-page/batch`,
+      this.mapper.mapCreateBatch(params),
+      {},
+      this.getToken,
+    );
+    return this.mapper.mapResponseBatch(response);
+  }
+
+  async getStatuses(
+    params: GetRichResultsStatusesRequestModel,
+  ): Promise<RichResultsReportStatusSummaryResponseModel> {
+    const response = await this.httpService.post<RichResultsReportStatusSummaryResponseDto>(
+      `${this.endpoint}/get_reports/statuses`,
+      this.mapper.mapStatuses(params),
+      {},
+    );
+    return this.mapper.mapResponseStatuses(response);
   }
 
   async getAll(params?: FilterRichResultsReportsRequestModel): Promise<RichResultsReportListResponseModel> {

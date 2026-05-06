@@ -9,9 +9,12 @@ from app.core.database import get_session
 from app.models.user import User
 from app.schemas.rich_results_schemas import (
     DeleteRichResultsReportResponse,
+    RichResultsBatchReportRequest,
+    RichResultsBatchReportResponse,
     RichResultsReportDetailResponse,
     RichResultsReportListResponse,
     RichResultsReportRequest,
+    RichResultsReportStatusSummaryResponse,
     RichResultsReportTaskResponse,
 )
 from app.services.rich_results_report_service import get_rich_results_report_service
@@ -55,6 +58,67 @@ async def report_page(
         status=report.status,
         url=report.url,
         message="Reporte de Google Rich Results encolado",
+    )
+
+
+@router.post(
+    "/report-page/batch",
+    response_model=RichResultsBatchReportResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def report_page_batch(
+    payload: RichResultsBatchReportRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    session=Depends(get_session),
+):
+    auth_token = getattr(current_user, "_token", None)
+    items: list[RichResultsReportTaskResponse] = []
+
+    for url in payload.urls:
+        report_payload = RichResultsReportRequest(
+            content=url,
+            is_url=True,
+            get_ai_result=payload.get_ai_result,
+        )
+        report = await get_rich_results_report_service().create_pending_report(
+            session,
+            user_id=current_user.id,
+            payload=report_payload,
+        )
+        background_tasks.add_task(
+            get_rich_results_report_service().run_report_task,
+            report_id=report.id,
+            payload=report_payload,
+            token=auth_token or "",
+        )
+        items.append(
+            RichResultsReportTaskResponse(
+                task_id=report.id,
+                status=report.status,
+                url=report.url,
+                message="Reporte de Google Rich Results encolado",
+            )
+        )
+
+    return RichResultsBatchReportResponse(
+        total=len(payload.urls),
+        created_count=len(items),
+        items=items,
+        message="Reportes de Google Rich Results encolados",
+    )
+
+
+@router.post("/get_reports/statuses", response_model=RichResultsReportStatusSummaryResponse)
+async def get_report_statuses(
+    payload: RichResultsBatchReportRequest,
+    current_user: User | None = Depends(get_current_user_optional),
+    session=Depends(get_session),
+):
+    del current_user
+    return await get_rich_results_report_service().get_status_summaries(
+        session,
+        urls=payload.urls,
     )
 
 

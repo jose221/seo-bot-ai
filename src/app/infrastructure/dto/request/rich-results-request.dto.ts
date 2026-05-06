@@ -6,6 +6,17 @@ export class CreateRichResultsReportRequestDto {
   ) {}
 }
 
+export class CreateRichResultsBatchReportRequestDto {
+  constructor(
+    public urls: string[],
+    public get_ai_result: boolean,
+  ) {}
+}
+
+export class GetRichResultsStatusesRequestDto {
+  constructor(public urls: string[]) {}
+}
+
 export class FilterRichResultsReportsRequestDto {
   constructor(
     public url?: string,

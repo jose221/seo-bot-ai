@@ -15,10 +15,14 @@ import {
   CreatePublicCommentRequestModel,
   AnswerCommentRequestModel,
 } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
-import { CreateRichResultsReportRequestModel } from '@/app/domain/models/rich-results/request/rich-results-request.model';
+import {
+  CreateRichResultsBatchReportRequestModel,
+  CreateRichResultsReportRequestModel,
+} from '@/app/domain/models/rich-results/request/rich-results-request.model';
 import {
   RichResultsReportDetailResponseModel,
   RichResultsReportListItemModel,
+  RichResultsReportStatusSummaryItemModel,
 } from '@/app/domain/models/rich-results/response/rich-results-response.model';
 import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
@@ -55,7 +59,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   isLoading = signal<boolean>(true);
   data = signal<AuditUrlValidationSchemasResponseModel | null>(null);
   validationId = signal<string | null>(null);
-  showFilters = signal<boolean>(false);
+  showFilters = signal<boolean>(true);
   layout = signal<AuditUrlValidationInfoLayout>('shared');
 
   // Filters
@@ -63,6 +67,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   severityFilter = signal<string>('');
   typeFilter = signal<string>('');
   onlyWithErrors = signal<boolean>(false);
+  richResultsHistoryFilter = signal<string>('all');
 
   // Accordion
   expandedCards = signal<Set<number>>(new Set([0]));
@@ -102,7 +107,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   richResultsDeletingSet = signal<Set<string>>(new Set());
   richResultsExpandedSet = signal<Set<string>>(new Set());
   richResultsDetailMap = signal<Map<string, RichResultsReportDetailResponseModel>>(new Map());
+  richResultsStatusMap = signal<Map<string, RichResultsReportStatusSummaryItemModel>>(new Map());
+  selectedRichResultsUrls = signal<Set<string>>(new Set());
+  richResultsBatchSubmitting = signal<boolean>(false);
   private richResultsPollTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly richResultsApiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
 
   availableTypes = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -141,8 +150,13 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   });
 
   hasActiveFilters = computed(() => {
-    return this.searchTerm() !== '' || this.severityFilter() !== '' || this.typeFilter() !== '' || this.onlyWithErrors();
+    return this.searchTerm() !== ''
+      || this.severityFilter() !== ''
+      || this.typeFilter() !== ''
+      || this.onlyWithErrors();
   });
+
+  richResultsBatchCount = computed(() => this.selectedRichResultsUrls().size);
 
   commentSummary = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -244,6 +258,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       this.isLoading.set(true);
       const response = await this._repository.getSchemasPublic(id);
       this.data.set(response);
+      await this.loadRichResultsStatuses(response.schemas.map((schema) => schema.url));
     } catch (error) {
       console.error('Error loading schemas:', error);
       await this._sweetAlertUtil.error('general.messages.error', 'No se pudieron cargar los esquemas de la validación.');
@@ -533,6 +548,117 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     }
   }
 
+  isUrlSelectedForRichResultsBatch(url: string): boolean {
+    return this.selectedRichResultsUrls().has(url);
+  }
+
+  toggleRichResultsBatchUrl(url: string): void {
+    const next = new Set(this.selectedRichResultsUrls());
+    if (next.has(url)) next.delete(url);
+    else next.add(url);
+    this.selectedRichResultsUrls.set(next);
+  }
+
+  addFilteredUrlsToRichResultsBatch(): void {
+    const visibleUrls = this.filteredSchemas().map((schema) => schema.url);
+    const next = new Set(this.selectedRichResultsUrls());
+    for (const url of visibleUrls) next.add(url);
+    this.selectedRichResultsUrls.set(next);
+  }
+
+  clearRichResultsBatch(): void {
+    this.selectedRichResultsUrls.set(new Set());
+  }
+
+  getScreenshotPreviewUrl(assetUrl: string): string {
+    if (!assetUrl) return '';
+    if (/^https?:\/\//i.test(assetUrl)) return assetUrl;
+    const normalizedPath = assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
+    return `${this.richResultsApiBase}${normalizedPath}`;
+  }
+
+  getScreenshotApiBase(assetUrl: string): string {
+    if (/^https?:\/\//i.test(assetUrl)) {
+      try {
+        return new URL(assetUrl).origin;
+      } catch {
+        return this.richResultsApiBase;
+      }
+    }
+    return this.richResultsApiBase;
+  }
+
+  getScreenshotApiPath(assetUrl: string): string {
+    if (!assetUrl) return '/';
+    if (/^https?:\/\//i.test(assetUrl)) {
+      try {
+        const parsed = new URL(assetUrl);
+        return `${parsed.pathname}${parsed.search}`;
+      } catch {
+        return assetUrl;
+      }
+    }
+    return assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
+  }
+
+  getRichResultsState(url: string): string {
+    return this.richResultsStatusMap().get(url)?.state ?? 'none';
+  }
+
+  getRichResultsStateLabel(url: string): string {
+    const state = this.getRichResultsState(url);
+    if (state === 'ok') return 'Rich Results OK';
+    if (state === 'warning') return 'Rich Results warning';
+    if (state === 'error') return 'Rich Results error';
+    if (state === 'pending') return 'Rich Results pendiente';
+    return 'Sin reporte Rich Results';
+  }
+
+  getRichResultsStateBadgeClass(url: string): string {
+    const state = this.getRichResultsState(url);
+    if (state === 'ok') return 'sv-success';
+    if (state === 'warning') return 'sv-warning';
+    if (state === 'error') return 'sv-danger';
+    if (state === 'pending') return 'sv-info';
+    return 'sv-secondary';
+  }
+
+  getFilteredRichResults(url: string): RichResultsReportListItemModel[] {
+    const selectedFilter = this.richResultsHistoryFilter();
+    const reports = this.getRichResults(url);
+
+    if (selectedFilter === 'all') return reports;
+    return reports.filter((report) => this.getRichResultsHistoryState(report) === selectedFilter);
+  }
+
+  getRichResultsHistoryState(report: RichResultsReportListItemModel): string {
+    const status = (report.status || '').toLowerCase();
+
+    if (status === 'pending' || status === 'in_progress') return 'pending';
+    if (status === 'failed' || report.error_message) return 'error';
+    if (report.blocked_by_google) return 'warning';
+    if (report.success) return 'ok';
+    return 'warning';
+  }
+
+  getRichResultsHistoryStateLabel(report: RichResultsReportListItemModel): string {
+    const state = this.getRichResultsHistoryState(report);
+    if (state === 'ok') return 'OK';
+    if (state === 'warning') return 'Warning';
+    if (state === 'error') return 'Error';
+    if (state === 'pending') return 'Pendiente';
+    return 'Sin clasificar';
+  }
+
+  getRichResultsHistoryStateClass(report: RichResultsReportListItemModel): string {
+    const state = this.getRichResultsHistoryState(report);
+    if (state === 'ok') return 'sv-success';
+    if (state === 'warning') return 'sv-warning';
+    if (state === 'error') return 'sv-danger';
+    if (state === 'pending') return 'sv-info';
+    return 'sv-secondary';
+  }
+
   private startRichResultsPolling(): void {
     if (this.richResultsPollTimer || !isPlatformBrowser(this._platformId)) return;
     this.richResultsPollTimer = setInterval(() => {
@@ -547,6 +673,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
     for (const url of urls) {
       await this.ensureRichResultsLoaded(url, true);
+    }
+
+    if (this.data()?.schemas?.length) {
+      await this.loadRichResultsStatuses(this.data()!.schemas.map((schema) => schema.url));
     }
   }
 
@@ -576,6 +706,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       const next = new Map(this.richResultsMap());
       next.set(url, response.items.filter((item) => item.url === url));
       this.richResultsMap.set(next);
+      await this.loadRichResultsStatuses([url]);
     } catch (error) {
       console.error('Error loading rich results reports:', error);
     } finally {
@@ -668,6 +799,43 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     }
   }
 
+  async createRichResultsBatchReports(): Promise<void> {
+    if (!this.isLoggedIn()) return;
+
+    const urls = Array.from(this.selectedRichResultsUrls());
+    if (urls.length === 0) {
+      await this._sweetAlertUtil.error('', 'Selecciona al menos una URL con los checkboxes para el lote.');
+      return;
+    }
+
+    this.richResultsBatchSubmitting.set(true);
+    try {
+      await this._richResultsRepository.createBatch(
+        new CreateRichResultsBatchReportRequestModel(urls, true),
+      );
+
+      for (const url of urls) {
+        await this.ensureRichResultsLoaded(url, true);
+      }
+      await this.loadRichResultsStatuses(urls);
+
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4500,
+        timerProgressBar: true,
+        icon: 'success',
+        title: `Se encolaron ${urls.length} reporte(s) Rich Results`,
+      });
+    } catch (error) {
+      console.error('Error creating rich results batch:', error);
+      await this._sweetAlertUtil.error('', 'No se pudo iniciar el lote de reportes Rich Results.');
+    } finally {
+      this.richResultsBatchSubmitting.set(false);
+    }
+  }
+
   async deleteRichResultsReport(reportId: string, url: string): Promise<void> {
     if (!this.isLoggedIn()) return;
 
@@ -718,11 +886,43 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       const next = new Map(this.richResultsMap());
       next.set(url, []);
       this.richResultsMap.set(next);
+      const statusMap = new Map(this.richResultsStatusMap());
+      statusMap.set(url, {
+        url,
+        state: 'none',
+        report_id: null,
+        report_status: null,
+        success: null,
+        blocked_by_google: null,
+        has_error: false,
+        message: null,
+        error_message: null,
+        created_at: null,
+      });
+      this.richResultsStatusMap.set(statusMap);
     } catch (error) {
       console.error('Error deleting rich results reports by url:', error);
       await this._sweetAlertUtil.error('', 'No se pudieron eliminar los reportes.');
     } finally {
       this.updateUrlSet(this.richResultsDeletingSet, url, false);
+    }
+  }
+
+  private async loadRichResultsStatuses(urls: string[]): Promise<void> {
+    const normalizedUrls = Array.from(new Set(urls.filter(Boolean)));
+    if (normalizedUrls.length === 0) return;
+
+    try {
+      const response = await this._richResultsRepository.getStatuses({
+        urls: normalizedUrls,
+      });
+      const next = new Map(this.richResultsStatusMap());
+      for (const item of response.items) {
+        next.set(item.url, item);
+      }
+      this.richResultsStatusMap.set(next);
+    } catch (error) {
+      console.error('Error loading rich results status summaries:', error);
     }
   }
 
