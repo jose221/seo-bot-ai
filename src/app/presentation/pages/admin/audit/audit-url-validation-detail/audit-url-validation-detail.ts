@@ -7,7 +7,7 @@ import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-ur
 import { FindAuditUrlValidationResponseModel } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
-import { environment } from '@/environments/environment';
+import { ReportDownloadService } from '@/app/infrastructure/services/general/report-download.service';
 
 @Component({
   selector: 'app-audit-url-validation-detail',
@@ -20,6 +20,7 @@ export class AuditUrlValidationDetail implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _repository = inject(AuditUrlValidationRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
+  private readonly _reportDownloadService = inject(ReportDownloadService);
   public readonly statusUtil = inject(StatusAuditUtil);
 
   isLoading = signal<boolean>(true);
@@ -44,30 +45,31 @@ export class AuditUrlValidationDetail implements OnInit {
     }
   }
 
-  downloadReport(type: 'pdf' | 'word' | 'global_pdf' | 'global_word') {
-    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    let path: string | null = null;
+  canDownloadReports(): boolean {
+    return this.item()?.status === 'completed';
+  }
 
-    switch (type) {
-      case 'pdf':
-        path = this.item()?.report_pdf_path ?? null;
-        break;
-      case 'word':
-        path = this.item()?.report_word_path ?? null;
-        break;
-      case 'global_pdf':
-        path = this.item()?.global_report_pdf_path ?? null;
-        break;
-      case 'global_word':
-        path = this.item()?.global_report_word_path ?? null;
-        break;
-    }
-
-    if (!path) {
-      this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
+  async downloadReport(type: 'pdf' | 'word' | 'global_pdf' | 'global_word') {
+    const id = this.item()?.id;
+    if (!id || !this.canDownloadReports()) {
+      await this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
       return;
     }
-    window.open(`${baseUrl}/${path}`, '_blank');
+
+    try {
+      if (type === 'pdf' || type === 'word') {
+        await this._reportDownloadService.downloadUrlValidationReport(id, type);
+        return;
+      }
+
+      await this._reportDownloadService.downloadUrlValidationGlobalReport(
+        id,
+        type === 'global_pdf' ? 'pdf' : 'word',
+      );
+    } catch (error) {
+      console.error(error);
+      await this._sweetAlertUtil.error('general.messages.error', 'No se pudo descargar el reporte');
+    }
   }
 
   getSeverityClass(severity: string | null): string {

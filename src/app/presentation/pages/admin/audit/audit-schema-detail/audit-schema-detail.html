@@ -22,25 +22,23 @@
             class="btn btn-primary dropdown-toggle"
             data-bs-toggle="dropdown"
             aria-expanded="false"
-            [disabled]="!item()?.report_pdf_path && !item()?.report_word_path">
+            [disabled]="!canDownloadReports()">
             <i class="bi bi-download me-1"></i>{{ 'auditSchemas.modal.downloadReport' | translate }}
           </button>
           <ul class="dropdown-menu dropdown-menu-end">
-            @if (item()?.report_pdf_path) {
+            @if (canDownloadReports()) {
               <li>
                 <a class="dropdown-item" (click)="downloadReport('pdf')" style="cursor:pointer">
                   <i class="bi bi-file-pdf me-2 text-danger"></i>Descargar PDF
                 </a>
               </li>
-            }
-            @if (item()?.report_word_path) {
               <li>
                 <a class="dropdown-item" (click)="downloadReport('word')" style="cursor:pointer">
                   <i class="bi bi-file-word me-2 text-primary"></i>Descargar Word
                 </a>
               </li>
             }
-            @if (!item()?.report_pdf_path && !item()?.report_word_path) {
+            @if (!canDownloadReports()) {
               <li>
                 <span class="dropdown-item text-muted">No hay reportes disponibles</span>
               </li>

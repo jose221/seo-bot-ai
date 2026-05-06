@@ -8,7 +8,7 @@ import { AuditResponseModel } from '@/app/domain/models/audit/response/audit-res
 import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 import { DateFormatPipe } from '@/app/pipes/date-format-pipe';
-import { environment } from '@/environments/environment';
+import { ReportDownloadService } from '@/app/infrastructure/services/general/report-download.service';
 
 @Component({
   selector: 'app-audit-detail',
@@ -21,6 +21,7 @@ export class AuditDetail implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _auditRepository = inject(AuditRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
+  private readonly _reportDownloadService = inject(ReportDownloadService);
   public readonly statusAuditUtil = inject(StatusAuditUtil);
 
   isLoading = signal<boolean>(true);
@@ -45,22 +46,22 @@ export class AuditDetail implements OnInit {
     }
   }
 
-  downloadReport(type: 'pdf' | 'excel' | 'word') {
-    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    let reportPath: string | null | undefined;
+  canDownloadReports(): boolean {
+    return this.item()?.status === 'completed';
+  }
 
-    if (type === 'pdf') {
-      reportPath = this.item()?.report_pdf_path;
-    } else if (type === 'excel') {
-      reportPath = this.item()?.report_excel_path;
-    } else {
-      reportPath = this.item()?.report_word_path;
-    }
-
-    if (!reportPath) {
-      this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
+  async downloadReport(type: 'pdf' | 'word') {
+    const id = this.item()?.id;
+    if (!id || !this.canDownloadReports()) {
+      await this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
       return;
     }
-    window.open(`${baseUrl}/${reportPath}`, '_blank');
+
+    try {
+      await this._reportDownloadService.downloadAuditReport(id, type);
+    } catch (error) {
+      console.error(error);
+      await this._sweetAlertUtil.error('general.messages.error', 'No se pudo descargar el reporte');
+    }
   }
 }

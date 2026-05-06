@@ -22,32 +22,23 @@
             class="btn btn-primary dropdown-toggle"
             data-bs-toggle="dropdown"
             aria-expanded="false"
-            [disabled]="!item()?.report_pdf_path && !item()?.report_excel_path && !item()?.report_word_path">
+            [disabled]="!canDownloadReports()">
             <i class="bi bi-download me-1"></i>{{ 'audits.compare.confirmModal.exportButton' | translate }}
           </button>
           <ul class="dropdown-menu dropdown-menu-end">
-            @if (item()?.report_pdf_path) {
+            @if (canDownloadReports()) {
               <li>
                 <a class="dropdown-item" (click)="downloadReport('pdf')" style="cursor: pointer;">
                   <i class="bi bi-file-pdf me-2"></i>Descargar PDF
                 </a>
               </li>
-            }
-            @if (item()?.report_excel_path) {
-              <li>
-                <a class="dropdown-item" (click)="downloadReport('excel')" style="cursor: pointer;">
-                  <i class="bi bi-file-excel me-2"></i>Descargar Excel
-                </a>
-              </li>
-            }
-            @if (item()?.report_word_path) {
               <li>
                 <a class="dropdown-item" (click)="downloadReport('word')" style="cursor: pointer;">
                   <i class="bi bi-file-word me-2"></i>Descargar Word
                 </a>
               </li>
             }
-            @if (!item()?.report_pdf_path && !item()?.report_excel_path && !item()?.report_word_path) {
+            @if (!canDownloadReports()) {
               <li>
                 <span class="dropdown-item text-muted">No hay reportes disponibles</span>
               </li>

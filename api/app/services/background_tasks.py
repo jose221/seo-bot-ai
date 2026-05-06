@@ -150,13 +150,13 @@ async def run_audit_task(
                 audit.seo_analysis = seo_analysis
 
                 # Generar reporte
-                report = ReportGenerator(audit=audit).generate_all()
+                report = ReportGenerator(audit=audit).generate_documents()
                 print(f"📄 Reporte generado: {report}")
 
                 # Guardar rutas de los reportes generados
                 audit.report_pdf_path = report.get('pdf_path')
-                audit.report_excel_path = report.get('xlsx_path')
                 audit.report_word_path = report.get('word_path')
+                audit.report_excel_path = None
 
                 session.add(audit)
 
@@ -350,7 +350,7 @@ async def run_comparison_task(
         # Generar reporte
         from app.schemas import audit_schemas
         response_obj = audit_schemas.AuditComparisonResponse(**comparison_result)
-        report = ReportGenerator(audit=base_audit).generate_comparison_reports(response_obj)
+        report = ReportGenerator(audit=base_audit).generate_comparison_documents(response_obj)
         print(f"📄 Reporte de comparación generado: {report}")
 
         # NUEVO: Generar Reporte Detallado de Propuesta de Schema
@@ -390,8 +390,8 @@ async def run_comparison_task(
 
                 # Guardar rutas de los reportes generados
                 comparison.report_pdf_path = report.get('pdf_path')
-                comparison.report_excel_path = report.get('xlsx_path')
                 comparison.report_word_path = report.get('word_path')
+                comparison.report_excel_path = None
 
                 # Guardar rutas de reporte detallado
                 comparison.proposal_report_pdf_path = detailed_report_paths.get('pdf_path')

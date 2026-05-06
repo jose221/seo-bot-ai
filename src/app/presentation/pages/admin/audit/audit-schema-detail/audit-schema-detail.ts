@@ -7,7 +7,7 @@ import { AuditSchemaRepository } from '@/app/domain/repositories/audit-schema/au
 import { FindAuditSchemaResponseModel } from '@/app/domain/models/audit-schema/response/audit-schema-response.model';
 import { StatusAuditUtil } from '@/app/presentation/utils/status-audit.util';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
-import { environment } from '@/environments/environment';
+import { ReportDownloadService } from '@/app/infrastructure/services/general/report-download.service';
 
 @Component({
   selector: 'app-audit-schema-detail',
@@ -20,6 +20,7 @@ export class AuditSchemaDetail implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _auditSchemaRepository = inject(AuditSchemaRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
+  private readonly _reportDownloadService = inject(ReportDownloadService);
   public readonly statusUtil = inject(StatusAuditUtil);
 
   isLoading = signal<boolean>(true);
@@ -44,15 +45,23 @@ export class AuditSchemaDetail implements OnInit {
     }
   }
 
-  downloadReport(type: 'pdf' | 'word') {
-    const baseUrl = (environment.apiUrl as string).replace('/api/v1', '');
-    const path = type === 'pdf' ? this.item()?.report_pdf_path : this.item()?.report_word_path;
+  canDownloadReports(): boolean {
+    return this.item()?.status === 'completed';
+  }
 
-    if (!path) {
-      this._sweetAlertUtil.error('general.messages.error', `El reporte no está disponible`);
+  async downloadReport(type: 'pdf' | 'word') {
+    const id = this.item()?.id;
+    if (!id || !this.canDownloadReports()) {
+      await this._sweetAlertUtil.error('general.messages.error', 'El reporte no está disponible');
       return;
     }
-    window.open(`${baseUrl}/${path}`, '_blank');
+
+    try {
+      await this._reportDownloadService.downloadSchemaReport(id, type);
+    } catch (error) {
+      console.error(error);
+      await this._sweetAlertUtil.error('general.messages.error', 'No se pudo descargar el reporte');
+    }
   }
 
   getStatusClass(status: string): string {

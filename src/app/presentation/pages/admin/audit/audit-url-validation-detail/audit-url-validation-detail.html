@@ -19,34 +19,26 @@
         <a [routerLink]="['/admin/audit/url-validations', item()!.id, 'info']" class="btn btn-primary">
           <i class="bi bi-braces me-1"></i> Ver Esquemas
         </a>
-        @if (item()!.report_pdf_path || item()!.report_word_path) {
+        @if (canDownloadReports()) {
           <div class="d-flex gap-1 align-items-center">
             <small class="text-muted fw-semibold me-1">Detalle:</small>
-            @if (item()!.report_pdf_path) {
-              <button type="button" class="btn btn-outline-danger btn-sm" (click)="downloadReport('pdf')" title="Descargar PDF Detalle">
-                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
-              </button>
-            }
-            @if (item()!.report_word_path) {
-              <button type="button" class="btn btn-outline-primary btn-sm" (click)="downloadReport('word')" title="Descargar Word Detalle">
-                <i class="bi bi-file-earmark-word me-1"></i>Word
-              </button>
-            }
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="downloadReport('pdf')" title="Descargar PDF Detalle">
+              <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="downloadReport('word')" title="Descargar Word Detalle">
+              <i class="bi bi-file-earmark-word me-1"></i>Word
+            </button>
           </div>
         }
-        @if (item()!.global_report_pdf_path || item()!.global_report_word_path) {
+        @if (canDownloadReports()) {
           <div class="d-flex gap-1 align-items-center">
             <small class="text-muted fw-semibold me-1">Global:</small>
-            @if (item()!.global_report_pdf_path) {
-              <button type="button" class="btn btn-danger btn-sm" (click)="downloadReport('global_pdf')" title="Descargar PDF Global">
-                <i class="bi bi-file-earmark-pdf me-1"></i>PDF
-              </button>
-            }
-            @if (item()!.global_report_word_path) {
-              <button type="button" class="btn btn-primary btn-sm" (click)="downloadReport('global_word')" title="Descargar Word Global">
-                <i class="bi bi-file-earmark-word me-1"></i>Word
-              </button>
-            }
+            <button type="button" class="btn btn-danger btn-sm" (click)="downloadReport('global_pdf')" title="Descargar PDF Global">
+              <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="downloadReport('global_word')" title="Descargar Word Global">
+              <i class="bi bi-file-earmark-word me-1"></i>Word
+            </button>
           </div>
         }
       }

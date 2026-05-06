@@ -6,7 +6,7 @@ import { MarkdownModule } from 'ngx-markdown';
 import { AuditRepository } from '@/app/domain/repositories/audit/audit.repository';
 import { FindCompareAuditResponseModel } from '@/app/domain/models/audit/response/audit-response.model';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
-import { environment } from '@/environments/environment';
+import { ReportDownloadService } from '@/app/infrastructure/services/general/report-download.service';
 
 @Component({
   selector: 'app-compare-audit-detail',
@@ -19,6 +19,7 @@ export class CompareAuditDetail implements OnInit {
   private readonly _route = inject(ActivatedRoute);
   private readonly _auditRepository = inject(AuditRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
+  private readonly _reportDownloadService = inject(ReportDownloadService);
 
   isLoading = signal<boolean>(true);
   item = signal<FindCompareAuditResponseModel | null>(null);
@@ -42,23 +43,22 @@ export class CompareAuditDetail implements OnInit {
     }
   }
 
-  downloadReport(type: 'pdf' | 'excel' | 'word') {
-    const baseUrl = environment.apiUrl.replace('/api/v1', '');
-    let reportPath: string | null | undefined;
+  canDownloadReports(): boolean {
+    return this.item()?.status === 'completed';
+  }
 
-    if (type === 'pdf') {
-      reportPath = this.item()?.report_pdf_path;
-    } else if (type === 'excel') {
-      reportPath = this.item()?.report_excel_path;
-    } else {
-      reportPath = this.item()?.report_word_path;
-    }
-
-    if (!reportPath) {
-      this._sweetAlertUtil.error('general.messages.error', `El reporte ${type.toUpperCase()} no está disponible`);
+  async downloadReport(type: 'pdf' | 'word') {
+    const id = this.item()?.id;
+    if (!id || !this.canDownloadReports()) {
+      await this._sweetAlertUtil.error('general.messages.error', `El reporte ${type.toUpperCase()} no está disponible`);
       return;
     }
 
-    window.open(`${baseUrl}/${reportPath}`, '_blank');
+    try {
+      await this._reportDownloadService.downloadComparisonReport(id, type);
+    } catch (error) {
+      console.error(error);
+      await this._sweetAlertUtil.error('general.messages.error', `No se pudo descargar el reporte ${type.toUpperCase()}`);
+    }
   }
 }

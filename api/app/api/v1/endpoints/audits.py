@@ -163,10 +163,11 @@ async def run_audit_task(
                 audit.seo_analysis = seo_analysis
 
                 #genera el reporte
-                report = ReportGenerator(audit=audit).generate_all()
+                report = ReportGenerator(audit=audit).generate_documents()
                 print(report)
-                #audit.report_path = report.get('pdf_path')
-                #audit.excel_path = report.get('xlsx_path')
+                audit.report_pdf_path = report.get('pdf_path')
+                audit.report_word_path = report.get('word_path')
+                audit.report_excel_path = None
 
                 session.add(audit)
                 # No llamar commit aquí, el context manager lo hace automáticamente
@@ -1392,13 +1393,13 @@ async def get_audit(
         )
 
     # Verificar y generar reportes si faltan
-    if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_excel_path or not audit.report_word_path):
+    if audit.status == AuditStatus.COMPLETED and (not audit.report_pdf_path or not audit.report_word_path):
         try:
             print(f"🔄 Generando reportes faltantes para audit {audit.id}")
-            report_paths = ReportGenerator(audit=audit).generate_all()
+            report_paths = ReportGenerator(audit=audit).generate_documents()
             audit.report_pdf_path = report_paths.get('pdf_path')
-            audit.report_excel_path = report_paths.get('xlsx_path')
             audit.report_word_path = report_paths.get('word_path')
+            audit.report_excel_path = None
 
             session.add(audit)
             await session.commit()
@@ -1484,14 +1485,14 @@ async def list_audits(
         excel_path = row.report_excel_path
         word_path = row.report_word_path
 
-        if row.status == AuditStatus.COMPLETED and (not pdf_path or not excel_path or not word_path):
+        if row.status == AuditStatus.COMPLETED and (not pdf_path or not word_path):
             try:
                 audit_obj = await session.get(AuditReport, row.id)
                 if audit_obj:
-                    report_paths = ReportGenerator(audit=audit_obj).generate_all()
+                    report_paths = ReportGenerator(audit=audit_obj).generate_documents()
                     audit_obj.report_pdf_path = report_paths.get('pdf_path')
-                    audit_obj.report_excel_path = report_paths.get('xlsx_path')
                     audit_obj.report_word_path = report_paths.get('word_path')
+                    audit_obj.report_excel_path = None
                     session.add(audit_obj)
                     audits_to_update.append(audit_obj)
                     pdf_path = audit_obj.report_pdf_path

@@ -662,6 +662,14 @@ class ReportGenerator:
         self._convert_pdf_to_word(pdf_filename, docx_filename)
         return str(docx_filename)
 
+    def generate_documents(self) -> Dict[str, str]:
+        pdf_path = self.generate_pdf()
+        word_path = self.generate_docx()
+        return {
+            "pdf_path": pdf_path,
+            "word_path": word_path,
+        }
+
     # =========================================================================
     #  COMPARATIVOS (Benchmarking)
     # =========================================================================
@@ -686,6 +694,23 @@ class ReportGenerator:
         self._convert_pdf_to_word(pdf_path, word_path)
 
         return {"pdf_path": str(pdf_path), "xlsx_path": str(xlsx_path), "word_path": str(word_path)}
+
+    def generate_comparison_documents(self, comparison_data: Union[Dict, Any]) -> Dict[str, str]:
+        if hasattr(comparison_data, 'model_dump'):
+            data = comparison_data.model_dump()
+        elif hasattr(comparison_data, 'dict'):
+            data = comparison_data.dict()
+        else:
+            data = comparison_data
+
+        ts = datetime.now().strftime("%Y%m%d_%H%M")
+        pdf_path = self.base_dir / f"Benchmark_Report_{ts}.pdf"
+        word_path = self.base_dir / f"Benchmark_Report_{ts}.docx"
+
+        self._create_comparison_pdf(data, pdf_path)
+        self._convert_pdf_to_word(pdf_path, word_path)
+
+        return {"pdf_path": str(pdf_path), "word_path": str(word_path)}
 
     def generate_detailed_proposal_reports(self, detailed_proposal_text: str) -> Dict[str, str]:
         """
@@ -737,7 +762,7 @@ class ReportGenerator:
             cv.convert(str(word_path), start=0, end=None)
             cv.close()
         except Exception as e:
-            print(f"Error convirtiendo PDF a Word: {e}")
+            raise RuntimeError(f"Error convirtiendo PDF a Word: {e}") from e
 
     def _create_comparison_pdf(self, data: dict, filename: Path):
         doc = SimpleDocTemplate(
@@ -980,8 +1005,8 @@ class ReportGenerator:
 
 
     def generate_all(self):
+        documents = self.generate_documents()
         return {
-            "pdf_path": self.generate_pdf(),
+            **documents,
             "xlsx_path": self.generate_excel(),
-            "word_path": self.generate_docx()
         }
