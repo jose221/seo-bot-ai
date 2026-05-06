@@ -42,13 +42,21 @@ export const routes: Routes = [
       {path: 'audit/schemas/:id', component: AuditSchemaDetail},
       {path: 'audit/url-validations', component: AuditUrlValidationList},
       {path: 'audit/url-validations/create', component: AuditUrlValidationForm},
-      {path: 'audit/url-validations/:id/info', loadComponent: () => import('@/app/presentation/pages/admin/audit/audit-url-validation-info/audit-url-validation-info')},
+      {
+        path: 'audit/url-validations/:id/info',
+        loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info'),
+        data: { layout: 'admin' }
+      },
       {path: 'audit/url-validations/:id', component: AuditUrlValidationDetail},
       {path: 'audit/:id', component: AuditDetail},
       {path: 'metrics', component: MetricsDashboardComponent},
       {path: 'json-tools', component: JsonTools},
     ]
   },
-  {path: 'shared/audit/url-validations/:id/info', loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info')},
+  {
+    path: 'shared/audit/url-validations/:id/info',
+    loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info'),
+    data: { layout: 'shared' }
+  },
   { path: '**', redirectTo: '/admin' }
 ];

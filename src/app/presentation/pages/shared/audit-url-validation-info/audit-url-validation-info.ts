@@ -1,6 +1,6 @@
 import { Component, inject, signal, OnInit, computed, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
@@ -18,14 +18,17 @@ import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 import { MarkdownModule } from 'ngx-markdown';
 import { FormsModule } from '@angular/forms';
+import { environment } from '@/environments/environment';
 
 const LS_USERNAME_KEY = 'public_validator_username';
+type AuditUrlValidationInfoLayout = 'admin' | 'shared';
 
 @Component({
   selector: 'app-public-audit-url-validation-info',
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     TranslateModule,
     MarkdownModule,
     FormsModule
@@ -46,6 +49,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   data = signal<AuditUrlValidationSchemasResponseModel | null>(null);
   validationId = signal<string | null>(null);
   showFilters = signal<boolean>(false);
+  layout = signal<AuditUrlValidationInfoLayout>('shared');
 
   // Filters
   searchTerm = signal<string>('');
@@ -62,6 +66,8 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
 
   // Auth
   isLoggedIn = signal<boolean>(false);
+
+  isAdminView = computed(() => this.layout() === 'admin');
 
   // Comments
   commentsMap = signal<Map<string, PublicCommentItemModel[]>>(new Map());
@@ -159,6 +165,14 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     };
   });
 
+  shareReportUrl = computed(() => {
+    const validationId = this.validationId() ?? this.data()?.validation_id ?? '';
+    if (!validationId) return '';
+
+    const appUrl = environment.appUrl.replace(/\/+$/, '');
+    return `${appUrl}/shared/audit/url-validations/${validationId}/info`;
+  });
+
   toggleCard(index: number): void {
     const current = new Set(this.expandedCards());
     if (current.has(index)) {
@@ -181,6 +195,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const layout = this._route.snapshot.data['layout'];
+    if (layout === 'admin' || layout === 'shared') {
+      this.layout.set(layout);
+    }
+
     const id = this._route.snapshot.paramMap.get('id');
     if (id) {
       this.validationId.set(id);
@@ -409,6 +428,30 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
     } catch (err) {
       console.error('Error al copiar:', err);
       this._sweetAlertUtil.error('Error', 'No se pudo copiar al portapapeles');
+    }
+  }
+
+  async shareReport(): Promise<void> {
+    const shareUrl = this.shareReportUrl();
+    if (!shareUrl) {
+      await this._sweetAlertUtil.error('', 'No se pudo generar la URL para compartir.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: 'URL compartible copiada al portapapeles'
+      });
+    } catch (error) {
+      console.error('Error al copiar URL compartible:', error);
+      await this._sweetAlertUtil.error('', 'No se pudo copiar la URL para compartir.');
     }
   }
 

@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
+  appUrl: 'http://localhost:4200',
   apiUrl: 'http://localhost:3101/api/v1',
   prometheusUrl: 'http://localhost:9090',
   metricsUrl: 'http://localhost:3101/metrics',
@@ -43,4 +44,3 @@ export const environment = {
     }
   }
 };
-

@@ -397,6 +397,10 @@ $pv-tr: all 0.2s ease;
   display: flex;
   flex-direction: column;
 }
+.public-page--admin {
+  min-height: auto;
+  background: transparent;
+}
 .public-header {
   background: #fff;
   border-bottom: 1px solid $pv-b;

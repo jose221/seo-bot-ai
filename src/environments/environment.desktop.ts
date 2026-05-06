@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
+  appUrl: 'https://seo-bot-ai.herandro.com.mx',
   apiUrl: 'http://localhost:8010/api/v1',
   //prometheusUrl: 'http://84.247.137.97:9090',
   prometheusUrl: 'https://prometheus.herandro.com.mx',

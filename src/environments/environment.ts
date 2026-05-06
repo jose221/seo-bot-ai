@@ -1,5 +1,6 @@
 export const environment = {
   production: false,
+  appUrl: 'http://localhost:4200',
   apiUrl: 'http://localhost:8000/api/v1',
   //prometheusUrl: 'http://84.247.137.97:9090',
   prometheusUrl: 'https://prometheus.herandro.com.mx',
