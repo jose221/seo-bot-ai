@@ -20,6 +20,7 @@ from app.models import (  # noqa: F401
     audit_schema_review,
     audit_url_validation,
     url_validation_comment,
+    rich_results_report,
 )
 
 

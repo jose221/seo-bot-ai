@@ -1,7 +1,9 @@
 """
 Schemas para generación de reportes de Google Rich Results.
 """
+from datetime import datetime
 from typing import List, Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -78,3 +80,49 @@ class RichResultsReportResponse(BaseModel):
     screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
     get_ai_result: Optional[RichResultsAIResult] = None
     ai_error_message: Optional[str] = None
+    report_id: Optional[UUID] = None
+    saved: bool = False
+
+
+class RichResultsReportListItem(BaseModel):
+    id: UUID
+    url: str
+    input_type: str
+    success: bool
+    method_used: str
+    result_url: Optional[str] = None
+    message: str
+    error_message: Optional[str] = None
+    blocked_by_google: bool = False
+    created_at: datetime
+
+
+class RichResultsReportListResponse(BaseModel):
+    items: List[RichResultsReportListItem]
+    total: int
+    page: int
+    page_size: Optional[int] = None
+
+
+class RichResultsReportDetailResponse(BaseModel):
+    id: UUID
+    url: str
+    input_type: str
+    success: bool
+    method_used: str
+    result_url: Optional[str] = None
+    message: str
+    error_message: Optional[str] = None
+    blocked_by_google: bool = False
+    screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
+    get_ai_result: Optional[RichResultsAIResult] = None
+    ai_error_message: Optional[str] = None
+    created_at: datetime
+
+
+class DeleteRichResultsReportResponse(BaseModel):
+    success: bool
+    message: str
+    deleted_count: int
+    report_id: Optional[UUID] = None
+    url: Optional[str] = None

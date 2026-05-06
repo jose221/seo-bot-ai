@@ -19,6 +19,7 @@ from app.core.database import init_db
 from app.core.security import clear_request_auth_context
 from app.api.v1.api import api_router
 from app.services.report_lifecycle import get_report_lifecycle_service
+from app.services.rich_results_report_service import get_rich_results_report_service
 from app.shared.herandro_services_api.herandro_services_api_client import (
     close_hsa_client,
     init_hsa_client,
@@ -52,13 +53,19 @@ async def lifespan(app: FastAPI):
     report_cleanup_task = asyncio.create_task(
         get_report_lifecycle_service().run_cleanup_loop()
     )
+    rich_results_cleanup_task = asyncio.create_task(
+        get_rich_results_report_service().run_cleanup_loop()
+    )
 
     yield
 
     # Limpieza
     report_cleanup_task.cancel()
+    rich_results_cleanup_task.cancel()
     with suppress(asyncio.CancelledError):
         await report_cleanup_task
+    with suppress(asyncio.CancelledError):
+        await rich_results_cleanup_task
     await close_hsa_client()
     print("👋 Cerrando aplicación...")
 
