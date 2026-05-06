@@ -1,10 +1,11 @@
-import { Component, inject, signal, OnInit, computed, PLATFORM_ID } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, computed, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
 import { TargetRepository } from '@/app/domain/repositories/target/target.repository';
+import { RichResultsRepository } from '@/app/domain/repositories/rich-results/rich-results.repository';
 import {
   AuditUrlValidationSchemasResponseModel,
   AuditUrlValidationSchemaItemModel,
@@ -14,6 +15,11 @@ import {
   CreatePublicCommentRequestModel,
   AnswerCommentRequestModel,
 } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
+import { CreateRichResultsReportRequestModel } from '@/app/domain/models/rich-results/request/rich-results-request.model';
+import {
+  RichResultsReportDetailResponseModel,
+  RichResultsReportListItemModel,
+} from '@/app/domain/models/rich-results/response/rich-results-response.model';
 import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 import { MarkdownModule } from 'ngx-markdown';
@@ -36,12 +42,13 @@ type AuditUrlValidationInfoLayout = 'admin' | 'shared';
   templateUrl: './audit-url-validation-info.html',
   styleUrl: './audit-url-validation-info.scss'
 })
-export default class PublicAuditUrlValidationInfoComponent implements OnInit {
+export default class PublicAuditUrlValidationInfoComponent implements OnInit, OnDestroy {
   private readonly _route = inject(ActivatedRoute);
   private readonly _repository = inject(AuditUrlValidationRepository);
   private readonly _taskNotificationService = inject(TaskNotificationService);
   private readonly _authRepository = inject(AuthRepository);
   private readonly _targetRepository = inject(TargetRepository);
+  private readonly _richResultsRepository = inject(RichResultsRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
   private readonly _platformId = inject(PLATFORM_ID);
 
@@ -89,6 +96,13 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
 
   // HTML fetch
   htmlLoading = signal<boolean>(false);
+  richResultsMap = signal<Map<string, RichResultsReportListItemModel[]>>(new Map());
+  richResultsLoadingSet = signal<Set<string>>(new Set());
+  richResultsCreatingSet = signal<Set<string>>(new Set());
+  richResultsDeletingSet = signal<Set<string>>(new Set());
+  richResultsExpandedSet = signal<Set<string>>(new Set());
+  richResultsDetailMap = signal<Map<string, RichResultsReportDetailResponseModel>>(new Map());
+  private richResultsPollTimer: ReturnType<typeof setInterval> | null = null;
 
   availableTypes = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -179,6 +193,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
       current.delete(index);
     } else {
       current.add(index);
+      const schema = this.filteredSchemas()[index];
+      if (schema?.url) {
+        void this.ensureRichResultsLoaded(schema.url);
+      }
     }
     this.expandedCards.set(current);
   }
@@ -210,6 +228,14 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
       const saved = localStorage.getItem(LS_USERNAME_KEY);
       if (saved) this.commentUsername.set(saved);
       this.isLoggedIn.set(this._authRepository.isAuthenticated());
+      this.startRichResultsPolling();
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.richResultsPollTimer) {
+      clearInterval(this.richResultsPollTimer);
+      this.richResultsPollTimer = null;
     }
   }
 
@@ -504,6 +530,199 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit {
       });
     } catch {
       return dateStr;
+    }
+  }
+
+  private startRichResultsPolling(): void {
+    if (this.richResultsPollTimer || !isPlatformBrowser(this._platformId)) return;
+    this.richResultsPollTimer = setInterval(() => {
+      void this.pollPendingRichResults();
+    }, 15000);
+  }
+
+  private async pollPendingRichResults(): Promise<void> {
+    const urls = Array.from(this.richResultsMap().entries())
+      .filter(([, items]) => items.some((item) => this.isRichResultsPending(item.status)))
+      .map(([url]) => url);
+
+    for (const url of urls) {
+      await this.ensureRichResultsLoaded(url, true);
+    }
+  }
+
+  private updateUrlSet(
+    signalRef: { (): Set<string>; set(value: Set<string>): void },
+    url: string,
+    add: boolean,
+  ): void {
+    const next = new Set(signalRef());
+    if (add) next.add(url);
+    else next.delete(url);
+    signalRef.set(next);
+  }
+
+  async ensureRichResultsLoaded(url: string, force = false): Promise<void> {
+    if (!url) return;
+    if (!force && this.richResultsMap().has(url)) return;
+
+    this.updateUrlSet(this.richResultsLoadingSet, url, true);
+    try {
+      const response = await this._richResultsRepository.getAll({
+        url,
+        distinct: false,
+        page: 1,
+        page_size: 20,
+      });
+      const next = new Map(this.richResultsMap());
+      next.set(url, response.items.filter((item) => item.url === url));
+      this.richResultsMap.set(next);
+    } catch (error) {
+      console.error('Error loading rich results reports:', error);
+    } finally {
+      this.updateUrlSet(this.richResultsLoadingSet, url, false);
+    }
+  }
+
+  getRichResults(url: string): RichResultsReportListItemModel[] {
+    return this.richResultsMap().get(url) ?? [];
+  }
+
+  isRichResultsLoading(url: string): boolean {
+    return this.richResultsLoadingSet().has(url);
+  }
+
+  isRichResultsCreating(url: string): boolean {
+    return this.richResultsCreatingSet().has(url);
+  }
+
+  isRichResultsDeleting(url: string): boolean {
+    return this.richResultsDeletingSet().has(url);
+  }
+
+  isRichResultsPending(status: string): boolean {
+    return status === 'pending' || status === 'in_progress';
+  }
+
+  getRichResultsStatusClass(status: string): string {
+    const normalized = (status || '').toLowerCase();
+    if (normalized === 'completed') return 'sv-success';
+    if (normalized === 'failed') return 'sv-danger';
+    if (normalized === 'in_progress') return 'sv-info';
+    return 'sv-warning';
+  }
+
+  isRichResultExpanded(reportId: string): boolean {
+    return this.richResultsExpandedSet().has(reportId);
+  }
+
+  getRichResultDetail(reportId: string): RichResultsReportDetailResponseModel | null {
+    return this.richResultsDetailMap().get(reportId) ?? null;
+  }
+
+  async toggleRichResultDetail(reportId: string, url: string): Promise<void> {
+    const expanded = new Set(this.richResultsExpandedSet());
+    if (expanded.has(reportId)) {
+      expanded.delete(reportId);
+      this.richResultsExpandedSet.set(expanded);
+      return;
+    }
+
+    if (!this.richResultsDetailMap().has(reportId)) {
+      try {
+        const detail = await this._richResultsRepository.find(reportId, url);
+        const details = new Map(this.richResultsDetailMap());
+        details.set(reportId, detail);
+        this.richResultsDetailMap.set(details);
+      } catch (error) {
+        console.error('Error loading rich results detail:', error);
+        await this._sweetAlertUtil.error('', 'No se pudo cargar el detalle del reporte.');
+        return;
+      }
+    }
+
+    expanded.add(reportId);
+    this.richResultsExpandedSet.set(expanded);
+  }
+
+  async createRichResultsReport(url: string): Promise<void> {
+    if (!this.isLoggedIn() || !url) return;
+
+    this.updateUrlSet(this.richResultsCreatingSet, url, true);
+    try {
+      await this._richResultsRepository.create(new CreateRichResultsReportRequestModel(url, true, true));
+      await this.ensureRichResultsLoaded(url, true);
+      this._sweetAlertUtil.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 4000,
+        timerProgressBar: true,
+        icon: 'success',
+        title: 'Reporte Rich Results iniciado en segundo plano'
+      });
+    } catch (error) {
+      console.error('Error creating rich results report:', error);
+      await this._sweetAlertUtil.error('', 'No se pudo iniciar el reporte de Rich Results.');
+    } finally {
+      this.updateUrlSet(this.richResultsCreatingSet, url, false);
+    }
+  }
+
+  async deleteRichResultsReport(reportId: string, url: string): Promise<void> {
+    if (!this.isLoggedIn()) return;
+
+    const confirmed = await this._sweetAlertUtil.fire({
+      title: 'Eliminar reporte',
+      text: 'Se eliminará este reporte de Rich Results.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Eliminar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!confirmed.isConfirmed) return;
+
+    this.updateUrlSet(this.richResultsDeletingSet, url, true);
+    try {
+      await this._richResultsRepository.delete(reportId, url);
+      const details = new Map(this.richResultsDetailMap());
+      details.delete(reportId);
+      this.richResultsDetailMap.set(details);
+      const expanded = new Set(this.richResultsExpandedSet());
+      expanded.delete(reportId);
+      this.richResultsExpandedSet.set(expanded);
+      await this.ensureRichResultsLoaded(url, true);
+    } catch (error) {
+      console.error('Error deleting rich results report:', error);
+      await this._sweetAlertUtil.error('', 'No se pudo eliminar el reporte.');
+    } finally {
+      this.updateUrlSet(this.richResultsDeletingSet, url, false);
+    }
+  }
+
+  async deleteRichResultsByUrl(url: string): Promise<void> {
+    if (!this.isLoggedIn()) return;
+
+    const confirmed = await this._sweetAlertUtil.fire({
+      title: 'Eliminar reportes por URL',
+      html: `Se eliminarán todos los reportes asociados a esta URL.<br><small class="text-muted">${url}</small>`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Eliminar todos',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!confirmed.isConfirmed) return;
+
+    this.updateUrlSet(this.richResultsDeletingSet, url, true);
+    try {
+      await this._richResultsRepository.deleteByUrl(url);
+      const next = new Map(this.richResultsMap());
+      next.set(url, []);
+      this.richResultsMap.set(next);
+    } catch (error) {
+      console.error('Error deleting rich results reports by url:', error);
+      await this._sweetAlertUtil.error('', 'No se pudieron eliminar los reportes.');
+    } finally {
+      this.updateUrlSet(this.richResultsDeletingSet, url, false);
     }
   }
 

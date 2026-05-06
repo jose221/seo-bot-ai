@@ -10,7 +10,7 @@ from app.models.audit_url_validation import (
     AuditUrlValidation, UrlValidationStatus, UrlValidationSeverity, UrlValidationSourceType
 )
 from app.models.url_validation_comment import UrlValidationComment, CommentStatus
-from app.models.rich_results_report import RichResultsReport
+from app.models.rich_results_report import RichResultsReport, RichResultsReportStatus
 
 __all__ = [
     "User",
@@ -29,4 +29,5 @@ __all__ = [
     "UrlValidationComment",
     "CommentStatus",
     "RichResultsReport",
+    "RichResultsReportStatus",
 ]

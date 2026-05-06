@@ -1,0 +1,70 @@
+export class RichResultsReportTaskResponseModel {
+  constructor(
+    public task_id: string,
+    public status: string,
+    public url: string,
+    public message: string,
+  ) {}
+}
+
+export class RichResultsReportListItemModel {
+  constructor(
+    public id: string,
+    public url: string,
+    public status: string,
+    public input_type: string,
+    public requested_ai_result: boolean,
+    public success: boolean,
+    public method_used: string,
+    public result_url: string | null,
+    public message: string,
+    public error_message: string | null,
+    public blocked_by_google: boolean,
+    public created_at: string,
+  ) {}
+}
+
+export class RichResultsReportListResponseModel {
+  constructor(
+    public items: RichResultsReportListItemModel[],
+    public total: number,
+    public page: number,
+    public page_size: number | null,
+  ) {}
+}
+
+export class RichResultsScreenshotModel {
+  constructor(
+    public path: string,
+    public url: string,
+  ) {}
+}
+
+export class RichResultsAIResultModel {
+  constructor(
+    public content: string,
+    public usage: Record<string, any> | null,
+    public model: string | null,
+    public generated_at: string | null,
+  ) {}
+}
+
+export class RichResultsReportDetailResponseModel {
+  constructor(
+    public id: string,
+    public url: string,
+    public status: string,
+    public input_type: string,
+    public requested_ai_result: boolean,
+    public success: boolean,
+    public method_used: string,
+    public result_url: string | null,
+    public message: string,
+    public error_message: string | null,
+    public blocked_by_google: boolean,
+    public screenshots: RichResultsScreenshotModel[],
+    public get_ai_result: RichResultsAIResultModel | null,
+    public ai_error_message: string | null,
+    public created_at: string,
+  ) {}
+}

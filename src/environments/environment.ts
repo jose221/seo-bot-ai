@@ -46,6 +46,9 @@ export const environment = {
     },
     auditUrlValidation:{
       path: '/audits/url-validations'
+    },
+    richResults:{
+      path: '/rich-results'
     }
   },
   settings:{

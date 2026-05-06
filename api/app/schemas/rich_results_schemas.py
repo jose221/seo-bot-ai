@@ -6,6 +6,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+from app.models.rich_results_report import RichResultsReportStatus
 
 
 class RichResultsScreenshot(BaseModel):
@@ -84,10 +85,19 @@ class RichResultsReportResponse(BaseModel):
     saved: bool = False
 
 
+class RichResultsReportTaskResponse(BaseModel):
+    task_id: UUID
+    status: RichResultsReportStatus
+    url: str
+    message: str = "Reporte de Google Rich Results iniciado en segundo plano"
+
+
 class RichResultsReportListItem(BaseModel):
     id: UUID
     url: str
+    status: RichResultsReportStatus
     input_type: str
+    requested_ai_result: bool = False
     success: bool
     method_used: str
     result_url: Optional[str] = None
@@ -107,7 +117,9 @@ class RichResultsReportListResponse(BaseModel):
 class RichResultsReportDetailResponse(BaseModel):
     id: UUID
     url: str
+    status: RichResultsReportStatus
     input_type: str
+    requested_ai_result: bool = False
     success: bool
     method_used: str
     result_url: Optional[str] = None

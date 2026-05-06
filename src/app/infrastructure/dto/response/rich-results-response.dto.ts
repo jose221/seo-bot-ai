@@ -1,0 +1,70 @@
+export class RichResultsReportTaskResponseDto {
+  constructor(
+    public task_id: string,
+    public status: string,
+    public url: string,
+    public message: string,
+  ) {}
+}
+
+export class RichResultsReportListItemDto {
+  constructor(
+    public id: string,
+    public url: string,
+    public status: string,
+    public input_type: string,
+    public requested_ai_result: boolean,
+    public success: boolean,
+    public method_used: string,
+    public result_url: string | null,
+    public message: string,
+    public error_message: string | null,
+    public blocked_by_google: boolean,
+    public created_at: string,
+  ) {}
+}
+
+export class RichResultsReportListResponseDto {
+  constructor(
+    public items: RichResultsReportListItemDto[],
+    public total: number,
+    public page: number,
+    public page_size: number | null,
+  ) {}
+}
+
+export class RichResultsScreenshotDto {
+  constructor(
+    public path: string,
+    public url: string,
+  ) {}
+}
+
+export class RichResultsAIResultDto {
+  constructor(
+    public content: string,
+    public usage: Record<string, any> | null,
+    public model: string | null,
+    public generated_at: string | null,
+  ) {}
+}
+
+export class RichResultsReportDetailResponseDto {
+  constructor(
+    public id: string,
+    public url: string,
+    public status: string,
+    public input_type: string,
+    public requested_ai_result: boolean,
+    public success: boolean,
+    public method_used: string,
+    public result_url: string | null,
+    public message: string,
+    public error_message: string | null,
+    public blocked_by_google: boolean,
+    public screenshots: RichResultsScreenshotDto[],
+    public get_ai_result: RichResultsAIResultDto | null,
+    public ai_error_message: string | null,
+    public created_at: string,
+  ) {}
+}

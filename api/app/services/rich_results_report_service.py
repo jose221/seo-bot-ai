@@ -13,15 +13,18 @@ from sqlalchemy import func
 from sqlmodel import desc, select
 
 from app.core.database import db_manager
-from app.models.rich_results_report import RichResultsReport
+from app.models.rich_results_report import RichResultsReport, RichResultsReportStatus
 from app.schemas.rich_results_schemas import (
     DeleteRichResultsReportResponse,
     RichResultsAIResult,
+    RichResultsReportDetailResponse,
     RichResultsReportListItem,
     RichResultsReportListResponse,
     RichResultsReportRequest,
     RichResultsReportResponse,
+    RichResultsScreenshot,
 )
+from app.services.rich_results_service import get_rich_results_service
 
 log = logging.getLogger(__name__)
 
@@ -64,21 +67,45 @@ class RichResultsReportService:
         await session.refresh(report)
         return report
 
-    async def list_reports(
+    async def create_pending_report(
         self,
         session,
         *,
         user_id: UUID,
-        url: Optional[str],
+        payload: RichResultsReportRequest,
+    ) -> RichResultsReport:
+        report = RichResultsReport(
+            user_id=user_id,
+            url=self._normalize_url(payload.content),
+            status=RichResultsReportStatus.PENDING,
+            input_type="url",
+            requested_ai_result=payload.get_ai_result,
+            success=False,
+            method_used="queued",
+            message="Reporte de Google Rich Results en cola",
+        )
+        session.add(report)
+        await session.commit()
+        await session.refresh(report)
+        return report
+
+    async def list_reports(
+        self,
+        session,
+        *,
+        url: str,
         distinct: bool,
         page: int,
         page_size: Optional[int],
     ) -> RichResultsReportListResponse:
+        normalized_url = self._normalize_url(url)
         base_statement = (
             select(
                 RichResultsReport.id,
                 RichResultsReport.url,
+                RichResultsReport.status,
                 RichResultsReport.input_type,
+                RichResultsReport.requested_ai_result,
                 RichResultsReport.success,
                 RichResultsReport.method_used,
                 RichResultsReport.result_url,
@@ -87,17 +114,14 @@ class RichResultsReportService:
                 RichResultsReport.blocked_by_google,
                 RichResultsReport.created_at,
             )
-            .where(RichResultsReport.user_id == user_id)
             .order_by(desc(RichResultsReport.created_at))
         )
-        count_statement = select(func.count()).select_from(RichResultsReport).where(
-            RichResultsReport.user_id == user_id
+        count_statement = (
+            select(func.count())
+            .select_from(RichResultsReport)
+            .where(RichResultsReport.url == normalized_url)
         )
-
-        normalized_url = self._normalize_url(url) if url else None
-        if normalized_url:
-            base_statement = base_statement.where(RichResultsReport.url.ilike(f"%{normalized_url}%"))
-            count_statement = count_statement.where(RichResultsReport.url.ilike(f"%{normalized_url}%"))
+        base_statement = base_statement.where(RichResultsReport.url == normalized_url)
 
         if distinct:
             rows = (await session.execute(base_statement)).all()
@@ -123,7 +147,9 @@ class RichResultsReportService:
             RichResultsReportListItem(
                 id=row.id,
                 url=row.url,
+                status=row.status,
                 input_type=row.input_type,
+                requested_ai_result=row.requested_ai_result,
                 success=row.success,
                 method_used=row.method_used,
                 result_url=row.result_url,
@@ -142,10 +168,16 @@ class RichResultsReportService:
             page_size=page_size,
         )
 
-    async def get_report(self, session, *, user_id: UUID, report_id: UUID) -> Optional[RichResultsReport]:
+    async def get_report(
+        self,
+        session,
+        *,
+        report_id: UUID,
+        url: str,
+    ) -> Optional[RichResultsReport]:
         statement = select(RichResultsReport).where(
             RichResultsReport.id == report_id,
-            RichResultsReport.user_id == user_id,
+            RichResultsReport.url == self._normalize_url(url),
         )
         return (await session.execute(statement)).scalars().first()
 
@@ -153,10 +185,19 @@ class RichResultsReportService:
         self,
         session,
         *,
-        user_id: UUID,
         report_id: UUID,
+        user_id: UUID,
+        url: str,
     ) -> Optional[DeleteRichResultsReportResponse]:
-        report = await self.get_report(session, user_id=user_id, report_id=report_id)
+        report = (
+            await session.execute(
+                select(RichResultsReport).where(
+                    RichResultsReport.id == report_id,
+                    RichResultsReport.user_id == user_id,
+                    RichResultsReport.url == self._normalize_url(url),
+                )
+            )
+        ).scalars().first()
         if not report:
             return None
 
@@ -173,13 +214,13 @@ class RichResultsReportService:
         self,
         session,
         *,
-        user_id: UUID,
         url: str,
+        user_id: UUID,
     ) -> DeleteRichResultsReportResponse:
         normalized_url = self._normalize_url(url)
         statement = select(RichResultsReport).where(
-            RichResultsReport.user_id == user_id,
             RichResultsReport.url == normalized_url,
+            RichResultsReport.user_id == user_id,
         )
         reports = (await session.execute(statement)).scalars().all()
 
@@ -193,6 +234,60 @@ class RichResultsReportService:
             deleted_count=len(reports),
             url=normalized_url,
         )
+
+    async def run_report_task(
+        self,
+        *,
+        report_id: UUID,
+        payload: RichResultsReportRequest,
+        token: str,
+    ) -> None:
+        try:
+            with db_manager.sync_session_context() as session:
+                report = session.get(RichResultsReport, report_id)
+                if not report:
+                    return
+                report.status = RichResultsReportStatus.IN_PROGRESS
+                report.method_used = "processing"
+                report.message = "Generando reporte de Google Rich Results"
+                session.add(report)
+
+            response = await get_rich_results_service().report_page(payload, token=token)
+
+            with db_manager.sync_session_context() as session:
+                report = session.get(RichResultsReport, report_id)
+                if not report:
+                    return
+
+                ai_result = response.get_ai_result
+                report.status = RichResultsReportStatus.COMPLETED
+                report.input_type = response.input_type
+                report.requested_ai_result = payload.get_ai_result
+                report.success = response.success
+                report.method_used = response.method_used
+                report.result_url = response.result_url
+                report.message = response.message
+                report.error_message = response.error_message
+                report.blocked_by_google = response.blocked_by_google
+                report.screenshots = [item.model_dump() for item in response.screenshots] or None
+                report.ai_result_content = ai_result.content if ai_result else None
+                report.ai_result_usage = ai_result.usage if ai_result else None
+                report.ai_result_model = ai_result.model if ai_result else None
+                report.ai_generated_at = ai_result.generated_at if ai_result else None
+                report.ai_error_message = response.ai_error_message
+                session.add(report)
+        except Exception as exc:
+            log.exception("Error generando reporte Rich Results %s", report_id)
+            with db_manager.sync_session_context() as session:
+                report = session.get(RichResultsReport, report_id)
+                if not report:
+                    return
+                report.status = RichResultsReportStatus.FAILED
+                report.success = False
+                report.method_used = "failed"
+                report.message = "No fue posible generar el reporte de Google Rich Results"
+                report.error_message = str(exc)
+                session.add(report)
 
     async def run_cleanup_loop(self) -> None:
         while True:
@@ -246,6 +341,30 @@ class RichResultsReportService:
             generated_at=report.ai_generated_at,
         )
 
+    def build_report_detail(self, report: RichResultsReport) -> RichResultsReportDetailResponse:
+        ai_result = self.build_ai_result(report)
+        screenshots = [
+            RichResultsScreenshot(**item)
+            for item in (report.screenshots or [])
+        ]
+        return RichResultsReportDetailResponse(
+            id=report.id,
+            url=report.url,
+            status=report.status,
+            input_type=report.input_type,
+            requested_ai_result=report.requested_ai_result,
+            success=report.success,
+            method_used=report.method_used,
+            result_url=report.result_url,
+            message=report.message,
+            error_message=report.error_message,
+            blocked_by_google=report.blocked_by_google,
+            screenshots=screenshots,
+            get_ai_result=ai_result,
+            ai_error_message=report.ai_error_message,
+            created_at=report.created_at,
+        )
+
 
 _rich_results_report_service: Optional[RichResultsReportService] = None
 
@@ -255,4 +374,3 @@ def get_rich_results_report_service() -> RichResultsReportService:
     if _rich_results_report_service is None:
         _rich_results_report_service = RichResultsReportService()
     return _rich_results_report_service
-

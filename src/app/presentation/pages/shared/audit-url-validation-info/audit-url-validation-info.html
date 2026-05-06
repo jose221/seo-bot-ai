@@ -449,6 +449,111 @@
                   </div>
                 </div>
 
+                <div class="meta-section mt-3">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                    <div>
+                      <h6 class="meta-title mb-1">Historial Rich Results</h6>
+                      <small class="text-muted">Consulta los reportes generados para esta URL.</small>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                      <button class="btn-action" (click)="ensureRichResultsLoaded(schema.url, true)" [disabled]="isRichResultsLoading(schema.url)">
+                        @if (isRichResultsLoading(schema.url)) {
+                          <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                          Actualizando...
+                        } @else {
+                          Actualizar
+                        }
+                      </button>
+                      @if (isLoggedIn()) {
+                        <button class="btn-action btn-action--rerun" (click)="createRichResultsReport(schema.url)" [disabled]="isRichResultsCreating(schema.url)">
+                          @if (isRichResultsCreating(schema.url)) {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                            En cola...
+                          } @else {
+                            Nuevo reporte
+                          }
+                        </button>
+                        <button class="btn-action btn-action--comment" (click)="deleteRichResultsByUrl(schema.url)" [disabled]="isRichResultsDeleting(schema.url) || getRichResults(schema.url).length === 0">
+                          Eliminar todos
+                        </button>
+                      }
+                    </div>
+                  </div>
+
+                  @if (isRichResultsLoading(schema.url) && getRichResults(schema.url).length === 0) {
+                    <div class="text-muted small">Cargando reportes...</div>
+                  } @else if (getRichResults(schema.url).length > 0) {
+                    <div class="d-flex flex-column gap-2">
+                      @for (report of getRichResults(schema.url); track report.id) {
+                        <div class="border rounded p-3">
+                          <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                            <div class="d-flex flex-column gap-1">
+                              <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="sv-badge" [ngClass]="getRichResultsStatusClass(report.status)">{{ report.status }}</span>
+                                <span class="sv-badge" [ngClass]="report.success ? 'sv-success' : 'sv-secondary'">
+                                  {{ report.success ? 'success' : 'sin resultado' }}
+                                </span>
+                                @if (report.requested_ai_result) {
+                                  <span class="sv-badge sv-info">IA</span>
+                                }
+                              </div>
+                              <small class="text-muted">{{ formatDate(report.created_at) }}</small>
+                              <div class="small">{{ report.message }}</div>
+                              @if (report.error_message) {
+                                <div class="small text-danger">{{ report.error_message }}</div>
+                              }
+                              @if (report.result_url) {
+                                <a [href]="report.result_url" target="_blank" rel="noopener noreferrer" class="small">
+                                  Abrir resultado en Google
+                                </a>
+                              }
+                            </div>
+                            <div class="d-flex flex-wrap gap-2">
+                              <button class="btn-action" (click)="toggleRichResultDetail(report.id, schema.url)">
+                                {{ isRichResultExpanded(report.id) ? 'Ocultar detalle' : 'Ver detalle' }}
+                              </button>
+                              @if (isLoggedIn()) {
+                                <button class="btn-action btn-action--comment" (click)="deleteRichResultsReport(report.id, schema.url)" [disabled]="isRichResultsDeleting(schema.url)">
+                                  Eliminar
+                                </button>
+                              }
+                            </div>
+                          </div>
+
+                          @if (isRichResultExpanded(report.id)) {
+                            @let detail = getRichResultDetail(report.id);
+                            @if (detail) {
+                              <div class="mt-3 pt-3 border-top">
+                                @if (detail.ai_error_message) {
+                                  <div class="small text-danger mb-2">{{ detail.ai_error_message }}</div>
+                                }
+                                @if (detail.get_ai_result?.content) {
+                                  <div class="ai-report ai-report--overflow mb-3">
+                                    <markdown [data]="detail.get_ai_result!.content"></markdown>
+                                  </div>
+                                }
+                                @if (detail.screenshots.length > 0) {
+                                  <div class="d-flex flex-wrap gap-2">
+                                    @for (shot of detail.screenshots; track shot.url) {
+                                      <a [href]="shot.url" target="_blank" rel="noopener noreferrer" class="btn-action">
+                                        Screenshot
+                                      </a>
+                                    }
+                                  </div>
+                                }
+                              </div>
+                            }
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <div class="text-muted small">
+                      No hay reportes Rich Results para esta URL.
+                    </div>
+                  }
+                </div>
+
                 <!-- ===== SECCIÓN COMENTARIOS (colapsable por schema) ===== -->
                 @if (isCommentSectionOpen(schema.url)) {
                   <div class="comments-section">

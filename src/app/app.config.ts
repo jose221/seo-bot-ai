@@ -25,6 +25,8 @@ import {AuditSchemaRepository} from '@/app/domain/repositories/audit-schema/audi
 import {AuditSchemaImplementationRepository} from '@/app/infrastructure/repositories/audit-schema/audit-schema.implementation.repository';
 import {AuditUrlValidationRepository} from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import {AuditUrlValidationImplementationRepository} from '@/app/infrastructure/repositories/audit-url-validation/audit-url-validation.implementation.repository';
+import {RichResultsRepository} from '@/app/domain/repositories/rich-results/rich-results.repository';
+import {RichResultsImplementationRepository} from '@/app/infrastructure/repositories/rich-results/rich-results.implementation.repository';
 import {provideMarkdown} from 'ngx-markdown';
 
 // Custom TranslateLoader
@@ -63,6 +65,7 @@ export const appConfig: ApplicationConfig = {
     { provide: TargetRepository, useClass: TargetImplementationRepository },
     { provide: AuditRepository, useClass: AuditImplementationRepository },
     { provide: AuditSchemaRepository, useClass: AuditSchemaImplementationRepository },
-    { provide: AuditUrlValidationRepository, useClass: AuditUrlValidationImplementationRepository }
+    { provide: AuditUrlValidationRepository, useClass: AuditUrlValidationImplementationRepository },
+    { provide: RichResultsRepository, useClass: RichResultsImplementationRepository }
   ]
 };

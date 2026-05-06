@@ -7,6 +7,14 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import JSON, String, Text
 from sqlmodel import Column, Field, SQLModel
+from enum import Enum
+
+
+class RichResultsReportStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    FAILED = "failed"
 
 
 class RichResultsReport(SQLModel, table=True):
@@ -20,7 +28,12 @@ class RichResultsReport(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="users.id", index=True)
 
     url: str = Field(index=True, description="URL origen del reporte")
+    status: RichResultsReportStatus = Field(
+        default=RichResultsReportStatus.PENDING,
+        sa_column=Column(String, nullable=False, default=RichResultsReportStatus.PENDING.value, index=True),
+    )
     input_type: str = Field(sa_column=Column(String, nullable=False))
+    requested_ai_result: bool = Field(default=False)
     success: bool = Field(default=False)
     method_used: str = Field(sa_column=Column(String, nullable=False))
     result_url: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
@@ -41,4 +54,3 @@ class RichResultsReport(SQLModel, table=True):
     ai_error_message: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
 
     created_at: datetime = Field(default_factory=datetime.utcnow, index=True)
-
