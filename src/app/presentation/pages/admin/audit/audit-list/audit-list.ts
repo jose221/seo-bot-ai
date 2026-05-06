@@ -170,16 +170,16 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
   }
 
   async init(silent: boolean = false) {
+    if (!silent) this.isLoading.set(true);
     try {
-      if (!silent) this.isLoading.set(true);
       const data = await this._auditRepository.get();
       console.log('data:', data);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       console.log('items:', this.items());
-      if (!silent) this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar items:', error);
+    } finally {
       if (!silent) this.isLoading.set(false);
     }
   }
@@ -217,10 +217,8 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
       try {
         this.isLoading.set(true);
         if(item.id) await this._auditRepository.delete(item.id);
-        await this._sweetAlertUtil.success(
-          'general.messages.success',
-          'La auditoría ha sido eliminada correctamente'
-        );
+        await this.init(true);
+        this.toastService.success('La auditoría ha sido eliminada correctamente');
       } catch (error) {
         console.error('Error al eliminar auditoría:', error);
         await this._sweetAlertUtil.error(
@@ -228,7 +226,7 @@ export class AuditList extends ListDefaultBase<AuditResponseModel> implements On
           'Ocurrió un error al eliminar la auditoría. Por favor, inténtalo de nuevo.'
         );
       } finally {
-        await this.init();
+        this.isLoading.set(false);
       }
     }
   }

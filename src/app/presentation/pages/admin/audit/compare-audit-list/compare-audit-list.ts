@@ -160,16 +160,16 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
   }
 
   async init(silent: boolean = false) {
+    if (!silent) this.isLoading.set(true);
     try {
-      if (!silent) this.isLoading.set(true);
       const data = await this._auditRepository.getComparisons();
       console.log('data:', data);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       console.log('items:', this.items());
-      if (!silent) this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar items:', error);
+    } finally {
       if (!silent) this.isLoading.set(false);
     }
   }
@@ -249,10 +249,8 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
       try {
         this.isLoading.set(true);
         if(item.id) await this._auditRepository.deleteComparisons(item.id);
-        await this._sweetAlertUtil.success(
-          'general.messages.success',
-          'La comparación ha sido eliminada correctamente'
-        );
+        await this.init(true);
+        this.toastService.success('La comparación ha sido eliminada correctamente');
       } catch (error) {
         console.error('Error al eliminar comparación:', error);
         await this._sweetAlertUtil.error(
@@ -260,7 +258,7 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
           'Ocurrió un error al eliminar la comparación. Por favor, inténtalo de nuevo.'
         );
       } finally {
-        await this.init();
+        this.isLoading.set(false);
       }
     }
   }

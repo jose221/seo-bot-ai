@@ -4,6 +4,7 @@ import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
 import {Router} from '@angular/router';
 import {PaginatorHelper} from '@/app/helper/paginator.helper';
 import {LoadingService} from '@/app/helper/loading.service';
+import {ToastService} from '@/app/helper/toast.service';
 
 @Directive()
 export abstract class ListDefaultBase<model> implements OnDestroy {
@@ -11,6 +12,7 @@ export abstract class ListDefaultBase<model> implements OnDestroy {
   cItems = signal<PaginatorHelper<model>>(new PaginatorHelper([], 12));
   items = signal<PaginatorHelper<model>>(new PaginatorHelper([], 12));
   loadingService = inject(LoadingService)
+  protected readonly toastService = inject(ToastService);
   protected isLoading = signal<boolean>(true);
   protected readonly _sweetAlertUtil = inject(SweetAlertUtil)
   protected readonly  _router = inject(Router)

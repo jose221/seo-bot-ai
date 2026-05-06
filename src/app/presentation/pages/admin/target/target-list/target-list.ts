@@ -50,15 +50,15 @@ export class TargetList extends ListDefaultBase<TargetResponseModel> implements 
   }
 
   async init() {
+    this.isLoading.set(true);
     try {
-      this.isLoading.set(true);
       const tag = this.selectedTag() || undefined;
       const data = await this._targetRepository.get(tag ? ({ tag } as any) : undefined);
       this.cItems.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
       this.items.set(new PaginatorHelper(data, this.configFilter().limit ?? 12));
-      this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar items:', error);
+    } finally {
       this.isLoading.set(false);
     }
   }
@@ -93,10 +93,8 @@ export class TargetList extends ListDefaultBase<TargetResponseModel> implements 
       try {
         this.isLoading.set(true);
         await this._targetRepository.delete(item.id as any);
-        await this._sweetAlertUtil.success(
-          'general.messages.success',
-          'El target ha sido eliminado correctamente',
-        );
+        await this.init();
+        this.toastService.success('El target ha sido eliminado correctamente');
       } catch (error) {
         console.error('Error al eliminar target:', error);
         await this._sweetAlertUtil.error(
@@ -104,7 +102,7 @@ export class TargetList extends ListDefaultBase<TargetResponseModel> implements 
           'Ocurrió un error al eliminar el target. Por favor, inténtalo de nuevo.',
         );
       } finally {
-        await this.init();
+        this.isLoading.set(false);
       }
     }
   }

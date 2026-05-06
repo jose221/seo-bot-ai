@@ -2,6 +2,7 @@ import {Directive, inject, Injectable, signal} from '@angular/core';
 import {ValidationMessagesUtil} from '@/app/presentation/utils/validationMessages.util';
 import {Router} from '@angular/router';
 import {SweetAlertUtil} from '@/app/presentation/utils/sweetAlert.util';
+import {ToastService} from '@/app/helper/toast.service';
 
 @Directive()
 export abstract class ValidationFormBase {
@@ -10,6 +11,7 @@ export abstract class ValidationFormBase {
   protected readonly submitted = signal(false);
   protected readonly loading = signal(false);
   protected readonly _sweetAlertUtil = inject(SweetAlertUtil)
+  protected readonly toastService = inject(ToastService);
   private readonly vm = inject(ValidationMessagesUtil);
   private errorPriority: string[] = [];
   protected abstract readonly form: any
@@ -28,7 +30,7 @@ export abstract class ValidationFormBase {
     return msgs
   }
   protected async successMessage(description?: string){
-    await this._sweetAlertUtil.success("Success", description ?? "The operation was successful")
+    this.toastService.success(description ?? 'La operación se realizó correctamente');
   }
   protected catchError(e: Error | any){
     console.log('Error logging in:', e);

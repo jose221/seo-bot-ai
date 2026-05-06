@@ -153,7 +153,7 @@ export class TargetUpdate extends ValidationFormBase implements OnInit {
         provider: formValue.provider || undefined,
       };
       await this.formRepository.update(id, payload);
-      await this._sweetAlertUtil.success('Éxito', 'Target actualizado correctamente');
+      this.toastService.success('Target actualizado correctamente');
       await this.router.navigateByUrl('/admin/target');
     } catch (e: Error | any) {
       console.log('Error updating target:', e);
@@ -163,4 +163,3 @@ export class TargetUpdate extends ValidationFormBase implements OnInit {
     }
   }
 }
-

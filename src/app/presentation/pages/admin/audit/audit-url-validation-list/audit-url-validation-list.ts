@@ -163,15 +163,15 @@ export class AuditUrlValidationList
   }
 
   async init(silent = false) {
+    if (!silent) this.isLoading.set(true);
     try {
-      if (!silent) this.isLoading.set(true);
       const data = await this._repository.getAll({ page: 1 });
       const list = data.items;
       this.cItems.set(new PaginatorHelper(list, this.configFilter().limit ?? 8));
       this.items.set(new PaginatorHelper(list, this.configFilter().limit ?? 8));
-      if (!silent) this.isLoading.set(false);
     } catch (error) {
       console.error('Error al cargar validaciones de URL:', error);
+    } finally {
       if (!silent) this.isLoading.set(false);
     }
   }
@@ -227,10 +227,8 @@ export class AuditUrlValidationList
     try {
       this.isLoading.set(true);
       await this._repository.delete(item.id);
-      await this._sweetAlertUtil.success(
-        'general.messages.success',
-        'La validación ha sido eliminada correctamente'
-      );
+      await this.init(true);
+      this.toastService.success('La validación ha sido eliminada correctamente');
     } catch (e) {
       console.error(e);
       await this._sweetAlertUtil.error(
@@ -238,7 +236,7 @@ export class AuditUrlValidationList
         'Ocurrió un error al eliminar la validación.'
       );
     } finally {
-      await this.init();
+      this.isLoading.set(false);
     }
   }
 

@@ -1,10 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { TranslateService, TranslateModule } from '@ngx-translate/core';
+import { AppToast } from '@/app/presentation/components/general/app-toast/app-toast';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, TranslateModule],
+  imports: [RouterOutlet, TranslateModule, AppToast],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
