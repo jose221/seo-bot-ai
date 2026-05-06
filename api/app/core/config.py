@@ -22,6 +22,7 @@ class Settings(BaseSettings):
 
     # API Externa de Herandro (legacy — se mantiene para compatibilidad)
     HERANDRO_API_URL: str = "https://herandro-services-api.herandro.com.mx"
+    RICH_RESULTS_PROXY_URL: str = ""
 
     # Seguridad
     SECRET_KEY: str = "dev-secret-key-change-in-production"

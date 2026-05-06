@@ -268,6 +268,58 @@ class AIClient:
       "usage": usage
     }
 
+  async def analyze_rich_results_content(
+    self,
+    markdown_content: str,
+    rich_results_url: Optional[str],
+    source_url: Optional[str],
+    token: str
+  ) -> dict:
+    system_template = self.jinja_env.get_template("rich_results_analysis.jinja")
+    system_content = system_template.render()
+
+    user_template = self.jinja_env.get_template("rich_results_user.jinja")
+    user_content = user_template.render(
+      markdown_content=markdown_content,
+      rich_results_url=rich_results_url,
+      source_url=source_url
+    )
+
+    request = ChatCompletionRequest(
+      messages=[
+        ChatMessage(role=MessageRole.SYSTEM, content=system_content, isContext=True),
+        ChatMessage(role=MessageRole.USER, content=user_content)
+      ],
+      model="deepseek-v4-flash",
+      stream=False
+    )
+
+    input_text = f"{system_content}\n{user_content}"
+    input_tokens = self.count_tokens(input_text)
+    response = await self.chat_completion(request, token)
+    content = response.get_content()
+
+    if response.usage and response.usage.total_tokens:
+      usage = {
+        "prompt_tokens": response.usage.prompt_tokens or input_tokens,
+        "completion_tokens": response.usage.completion_tokens or self.count_tokens(content),
+        "total_tokens": response.usage.total_tokens,
+      }
+    else:
+      output_tokens = self.count_tokens(content)
+      usage = {
+        "prompt_tokens": input_tokens,
+        "completion_tokens": output_tokens,
+        "total_tokens": input_tokens + output_tokens,
+      }
+
+    return {
+      "content": content,
+      "usage": usage,
+      "generated_at": response.generated_at,
+      "model": response.model or "deepseek-v4-flash"
+    }
+
 
 _ai_client: Optional[AIClient] = None
 

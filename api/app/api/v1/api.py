@@ -4,7 +4,7 @@ Agrupa todos los endpoints.
 """
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, targets, audits, downloads, sitemaps
+from app.api.v1.endpoints import auth, targets, audits, downloads, sitemaps, rich_results
 
 
 api_router = APIRouter()
@@ -15,3 +15,4 @@ api_router.include_router(targets.router, tags=["Targets"])
 api_router.include_router(audits.router, tags=["Auditorías"])
 api_router.include_router(downloads.router, tags=["Descargas"])
 api_router.include_router(sitemaps.router, tags=["Sitemaps"])
+api_router.include_router(rich_results.router, tags=["Rich Results"])
