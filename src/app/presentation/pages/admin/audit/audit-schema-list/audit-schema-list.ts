@@ -22,7 +22,7 @@ import { TableComponent } from '@/app/presentation/components/general/table/tabl
     RouterLink,
     TableComponent,
     TranslatePipe,
-    NgClass,
+  
   ],
   templateUrl: './audit-schema-list.html',
   styleUrl: './audit-schema-list.scss',

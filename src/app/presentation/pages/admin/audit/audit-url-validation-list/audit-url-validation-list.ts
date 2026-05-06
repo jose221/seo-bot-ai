@@ -24,7 +24,7 @@ import { TableComponent } from '@/app/presentation/components/general/table/tabl
     RouterLink,
     TableComponent,
     TranslatePipe,
-    NgClass,
+  
   ],
   templateUrl: './audit-url-validation-list.html',
   styleUrl: './audit-url-validation-list.scss',
