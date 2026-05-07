@@ -33,17 +33,11 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(oauth2_scheme),
     session: AsyncSession = Depends(get_session),
 ) -> User:
-    """
-    Dependencia principal de seguridad — Keycloak JWT + Shadow User.
+    return await get_user_from_token(session=session, token=credentials.credentials)
 
-    1. Valida el JWT contra las llaves públicas de Keycloak.
-    2. Busca al usuario por email en la BD local.
-    3. Si no existe, lo crea automáticamente con los datos del token.
-    4. Almacena el token en el contexto del request (disponible vía get_request_access_token).
-    """
-    token = credentials.credentials
 
-    # 1. Validar JWT con Keycloak JWKS
+async def get_user_from_token(*, session: AsyncSession, token: str) -> User:
+    """Valida un JWT Keycloak y resuelve/crea el shadow user local."""
     try:
         jwks = await _get_jwks()
         payload: dict[str, Any] = _decode_token(token, jwks)
@@ -96,10 +90,8 @@ async def get_current_user(
     else:
         log.debug("Usuario encontrado en BD — id=%s email=%s", user.id, user.email)
 
-    # 5. Guardar token en el contexto del request
     set_request_auth_context(token=token, payload=payload)
     setattr(user, "_token", token)
-
     return user
 
 
@@ -120,5 +112,4 @@ async def get_current_user_optional(
         return await get_current_user(credentials, session)
     except HTTPException:
         return None
-
 

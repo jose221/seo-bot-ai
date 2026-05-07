@@ -2,21 +2,12 @@ import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 
-import { AuditRepository } from '@/app/domain/repositories/audit/audit.repository';
-import { AuditSchemaRepository } from '@/app/domain/repositories/audit-schema/audit-schema.repository';
-import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
+import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
 import { StatusType } from '@/app/domain/types/status.type';
 import { ToastService } from '@/app/helper/toast.service';
+import { environment } from '@/environments/environment';
 
 type TrackableTaskKind = 'audit' | 'comparison' | 'schema' | 'url-validation';
-
-interface TrackableTask {
-  id: string;
-  kind: TrackableTaskKind;
-  status: string;
-  route: string;
-  label: string;
-}
 
 interface DesktopNotificationPayload {
   title: string;
@@ -33,6 +24,16 @@ interface DesktopNotificationsBridge {
   onClick?(callback: (payload: DesktopNotificationClickPayload) => void): () => void;
 }
 
+interface TaskStatusChangedEvent {
+  event: 'task-status-changed';
+  task_kind: TrackableTaskKind;
+  task_id: string;
+  status: string;
+  route: string;
+  label: string;
+  occurred_at: string;
+}
+
 type BrowserWindowWithDesktopNotifications = Window & {
   desktopNotifications?: DesktopNotificationsBridge;
 };
@@ -43,17 +44,17 @@ type BrowserWindowWithDesktopNotifications = Window & {
 export class TaskNotificationService {
   private readonly platformId = inject(PLATFORM_ID);
   private readonly router = inject(Router);
-  private readonly auditRepository = inject(AuditRepository);
-  private readonly auditSchemaRepository = inject(AuditSchemaRepository);
-  private readonly auditUrlValidationRepository = inject(AuditUrlValidationRepository);
+  private readonly authRepository = inject(AuthRepository);
   private readonly toastService = inject(ToastService);
 
-  private readonly pollIntervalMs = 15000;
-  private readonly knownStatuses = new Map<string, string>();
+  private readonly reconnectDelayMs = 4000;
+  private readonly pingIntervalMs = 25000;
 
   private started = false;
-  private isPolling = false;
-  private pollTimer: number | null = null;
+  private manualStop = false;
+  private websocket: WebSocket | null = null;
+  private reconnectTimer: number | null = null;
+  private pingTimer: number | null = null;
   private desktopClickUnsubscribe: (() => void) | null = null;
 
   start(): void {
@@ -62,11 +63,9 @@ export class TaskNotificationService {
     }
 
     this.started = true;
+    this.manualStop = false;
     this.prepareNotifications();
-    void this.pollTasks();
-    this.pollTimer = window.setInterval(() => {
-      void this.pollTasks();
-    }, this.pollIntervalMs);
+    this.connectWebSocket();
   }
 
   prepareNotifications(): void {
@@ -79,138 +78,24 @@ export class TaskNotificationService {
   }
 
   stop(): void {
-    if (this.pollTimer !== null) {
-      window.clearInterval(this.pollTimer);
-      this.pollTimer = null;
+    this.manualStop = true;
+    this.started = false;
+    this.clearReconnectTimer();
+    this.stopPing();
+
+    if (this.websocket) {
+      this.websocket.close();
+      this.websocket = null;
     }
 
     if (this.desktopClickUnsubscribe) {
       this.desktopClickUnsubscribe();
       this.desktopClickUnsubscribe = null;
     }
-
-    this.started = false;
-    this.isPolling = false;
   }
 
-  registerPendingTask(kind: TrackableTaskKind, id: string): void {
-    this.knownStatuses.set(this.buildTaskKey(kind, id), 'pending');
+  registerPendingTask(_kind: TrackableTaskKind, _id: string): void {
     this.start();
-  }
-
-  private async pollTasks(): Promise<void> {
-    if (this.isPolling) {
-      return;
-    }
-
-    this.isPolling = true;
-
-    try {
-      const trackedTasks = Array.from(this.knownStatuses.entries())
-        .filter(([, status]) => !this.isTerminalStatus(status))
-        .map(([key]) => this.parseTaskKey(key))
-        .filter((task): task is { kind: TrackableTaskKind; id: string } => !!task);
-
-      if (trackedTasks.length === 0) {
-        this.stop();
-        this.prepareNotifications();
-        return;
-      }
-
-      const taskResults = await Promise.allSettled(
-        trackedTasks.map((task) => this.fetchTrackedTask(task.kind, task.id)),
-      );
-
-      const tasks: TrackableTask[] = taskResults
-        .filter(
-          (result): result is PromiseFulfilledResult<TrackableTask | null> =>
-            result.status === 'fulfilled',
-        )
-        .map((result) => result.value)
-        .filter((task): task is TrackableTask => !!task);
-
-      for (const task of tasks) {
-        const key = this.buildTaskKey(task.kind, task.id);
-        const previousStatus = this.knownStatuses.get(key);
-        const nextStatus = this.normalizeStatus(task.status);
-
-        if (
-          previousStatus &&
-          previousStatus !== nextStatus &&
-          this.isTerminalStatus(nextStatus) &&
-          !this.isTerminalStatus(previousStatus)
-        ) {
-          this.notify(task, nextStatus);
-        }
-
-        this.knownStatuses.set(key, nextStatus);
-      }
-    } finally {
-      this.isPolling = false;
-    }
-  }
-
-  private notify(task: TrackableTask, status: string): void {
-    const title = this.buildNotificationTitle(task.kind, status);
-    const body = this.buildNotificationBody(task.label, status);
-    this.notifyTaskResult({
-      title,
-      body,
-      status,
-      route: task.route,
-      tag: this.buildTaskKey(task.kind, task.id),
-    });
-  }
-
-  private async fetchTrackedTask(
-    kind: TrackableTaskKind,
-    id: string,
-  ): Promise<TrackableTask | null> {
-    try {
-      if (kind === 'audit') {
-        const audit = await this.auditRepository.find(id);
-        return {
-          id: audit.id,
-          kind,
-          status: audit.status,
-          route: `/admin/audit/${audit.id}`,
-          label: audit.web_page?.name || audit.web_page?.url || `Auditoría ${audit.id}`,
-        };
-      }
-
-      if (kind === 'comparison') {
-        const comparison = await this.auditRepository.findComparisons(id);
-        return {
-          id: comparison.id,
-          kind,
-          status: comparison.status,
-          route: `/admin/audit/comparisons/${comparison.id}`,
-          label: `Comparación ${comparison.id}`,
-        };
-      }
-
-      if (kind === 'schema') {
-        const schema = await this.auditSchemaRepository.find(id);
-        return {
-          id: schema.id,
-          kind,
-          status: schema.status,
-          route: `/admin/audit/schemas/${schema.id}`,
-          label: schema.programming_language || `Schema ${schema.id}`,
-        };
-      }
-
-      const validation = await this.auditUrlValidationRepository.find(id);
-      return {
-        id: validation.id,
-        kind,
-        status: validation.status,
-        route: `/admin/audit/url-validations/${validation.id}`,
-        label: validation.name_validation || `Validación ${validation.id}`,
-      };
-    } catch {
-      return null;
-    }
   }
 
   notifyTaskResult({
@@ -253,6 +138,113 @@ export class TaskNotificationService {
         void this.router.navigateByUrl(route);
       }
     };
+  }
+
+  private connectWebSocket(): void {
+    if (!isPlatformBrowser(this.platformId) || this.websocket || !this.authRepository.isAuthenticated()) {
+      return;
+    }
+
+    const url = this.buildWebSocketUrl();
+    if (!url) {
+      return;
+    }
+
+    this.clearReconnectTimer();
+    const socket = new WebSocket(url);
+    this.websocket = socket;
+
+    socket.onopen = () => {
+      this.startPing();
+    };
+
+    socket.onmessage = (event) => {
+      this.handleSocketMessage(event.data);
+    };
+
+    socket.onerror = () => {
+      socket.close();
+    };
+
+    socket.onclose = () => {
+      this.stopPing();
+      if (this.websocket === socket) {
+        this.websocket = null;
+      }
+
+      if (!this.manualStop && this.started) {
+        this.scheduleReconnect();
+      }
+    };
+  }
+
+  private handleSocketMessage(rawMessage: string): void {
+    try {
+      const payload = JSON.parse(rawMessage) as TaskStatusChangedEvent | { event: 'pong' };
+      if (payload.event !== 'task-status-changed') {
+        return;
+      }
+
+      const status = this.normalizeStatus(payload.status);
+      if (!this.isTerminalStatus(status)) {
+        return;
+      }
+
+      this.notifyTaskResult({
+        title: this.buildNotificationTitle(payload.task_kind, status),
+        body: this.buildNotificationBody(payload.label, status),
+        status,
+        route: payload.route,
+        tag: `${payload.task_kind}:${payload.task_id}:${status}`,
+      });
+    } catch (error) {
+      console.warn('No se pudo procesar el mensaje WebSocket de tareas', error);
+    }
+  }
+
+  private buildWebSocketUrl(): string | null {
+    const token = this.authRepository.getToken();
+    if (!token) {
+      return null;
+    }
+
+    const apiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
+    const wsBase = apiBase.replace(/^http:\/\//i, 'ws://').replace(/^https:\/\//i, 'wss://');
+    return `${wsBase}/api/v1/ws/task-notifications?token=${encodeURIComponent(token)}`;
+  }
+
+  private scheduleReconnect(): void {
+    if (this.reconnectTimer !== null) {
+      return;
+    }
+
+    this.reconnectTimer = window.setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connectWebSocket();
+    }, this.reconnectDelayMs);
+  }
+
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer !== null) {
+      window.clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  private startPing(): void {
+    this.stopPing();
+    this.pingTimer = window.setInterval(() => {
+      if (this.websocket?.readyState === WebSocket.OPEN) {
+        this.websocket.send('ping');
+      }
+    }, this.pingIntervalMs);
+  }
+
+  private stopPing(): void {
+    if (this.pingTimer !== null) {
+      window.clearInterval(this.pingTimer);
+      this.pingTimer = null;
+    }
   }
 
   private async requestNotificationPermission(): Promise<void> {
@@ -309,28 +301,8 @@ export class TaskNotificationService {
     return isPlatformBrowser(this.platformId) && 'Notification' in window && Notification.permission === 'granted';
   }
 
-  private buildTaskKey(kind: TrackableTaskKind, id: string): string {
-    return `${kind}:${id}`;
-  }
-
-  private parseTaskKey(key: string): { kind: TrackableTaskKind; id: string } | null {
-    const separatorIndex = key.indexOf(':');
-    if (separatorIndex <= 0) {
-      return null;
-    }
-
-    const kind = key.slice(0, separatorIndex) as TrackableTaskKind;
-    const id = key.slice(separatorIndex + 1);
-    if (!id) {
-      return null;
-    }
-
-    return { kind, id };
-  }
-
   private normalizeStatus(status: string): StatusType | string {
-    const normalized = status?.toLowerCase?.() ?? '';
-    return normalized;
+    return status?.toLowerCase?.() ?? '';
   }
 
   private isTerminalStatus(status: string): boolean {

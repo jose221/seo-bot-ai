@@ -19,6 +19,7 @@ from app.services.seo_analyzer import SEOAnalyzer, filter_open_graph_schemas
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
 from app.services.task_progress_service import get_task_progress_service
+from app.services.task_notification_service import get_task_notification_service
 from app.helpers import extract_domain
 from sqlalchemy import String, cast as sql_cast, desc
 from sqlalchemy.orm import joinedload
@@ -55,6 +56,25 @@ def _log_task_progress(
         message=message,
         level=level,
         progress_percentage=progress_percentage,
+    )
+
+
+async def _publish_task_status_change(
+    *,
+    user_id: UUID | str,
+    task_kind: str,
+    task_id: UUID,
+    status: str,
+    route: str,
+    label: str,
+) -> None:
+    await get_task_notification_service().publish_task_status_change(
+        user_id=user_id,
+        task_kind=task_kind,
+        task_id=task_id,
+        status=status,
+        route=route,
+        label=label,
     )
 
 
@@ -237,6 +257,14 @@ async def run_comparison_task(
             comparison.progress_percentage = 0
             comparison.progress_message = "Preparando comparación de auditorías"
             session.add(comparison)
+        await _publish_task_status_change(
+            user_id=comparison.user_id,
+            task_kind="comparison",
+            task_id=comparison_id,
+            status=ComparisonStatus.IN_PROGRESS.value,
+            route=f"/admin/audit/comparisons/{comparison_id}",
+            label=f"Comparación {comparison_id}",
+        )
         _log_task_progress(
             task_type="audit_comparison",
             task_id=comparison_id,
@@ -475,6 +503,14 @@ async def run_comparison_task(
                 comparison.proposal_report_word_path = None
 
                 session.add(comparison)
+        await _publish_task_status_change(
+            user_id=comparison.user_id,
+            task_kind="comparison",
+            task_id=comparison_id,
+            status=ComparisonStatus.COMPLETED.value,
+            route=f"/admin/audit/comparisons/{comparison_id}",
+            label=f"Comparación {comparison_id}",
+        )
         _log_task_progress(
             task_type="audit_comparison",
             task_id=comparison_id,
@@ -501,6 +537,14 @@ async def run_comparison_task(
                     comparison.error_message = str(e)
                     comparison.completed_at = datetime.utcnow()
                     session.add(comparison)
+                    await _publish_task_status_change(
+                        user_id=comparison.user_id,
+                        task_kind="comparison",
+                        task_id=comparison_id,
+                        status=ComparisonStatus.FAILED.value,
+                        route=f"/admin/audit/comparisons/{comparison_id}",
+                        label=f"Comparación {comparison_id}",
+                    )
             _log_task_progress(
                 task_type="audit_comparison",
                 task_id=comparison_id,
@@ -529,6 +573,14 @@ async def run_schema_audit_task(
 
             schema_audit.status = SchemaAuditStatus.IN_PROGRESS
             session.add(schema_audit)
+        await _publish_task_status_change(
+            user_id=schema_audit.user_id,
+            task_kind="schema",
+            task_id=schema_audit_id,
+            status=SchemaAuditStatus.IN_PROGRESS.value,
+            route=f"/admin/audit/schemas/{schema_audit_id}",
+            label=schema_audit.programming_language or f"Schema {schema_audit_id}",
+        )
 
         service = get_schema_audit_service()
         total_input_tokens = 0
@@ -619,6 +671,14 @@ async def run_schema_audit_task(
             schema_audit.status = SchemaAuditStatus.COMPLETED
             schema_audit.completed_at = datetime.utcnow()
             session.add(schema_audit)
+        await _publish_task_status_change(
+            user_id=schema_audit.user_id,
+            task_kind="schema",
+            task_id=schema_audit_id,
+            status=SchemaAuditStatus.COMPLETED.value,
+            route=f"/admin/audit/schemas/{schema_audit_id}",
+            label=schema_audit.programming_language or f"Schema {schema_audit_id}",
+        )
 
         print(f"✅ Auditoría de schemas completada: {schema_audit_id}")
     except Exception as e:
@@ -636,6 +696,14 @@ async def run_schema_audit_task(
                     schema_audit.error_message = str(e)
                     schema_audit.completed_at = datetime.utcnow()
                     session.add(schema_audit)
+                    await _publish_task_status_change(
+                        user_id=schema_audit.user_id,
+                        task_kind="schema",
+                        task_id=schema_audit_id,
+                        status=SchemaAuditStatus.FAILED.value,
+                        route=f"/admin/audit/schemas/{schema_audit_id}",
+                        label=schema_audit.programming_language or f"Schema {schema_audit_id}",
+                    )
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo schema audit: {inner_error}")
 
@@ -674,6 +742,14 @@ async def run_url_validation_task(
             validation.global_severity = None
             validation.error_message = None
             session.add(validation)
+        await _publish_task_status_change(
+            user_id=validation.user_id,
+            task_kind="url-validation",
+            task_id=validation_id,
+            status=UrlValidationStatus.IN_PROGRESS.value,
+            route=f"/admin/audit/url-validations/{validation_id}",
+            label=validation.name_validation or f"Validación {validation_id}",
+        )
         _log_task_progress(
             task_type="audit_url_validation",
             task_id=validation_id,
@@ -881,6 +957,14 @@ async def run_url_validation_task(
                 validation.global_report_ai_text = global_report_ai_text
                 validation.completed_at = datetime.utcnow()
                 session.add(validation)
+        await _publish_task_status_change(
+            user_id=validation.user_id,
+            task_kind="url-validation",
+            task_id=validation_id,
+            status=UrlValidationStatus.COMPLETED.value,
+            route=f"/admin/audit/url-validations/{validation_id}",
+            label=validation.name_validation or f"Validación {validation_id}",
+        )
         _log_task_progress(
             task_type="audit_url_validation",
             task_id=validation_id,
@@ -905,6 +989,14 @@ async def run_url_validation_task(
                     validation.error_message = str(e)
                     validation.completed_at = datetime.utcnow()
                     session.add(validation)
+                    await _publish_task_status_change(
+                        user_id=validation.user_id,
+                        task_kind="url-validation",
+                        task_id=validation_id,
+                        status=UrlValidationStatus.FAILED.value,
+                        route=f"/admin/audit/url-validations/{validation_id}",
+                        label=validation.name_validation or f"Validación {validation_id}",
+                    )
             _log_task_progress(
                 task_type="audit_url_validation",
                 task_id=validation_id,
@@ -1000,6 +1092,14 @@ async def run_url_validation_single_url_task(
             validation.progress_message = f"Re-analizando {target_url}"
             validation.error_message = None
             session.add(validation)
+        await _publish_task_status_change(
+            user_id=validation.user_id,
+            task_kind="url-validation",
+            task_id=validation_id,
+            status=UrlValidationStatus.IN_PROGRESS.value,
+            route=f"/admin/audit/url-validations/{validation_id}",
+            label=validation.name_validation or target_url,
+        )
         _log_task_progress(
             task_type="audit_url_validation",
             task_id=validation_id,
@@ -1109,6 +1209,14 @@ async def run_url_validation_single_url_task(
             validation.progress_message = f"Re-análisis completado para {target_url}"
             validation.completed_at = datetime.utcnow()
             session.add(validation)
+        await _publish_task_status_change(
+            user_id=validation.user_id,
+            task_kind="url-validation",
+            task_id=validation_id,
+            status=UrlValidationStatus.COMPLETED.value,
+            route=f"/admin/audit/url-validations/{validation_id}",
+            label=validation.name_validation or target_url,
+        )
         _log_task_progress(
             task_type="audit_url_validation",
             task_id=validation_id,
@@ -1130,6 +1238,14 @@ async def run_url_validation_single_url_task(
                     validation.progress_message = f"Error re-analizando {target_url}: {e}"
                     validation.error_message = str(e)
                     session.add(validation)
+                    await _publish_task_status_change(
+                        user_id=validation.user_id,
+                        task_kind="url-validation",
+                        task_id=validation_id,
+                        status=UrlValidationStatus.FAILED.value,
+                        route=f"/admin/audit/url-validations/{validation_id}",
+                        label=validation.name_validation or target_url,
+                    )
             _log_task_progress(
                 task_type="audit_url_validation",
                 task_id=validation_id,

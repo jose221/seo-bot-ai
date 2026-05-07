@@ -33,6 +33,7 @@ from app.services.report_lifecycle import get_report_lifecycle_service
 from app.services.url_validation_service import get_url_validation_service
 from app.services.background_tasks import run_comparison_task, run_schema_audit_task, run_url_validation_task, run_url_validation_single_url_task
 from app.services.task_progress_service import get_task_progress_service
+from app.services.task_notification_service import get_task_notification_service
 
 router = APIRouter()
 
@@ -68,6 +69,14 @@ async def run_audit_task(
             audit.status = AuditStatus.IN_PROGRESS
             session.add(audit)
             # No llamar commit aquí, el context manager lo hace automáticamente
+        await get_task_notification_service().publish_task_status_change(
+            user_id=audit.user_id,
+            task_kind="audit",
+            task_id=audit_id,
+            status=AuditStatus.IN_PROGRESS.value,
+            route=f"/admin/audit/{audit_id}",
+            label=webpage.url,
+        )
 
         print(f"🚀 Iniciando auditoría para {webpage.url}")
 
@@ -171,6 +180,14 @@ async def run_audit_task(
 
                 session.add(audit)
                 # No llamar commit aquí, el context manager lo hace automáticamente
+        await get_task_notification_service().publish_task_status_change(
+            user_id=audit.user_id,
+            task_kind="audit",
+            task_id=audit_id,
+            status=AuditStatus.COMPLETED.value,
+            route=f"/admin/audit/{audit_id}",
+            label=webpage.url,
+        )
 
         print(f"✅ Auditoría completada: {audit_id}")
     except Exception as e:
@@ -190,6 +207,14 @@ async def run_audit_task(
                     audit.completed_at = datetime.utcnow()
                     session.add(audit)
                     # No llamar commit aquí, el context manager lo hace automáticamente
+                    await get_task_notification_service().publish_task_status_change(
+                        user_id=audit.user_id,
+                        task_kind="audit",
+                        task_id=audit_id,
+                        status=AuditStatus.FAILED.value,
+                        route=f"/admin/audit/{audit_id}",
+                        label=webpage.url,
+                    )
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo: {inner_error}")
 
