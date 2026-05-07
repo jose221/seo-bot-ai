@@ -95,7 +95,7 @@ class GoogleRichResultsEngine:
       if self._proxy_server:
         browser_args.append(f"--proxy-server={self._proxy_server}")
 
-      # Iniciamos headless=False obligatoriamente para evadir detección. Xvfb se encarga de ocultarlo en el servidor.
+      # Iniciamos headless=False obligatoriamente para evadir detección.
       browser = await uc.start(headless=False, browser_args=browser_args)
       page = await browser.get(self.target_url)
 
@@ -104,47 +104,89 @@ class GoogleRichResultsEngine:
 
       # 3. Interacción con la UI de Google
       if input_type == InputType.HTML:
-        code_tab = await page.find("text=Código", best_match=True)
-        await code_tab.click()
+        logger.info("Switching to 'Código' tab...")
+
+        # 3.1 Clic literal apuntando al contenedor div principal
+        try:
+          # Usamos el jsname del contenedor (más estable que las clases)
+          codigo_tab = await page.select("div[aria-controls='fmefR']")
+          await codigo_tab.click()
+        except Exception as e:
+          logger.warning(f"No se encontró el jsname exacto, usando fallback de clases: {e}")
+          # Fallback con las clases exactas que propusiste
+          codigo_tab = await page.select("div.ThdJC.kaAt2.Y8xidc.RPhebf.KKjvXb.j7nIZb")
+          if codigo_tab:
+            await codigo_tab.click()
+
+        await asyncio.sleep(2) # Dar tiempo a que el DOM cargue el editor CodeMirror
+
+        # 3.2 Clic físico en el contenedor del editor para enfocarlo
+        try:
+          cm_container = await page.select('.CodeMirror')
+          await cm_container.click()
+        except Exception as e:
+          logger.warning(f"No se pudo hacer clic físico en CodeMirror: {e}")
+
         await asyncio.sleep(1)
 
-        # Inyección limpia vía JS en CodeMirror
+        # 3.3 Inyección limpia de HTML (Equivalente a un Ctrl+V)
         content_json = json.dumps(content)
         await page.evaluate(f"""
                     () => {{
-                        const cm = document.querySelector('.CodeMirror').CodeMirror;
-                        const value = {content_json};
-                        cm.setValue(value);
+                        const cmElement = document.querySelector('.CodeMirror');
+                        if (cmElement && cmElement.CodeMirror) {{
+                            const cm = cmElement.CodeMirror;
+                            cm.setValue({content_json});
+                            cm.refresh(); // Forzar renderizado
+                        }}
                     }}
                 """)
 
-        test_btn = await page.find("text=Probar código", best_match=True)
-        await test_btn.click()
+        logger.info("HTML injected. Waiting 3 seconds for Google to validate input...")
+        await asyncio.sleep(3)
+
+        # 3.4 Clic en el botón "probar código" (jsname oe2Hje)
+        logger.info("Clicking 'probar código' button...")
+        try:
+          submit_btn = await page.select("div[jsname='oe2Hje']")
+          await submit_btn.click()
+        except Exception as e:
+          logger.warning(f"Fallo el clic físico en el botón, usando JS fallback: {e}")
+          await page.evaluate("""
+                        () => {
+                            const btn = document.querySelector("div[jsname='oe2Hje']");
+                            if (btn) btn.click();
+                        }
+                    """)
 
       else:
+        # Flujo de URL
         url_input = await page.select("input[type='url']")
         await url_input.send_keys(content)
 
         logger.info("URL typed. Waiting 3 seconds for Google event listeners to catch up...")
         await asyncio.sleep(3)
 
-        # Seleccionamos el botón usando el jsname persistente
+        # Seleccionamos el botón "probar URL" (jsname LZQqje)
         submit_btn = await page.select("div[jsname='LZQqje']")
         await submit_btn.click()
         logger.info("Clicked 'probar URL' button")
 
-      # 4. Polling manual para captura de redirección
+      # 4. Polling manual para captura de redirección (El modal "Probando URL...")
       logger.info("Polling for URL change indicating analysis completion...")
       current_url = ""
 
-      # 80 iteraciones * 1.5s = 120 segundos máximo de espera para el modal de progreso
+      # 80 iteraciones * 1.5s = 120 segundos máximo de espera
       for _ in range(80):
         current_url = await page.evaluate("window.location.href")
-        # Si detectamos captcha o límite de peticiones durante la espera
+
+        # Detección temprana de bloqueos o captchas
         if "sorry" in current_url.lower():
           raise Exception("Google explicitly blocked the request (429/Captcha).")
+
         if "/result?id=" in current_url:
           break
+
         await asyncio.sleep(1.5)
 
       if "/result?id=" not in current_url:
@@ -186,7 +228,7 @@ class GoogleRichResultsEngine:
       )
 
     finally:
-      # Limpieza de recursos crítica para evitar fugas de memoria en el servidor
+      # Limpieza segura de recursos
       if browser:
         try:
           browser.stop()
