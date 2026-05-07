@@ -9,18 +9,22 @@ from urllib.parse import unquote, urlparse
 import trafilatura
 from bs4 import BeautifulSoup
 from fastapi import HTTPException, status
+from sqlmodel import select
 
 from app.core.config import settings
+from app.core.database import db_manager
 from app.handlers.seo_scrapper.google_rich_results_engine import (
     GoogleRichResultsEngine,
     InputType,
 )
+from app.models.webpage import WebPage
 from app.schemas.rich_results_schemas import (
     RichResultsAIResult,
     RichResultsReportRequest,
     RichResultsReportResponse,
 )
 from app.services.ai_client import get_ai_client
+from app.services.audit_engine import get_audit_engine
 
 
 class RichResultsService:
@@ -69,13 +73,56 @@ class RichResultsService:
         soup = BeautifulSoup(html_content, "lxml")
         return soup.get_text("\n", strip=True)
 
+    async def _extract_html_from_url(self, url: str) -> str:
+        target = None
+        async with db_manager.async_session_context() as session:
+            statement = select(WebPage).where(
+                WebPage.url == url,
+                WebPage.is_active == True,
+            )
+            target = (await session.execute(statement)).scalars().first()
+
+        html_content: Optional[str] = None
+        try:
+            html_content = await get_audit_engine().fetch_html(url, timeout_ms=30_000)
+        except Exception:
+            html_content = None
+
+        if not html_content and target and target.manual_html_content:
+            html_content = target.manual_html_content
+
+        if not html_content:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "No se pudo extraer el HTML para Rich Results."
+                    + (
+                        " El target no respondió al scraper y no hay HTML guardado."
+                        if target
+                        else " La URL no respondió al scraper."
+                    )
+                ),
+            )
+
+        return html_content
+
+    async def _build_effective_input(
+        self,
+        payload: RichResultsReportRequest,
+    ) -> tuple[InputType, str, Optional[str]]:
+        if payload.is_url and payload.auto_extract_html:
+            html_content = await self._extract_html_from_url(payload.content)
+            return InputType.HTML, html_content, payload.content
+
+        input_type = InputType.URL if payload.is_url else InputType.HTML
+        return input_type, payload.content, payload.content if payload.is_url else None
+
     async def report_page(
         self,
         payload: RichResultsReportRequest,
         token: Optional[str] = None,
     ) -> RichResultsReportResponse:
-        input_type = InputType.URL if payload.is_url else InputType.HTML
-        content = payload.content
+        input_type, content, source_url = await self._build_effective_input(payload)
         proxy_url = self._resolve_proxy_url()
         engine = self._build_engine(proxy_url)
 
@@ -96,7 +143,7 @@ class RichResultsService:
                     ai_payload = await self.ai_client.analyze_rich_results_content(
                         markdown_content=markdown_content,
                         rich_results_url=validation.result_url,
-                        source_url=payload.content if payload.is_url else None,
+                        source_url=source_url,
                         token=token
                     )
                     ai_result = RichResultsAIResult(**ai_payload)

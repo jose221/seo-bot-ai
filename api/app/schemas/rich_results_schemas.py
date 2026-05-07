@@ -35,6 +35,10 @@ class RichResultsReportRequest(BaseModel):
         default=False,
         description="Si es true, convierte el HTML final de Google a markdown y solicita análisis al agente de IA."
     )
+    auto_extract_html: bool = Field(
+        default=False,
+        description="Si es true y content es una URL, primero extrae el HTML con el scraper propio y valida ese HTML en lugar de enviar la URL directo a Google.",
+    )
 
     @field_validator("content")
     @classmethod
@@ -51,6 +55,8 @@ class RichResultsReportRequest(BaseModel):
 
         if not self.is_url and "<" not in self.content:
             raise ValueError("Cuando is_url es false, content debe parecer HTML válido")
+        if self.auto_extract_html and not self.is_url:
+            raise ValueError("auto_extract_html solo se puede usar cuando is_url es true")
         return self
 
     class Config:
@@ -59,12 +65,14 @@ class RichResultsReportRequest(BaseModel):
                 {
                     "content": "https://example.com/producto",
                     "is_url": True,
-                    "get_ai_result": True
+                    "get_ai_result": True,
+                    "auto_extract_html": False,
                 },
                 {
                     "content": "<html><body><script type='application/ld+json'>{}</script></body></html>",
                     "is_url": False,
-                    "get_ai_result": False
+                    "get_ai_result": False,
+                    "auto_extract_html": False,
                 }
             ]
         }
@@ -79,6 +87,10 @@ class RichResultsBatchReportRequest(BaseModel):
     get_ai_result: bool = Field(
         default=True,
         description="Si es true, solicita también el análisis de IA para cada URL.",
+    )
+    auto_extract_html: bool = Field(
+        default=False,
+        description="Si es true, cada URL del lote primero se convierte a HTML con el scraper propio y ese HTML se usa para la validación Rich Results.",
     )
 
     @field_validator("urls")

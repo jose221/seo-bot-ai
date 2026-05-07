@@ -117,7 +117,9 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   richResultsBatchSubmitting = signal<boolean>(false);
   autoReload = signal<boolean>(true);
   richResultsBatchAnalyzeWithAi = signal<boolean>(true);
+  richResultsBatchAutoExtractHtml = signal<boolean>(false);
   richResultsSingleAnalyzeWithAi = signal<boolean>(true);
+  richResultsSingleAutoExtractHtml = signal<boolean>(false);
   private richResultsPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly richResultsApiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
   private readonly trackedRichResultsTasks = new Map<string, TrackedRichResultsTask>();
@@ -822,7 +824,12 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     this.updateUrlSet(this.richResultsCreatingSet, url, true);
     try {
       const response = await this._richResultsRepository.create(
-        new CreateRichResultsReportRequestModel(url, true, this.richResultsSingleAnalyzeWithAi()),
+        new CreateRichResultsReportRequestModel(
+          url,
+          true,
+          this.richResultsSingleAnalyzeWithAi(),
+          this.richResultsSingleAutoExtractHtml(),
+        ),
       );
       this.trackRichResultsTask(response);
       await this.ensureRichResultsLoaded(url, true);
@@ -855,7 +862,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     this.richResultsBatchSubmitting.set(true);
     try {
       const response = await this._richResultsRepository.createBatch(
-        new CreateRichResultsBatchReportRequestModel(urls, this.richResultsBatchAnalyzeWithAi()),
+        new CreateRichResultsBatchReportRequestModel(
+          urls,
+          this.richResultsBatchAnalyzeWithAi(),
+          this.richResultsBatchAutoExtractHtml(),
+        ),
       );
       response.items.forEach((item) => this.trackRichResultsTask(item));
 

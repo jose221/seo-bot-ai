@@ -3,6 +3,7 @@ export class CreateRichResultsReportRequestDto {
     public content: string,
     public is_url: boolean,
     public get_ai_result: boolean,
+    public auto_extract_html: boolean,
   ) {}
 }
 
@@ -10,6 +11,7 @@ export class CreateRichResultsBatchReportRequestDto {
   constructor(
     public urls: string[],
     public get_ai_result: boolean,
+    public auto_extract_html: boolean,
   ) {}
 }
 

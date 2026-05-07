@@ -295,6 +295,15 @@
                 <span class="filter-switch-slider"></span>
                 <span class="filter-switch-label">Analizar con IA</span>
               </label>
+              <label class="filter-switch">
+                <input
+                  type="checkbox"
+                  [ngModel]="richResultsBatchAutoExtractHtml()"
+                  (ngModelChange)="richResultsBatchAutoExtractHtml.set($event)"
+                >
+                <span class="filter-switch-slider"></span>
+                <span class="filter-switch-label">Auto extraer HTML</span>
+              </label>
               <button class="btn-action" type="button" (click)="addFilteredUrlsToRichResultsBatch()">
                 Seleccionar visibles
               </button>
@@ -582,6 +591,15 @@
                           >
                           <span class="filter-switch-slider"></span>
                           <span class="filter-switch-label">Analizar con IA</span>
+                        </label>
+                        <label class="filter-switch">
+                          <input
+                            type="checkbox"
+                            [ngModel]="richResultsSingleAutoExtractHtml()"
+                            (ngModelChange)="richResultsSingleAutoExtractHtml.set($event)"
+                          >
+                          <span class="filter-switch-slider"></span>
+                          <span class="filter-switch-label">Auto extraer HTML</span>
                         </label>
                         <button class="btn-action btn-action--rerun" (click)="createRichResultsReport(schema.url)" [disabled]="isRichResultsCreating(schema.url)">
                           @if (isRichResultsCreating(schema.url)) {

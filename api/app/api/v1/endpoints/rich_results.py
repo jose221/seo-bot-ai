@@ -85,6 +85,7 @@ async def report_page_batch(
             content=url,
             is_url=True,
             get_ai_result=payload.get_ai_result,
+            auto_extract_html=payload.auto_extract_html,
         )
         report = await get_rich_results_report_service().create_pending_report(
             session,
