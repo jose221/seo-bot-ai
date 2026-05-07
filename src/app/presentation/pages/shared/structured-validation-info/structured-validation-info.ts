@@ -8,7 +8,7 @@ import { StructuredValidationRepository } from '@/app/domain/repositories/struct
 import { StructuredValidationTaskItemModel, StructuredValidationTaskResponseModel } from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
 import { AnswerCommentRequestModel, CreatePublicCommentRequestModel } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import { PublicCommentItemModel } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
-import { RichResultsValidatorDetailModel } from '@/app/domain/models/rich-results/response/rich-results-response.model';
+import { RichResultsScreenshotModel, RichResultsValidatorDetailModel } from '@/app/domain/models/rich-results/response/rich-results-response.model';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 
 const LS_USERNAME_KEY = 'structured-validation-comment-username';
@@ -41,6 +41,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   private readonly apiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private photoSwipeInstance: { close: () => void } | null = null;
 
   readonly filteredItems = computed(() => {
     const query = this.search().trim().toLowerCase();
@@ -90,6 +91,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     if (this.pollTimer) clearInterval(this.pollTimer);
+    this.photoSwipeInstance?.close();
   }
 
   private startPolling(id: string): void {
@@ -209,6 +211,51 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
       }
     }
     return assetUrl.startsWith('/') ? assetUrl : `/${assetUrl}`;
+  }
+
+  async openScreenshotGallery(screenshots: RichResultsScreenshotModel[], index: number): Promise<void> {
+    if (!isPlatformBrowser(this.platformId) || screenshots.length === 0) return;
+
+    const PhotoSwipe = (await import('photoswipe')).default;
+    const dataSource = await Promise.all(screenshots.map((shot) => this.buildPhotoSwipeSlide(shot)));
+
+    this.photoSwipeInstance?.close();
+    const gallery = new PhotoSwipe({
+      dataSource,
+      index,
+      bgOpacity: 0.92,
+      showHideAnimationType: 'zoom',
+      secondaryZoomLevel: 1.75,
+      initialZoomLevel: 'fit',
+      paddingFn: () => ({ top: 32, bottom: 32, left: 32, right: 32 }),
+    });
+
+    gallery.on('destroy', () => {
+      if (this.photoSwipeInstance === gallery) this.photoSwipeInstance = null;
+    });
+
+    this.photoSwipeInstance = gallery;
+    gallery.init();
+  }
+
+  private async buildPhotoSwipeSlide(shot: RichResultsScreenshotModel): Promise<{ src: string; width: number; height: number; alt: string }> {
+    const src = this.getScreenshotPreviewUrl(shot.url);
+    const dimensions = await this.getImageDimensions(src);
+    return {
+      src,
+      width: dimensions.width,
+      height: dimensions.height,
+      alt: 'Screenshot de validación',
+    };
+  }
+
+  private getImageDimensions(src: string): Promise<{ width: number; height: number }> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve({ width: img.naturalWidth || 1600, height: img.naturalHeight || 900 });
+      img.onerror = () => resolve({ width: 1600, height: 900 });
+      img.src = src;
+    });
   }
 
   toggleComments(itemKey: string): void {

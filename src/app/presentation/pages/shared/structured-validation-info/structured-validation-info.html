@@ -220,13 +220,34 @@
                   }
 
                   @if (validator.screenshots.length > 0) {
-                    <div class="screenshot-grid">
+                    <div class="screenshot-gallery">
+                      <div class="screenshot-gallery__header">
+                        <div>
+                          <h4 class="screenshot-gallery__title">Capturas del validador</h4>
+                          <p class="screenshot-gallery__subtitle">Vista previa compacta. Da clic para abrir zoom, pan y navegación completa.</p>
+                        </div>
+                        <span class="sv-badge sv-badge--neutral">{{ validator.screenshots.length }} captura(s)</span>
+                      </div>
+
+                      <div class="screenshot-grid">
                       @for (shot of validator.screenshots; track shot.path) {
-                        <a class="screenshot-card" [href]="getScreenshotPreviewUrl(shot.url)" target="_blank">
-                          <img [src]="getScreenshotPreviewUrl(shot.url)" alt="Screenshot de validación" />
-                          <span class="screenshot-card__path">{{ getScreenshotApiPath(shot.url) }}</span>
-                        </a>
+                        <button type="button" class="screenshot-card" (click)="openScreenshotGallery(validator.screenshots, $index)">
+                          <div class="screenshot-card__media">
+                            <img [src]="getScreenshotPreviewUrl(shot.url)" alt="Screenshot de validación" />
+                          </div>
+                          <div class="screenshot-card__footer">
+                            <div class="screenshot-card__copy">
+                              <strong>Captura {{ $index + 1 }}</strong>
+                              <span class="screenshot-card__path">{{ getScreenshotApiPath(shot.url) }}</span>
+                            </div>
+                            <span class="screenshot-card__action">
+                              <i class="bi bi-arrows-fullscreen"></i>
+                              Abrir
+                            </span>
+                          </div>
+                        </button>
                       }
+                      </div>
                     </div>
                   }
                 </section>

@@ -58,6 +58,98 @@ class SchemaOrgValidatorEngine:
       "url": f"{self.storage_url_prefix}/{filename}"
     }
 
+  async def _get_result_item_count(self, page) -> int:
+    try:
+      count = await page.evaluate("""
+                () => document.querySelectorAll('ul.mdl-list li.mdl-list__item').length
+            """)
+      return int(count or 0)
+    except Exception:
+      return 0
+
+  async def _wait_for_results_ready(self, page, timeout_seconds: int = 30) -> int:
+    dashboard_ready_streak = 0
+    for _ in range(timeout_seconds):
+      item_count = await self._get_result_item_count(page)
+      if item_count > 0:
+        return item_count
+
+      try:
+        dashboard_ready = await page.evaluate("""
+                    () => Boolean(
+                        document.querySelector('.sKfxWe-BeDmAc')
+                        || document.querySelector('.mdl-list')
+                        || document.body.innerText.includes('ELEMENTO')
+                        || document.body.innerText.includes('ERRORES')
+                        || document.body.innerText.includes('ADVERTENCIAS')
+                    )
+                """)
+      except Exception:
+        dashboard_ready = False
+
+      if dashboard_ready:
+        dashboard_ready_streak += 1
+        if dashboard_ready_streak >= 3:
+          return 0
+      else:
+        dashboard_ready_streak = 0
+
+      await asyncio.sleep(1.0)
+
+    logger.warning("Timeout esperando resultados de Schema.org")
+    return await self._get_result_item_count(page)
+
+  async def _click_result_item(self, page, index: int) -> bool:
+    try:
+      clicked = await page.evaluate(
+        f"""
+                (() => {{
+                    const items = Array.from(document.querySelectorAll('ul.mdl-list li.mdl-list__item'));
+                    const target = items[{index}];
+                    if (!target) return false;
+                    target.click();
+                    return true;
+                }})()
+            """,
+      )
+      return bool(clicked)
+    except Exception as exc:
+      logger.warning("Error al hacer click en el elemento %s: %s", index, exc)
+      return False
+
+  async def _wait_for_item_detail(self, page, timeout_seconds: int = 10) -> bool:
+    for _ in range(timeout_seconds):
+      try:
+        has_back = await page.evaluate("""
+                    () => Array.from(document.querySelectorAll('button'))
+                        .some((btn) => (btn.textContent || '').includes('arrow_back'))
+                """)
+      except Exception:
+        has_back = False
+
+      if has_back:
+        return True
+      await asyncio.sleep(0.5)
+    return False
+
+  async def _go_back_to_dashboard(self, page, timeout_seconds: int = 10) -> None:
+    try:
+      await page.evaluate("""
+                () => {
+                    const backButton = Array.from(document.querySelectorAll('button'))
+                        .find((btn) => (btn.textContent || '').includes('arrow_back'));
+                    if (backButton) backButton.click();
+                }
+            """)
+    except Exception as exc:
+      logger.warning("Error al regresar al dashboard: %s", exc)
+      return
+
+    for _ in range(timeout_seconds * 2):
+      if await self._get_result_item_count(page) > 0:
+        return
+      await asyncio.sleep(0.5)
+
   async def _capture_screenshot(self, page, label: str) -> Optional[dict[str, str]]:
     if page is None:
       return None
@@ -162,16 +254,9 @@ class SchemaOrgValidatorEngine:
                     }
                 """)
 
-      # 4. Polling dinámico (Máximo 20 segundos)
-      logger.info("Esperando resolución del validador (Polling de 20s máximo)...")
-      analysis_complete = False
-
-      # 20 iteraciones * 1s = 20 segundos max
-      await asyncio.sleep(5)
-      analysis_complete = True
-      if not analysis_complete:
-        # No lanzamos excepción inmediatamente porque a veces la página no tiene ningún esquema (0 elementos)
-        logger.warning("Timeout de 20s superado o no se detectaron elementos Schema.")
+      # 4. Esperar a que el dashboard realmente termine de renderizar
+      logger.info("Esperando resolución del validador y render del dashboard...")
+      items_count = await self._wait_for_results_ready(page, timeout_seconds=30)
 
       # 5. Interacción de capturas: Navegación de Elementos (Clic, Captura, Atrás)
       logger.info("Análisis completo. Extrayendo resultados e iterando elementos...")
@@ -182,69 +267,27 @@ class SchemaOrgValidatorEngine:
       if main_screenshot:
         screenshots.append(main_screenshot)
 
-      # Contar cuántos elementos detectó Schema.org
-      elementos = await page.select_all('ul.mdl-list li.mdl-list__item')
-      items_count = len(elementos)
-
       logger.info(f"Se detectaron {items_count} elementos Schema.")
 
-      # Iterar usando índices para evitar el problema de "Stale Element Reference"
-      # Iterar usando índices
       for i in range(items_count):
         logger.info(f"Navegando al elemento {i+1} de {items_count}...")
 
-        try:
-          # 5.1 Búsqueda FRESCA en cada iteración y clic nativo de Python
-          elementos = await page.select_all('ul.mdl-list li.mdl-list__item')
-
-          if i < len(elementos):
-            await elementos[i].click()
-          else:
-            logger.warning(f"No se encontró el elemento en el índice {i}")
-            continue
-
-        except Exception as e:
-          logger.warning(f"Error al intentar clickear el elemento {i}: {e}")
+        clicked = await self._click_result_item(page, i)
+        if not clicked:
+          logger.warning(f"No se pudo abrir el elemento {i}")
           continue
 
-        await asyncio.sleep(1.0) # Espera a que el panel lateral deslice
+        detail_ready = await self._wait_for_item_detail(page, timeout_seconds=10)
+        if not detail_ready:
+          logger.warning(f"El detalle del elemento {i+1} no se renderizó a tiempo")
+          continue
 
         # 5.2 Captura del detalle
         item_screenshot = await self._capture_screenshot(page, f"detail_item_{i+1}")
         if item_screenshot:
           screenshots.append(item_screenshot)
 
-        # 5.3 Clic en botón "Atrás"
-        try:
-          # Obtenemos todos los botones de la página
-          botones = await page.select_all('button')
-
-          for btn in botones:
-            # btn.text obtiene el textContent del elemento en nodriver
-            if btn.text and 'arrow_back' in btn.text:
-              await btn.click()
-              break
-
-        except Exception as e:
-          logger.warning(f"Error al regresar al dashboard: {e}")
-
-        await asyncio.sleep(1.0) # Espera a que el panel regrese al dashboard
-
-
-
-        # 5.3 Clic en botón "Atrás" con nodriver puro
-        try:
-          # Buscamos dinámicamente todos los botones
-          botones = await page.select_all('button')
-
-          for btn in botones:
-            # Verificamos si el texto del botón contiene el ícono 'arrow_back'
-            if btn.text and 'arrow_back' in btn.text:
-              await btn.click()
-              break # Salimos del ciclo al encontrarlo y clickearlo
-
-        except Exception as e:
-          logger.warning(f"Error al regresar al dashboard: {e}")
+        await self._go_back_to_dashboard(page, timeout_seconds=10)
 
       current_url = await page.evaluate("window.location.href")
       final_html = await page.get_content()

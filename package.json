@@ -51,6 +51,7 @@
     "marked": "^17.0.1",
     "ngx-markdown": "^21.0.1",
     "ngx-skeleton-loader": "^11.3.0",
+    "photoswipe": "^5.4.4",
     "rxjs": "~7.8.0",
     "sweetalert2": "^11.26.3",
     "tslib": "^2.3.0",
