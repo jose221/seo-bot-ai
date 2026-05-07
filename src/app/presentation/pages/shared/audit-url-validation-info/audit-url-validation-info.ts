@@ -729,6 +729,30 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     return `${finding.key}-${finding.selector}-${finding.message}-${finding.document_url || index}`;
   }
 
+  groupFindingsByItem(
+    findings: RichResultsAnalysisFindingModel[],
+  ): { item_name: string | null; findings: RichResultsAnalysisFindingModel[] }[] {
+    const map = new Map<string, RichResultsAnalysisFindingModel[]>();
+    const NULL_KEY = '__no_item__';
+
+    for (const f of findings) {
+      const key = f.item_name ?? NULL_KEY;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(f);
+    }
+
+    const groups: { item_name: string | null; findings: RichResultsAnalysisFindingModel[] }[] = [];
+    // ungrouped first
+    if (map.has(NULL_KEY)) {
+      groups.push({ item_name: null, findings: map.get(NULL_KEY)! });
+      map.delete(NULL_KEY);
+    }
+    for (const [key, items] of map.entries()) {
+      groups.push({ item_name: key, findings: items });
+    }
+    return groups;
+  }
+
   private startRichResultsPolling(): void {
     if (this.richResultsPollTimer || !isPlatformBrowser(this._platformId)) return;
     this.richResultsPollTimer = setInterval(() => {

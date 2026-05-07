@@ -1199,6 +1199,19 @@ $pv-tr: all 0.2s ease;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.75rem;
 }
+.rich-results-finding-group-header {
+  grid-column: 1 / -1;
+  padding: 0.4rem 0 0.2rem;
+  border-top: 1px solid $pv-b;
+  margin-top: 0.25rem;
+  &:first-child {
+    border-top: none;
+    margin-top: 0;
+  }
+}
+.rich-results-finding-card--indented {
+  border-left: 3px solid rgba($pv-p, 0.3);
+}
 .rich-results-finding-card {
   display: flex;
   flex-direction: column;

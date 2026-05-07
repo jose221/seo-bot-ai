@@ -731,28 +731,35 @@
                                       }
                                     </div>
                                     <div class="rich-results-findings-list">
-                                      @for (finding of detail.findings; track trackRichResultsFinding(finding, $index)) {
-                                        <div class="rich-results-finding-card">
-                                          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                            <span class="sv-badge sv-badge--sm" [ngClass]="getRichResultsFindingBadgeClass(finding.severity)">
-                                              {{ finding.severity }}
-                                            </span>
-                                            <span class="sv-badge sv-badge--sm sv-secondary">
-                                              {{ finding.category }}
-                                            </span>
+                                      @for (group of groupFindingsByItem(detail.findings); track group.item_name ?? '__no_item__') {
+                                        @if (group.item_name) {
+                                          <div class="rich-results-finding-group-header">
+                                            <span class="sv-badge sv-badge--sm sv-info me-2">{{ group.item_name }}</span>
                                           </div>
-                                          <div class="small fw-semibold">{{ finding.message }}</div>
-                                          @if (finding.document_url) {
-                                            <a
-                                              [href]="finding.document_url"
-                                              target="_blank"
-                                              rel="noopener noreferrer"
-                                              class="small"
-                                            >
-                                              {{ finding.document_label || 'Abrir documentación relacionada' }}
-                                            </a>
-                                          }
-                                        </div>
+                                        }
+                                        @for (finding of group.findings; track trackRichResultsFinding(finding, $index)) {
+                                          <div class="rich-results-finding-card" [class.rich-results-finding-card--indented]="!!group.item_name">
+                                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                              <span class="sv-badge sv-badge--sm" [ngClass]="getRichResultsFindingBadgeClass(finding.severity)">
+                                                {{ finding.severity }}
+                                              </span>
+                                              <span class="sv-badge sv-badge--sm sv-secondary">
+                                                {{ finding.category }}
+                                              </span>
+                                            </div>
+                                            <div class="small fw-semibold">{{ finding.message }}</div>
+                                            @if (finding.document_url) {
+                                              <a
+                                                [href]="finding.document_url"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="small"
+                                              >
+                                                {{ finding.document_label || 'Abrir documentación relacionada' }}
+                                              </a>
+                                            }
+                                          </div>
+                                        }
                                       }
                                     </div>
                                   </div>

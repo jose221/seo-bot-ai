@@ -28,6 +28,7 @@ class RichResultsHtmlFinding:
     message: str
     document_url: Optional[str] = None
     document_label: Optional[str] = None
+    item_name: Optional[str] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -76,6 +77,27 @@ HTML_ANALYSIS_RULES: tuple[RichResultsHtmlAnalysisRule, ...] = (
 
 def _normalize_text(value: Optional[str]) -> str:
     return " ".join((value or "").split()).strip()
+
+
+def _find_item_name_for_element(element) -> Optional[str]:
+    """
+    Traverse ancestors of a warning element to find the rich result type name.
+    Looks for a sibling `div.MreLB` at each ancestor level.
+    """
+    current = element
+    for _ in range(15):
+        parent = getattr(current, "parent", None)
+        if parent is None:
+            break
+        # Look for MreLB as a direct child of this parent (sibling of current)
+        for sibling in parent.find_all(True, recursive=False):
+            classes = sibling.get("class") or []
+            if "MreLB" in classes:
+                text = _normalize_text(sibling.get_text(" ", strip=True))
+                if text:
+                    return text
+        current = parent
+    return None
 
 
 def _extract_rule_message(element, rule: RichResultsHtmlAnalysisRule) -> str:
@@ -129,12 +151,14 @@ def analyze_rich_results_html(html_content: str) -> list[RichResultsHtmlFinding]
                     continue
 
                 document_url, document_label = _extract_rule_document(element, rule)
+                item_name = _find_item_name_for_element(element)
                 fingerprint = (
                     rule.key,
                     rule.code,
                     rule.severity,
                     message,
                     document_url,
+                    item_name,
                 )
                 if fingerprint in seen:
                     continue
@@ -150,6 +174,7 @@ def analyze_rich_results_html(html_content: str) -> list[RichResultsHtmlFinding]
                         message=message,
                         document_url=document_url,
                         document_label=document_label,
+                        item_name=item_name,
                     )
                 )
 
