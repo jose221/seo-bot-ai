@@ -71,6 +71,7 @@ class AuditUrlValidation(SQLModel, table=True):
         sa_column=Column(Integer, nullable=False, default=0),
         description="Porcentaje de avance del proceso batch (0-100)",
     )
+    progress_message: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
     # Severidad global (peor caso entre todas las URLs)
     global_severity: Optional[str] = Field(

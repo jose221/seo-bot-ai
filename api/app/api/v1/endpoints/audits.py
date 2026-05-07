@@ -22,6 +22,7 @@ from app.models.webpage import WebPage
 from app.models.audit import AuditReport, AuditStatus
 from app.models.audit_comparison import ComparisonStatus
 from app.schemas import audit_schemas
+from app.schemas.task_log_schemas import TaskLogListResponse, TaskLogEntryResponse
 from app.services.audit_engine import get_audit_engine
 from app.services.ai_client import get_ai_client
 from app.services.cache import Cache
@@ -31,6 +32,7 @@ from app.services.schema_audit_service import get_schema_audit_service
 from app.services.report_lifecycle import get_report_lifecycle_service
 from app.services.url_validation_service import get_url_validation_service
 from app.services.background_tasks import run_comparison_task, run_schema_audit_task, run_url_validation_task, run_url_validation_single_url_task
+from app.services.task_progress_service import get_task_progress_service
 
 router = APIRouter()
 
@@ -429,6 +431,7 @@ async def list_comparisons(
         AuditComparison.base_web_page_id,
         AuditComparison.status,
         AuditComparison.progress_percentage,
+        AuditComparison.progress_message,
         AuditComparison.created_at,
         AuditComparison.completed_at,
         AuditComparison.error_message,
@@ -457,6 +460,7 @@ async def list_comparisons(
             base_web_page_id=comp.base_web_page_id,
             status=comp.status,
             progress_percentage=comp.progress_percentage,
+            progress_message=comp.progress_message,
             created_at=comp.created_at,
             completed_at=comp.completed_at,
             base_url=comp.base_url,
@@ -514,6 +518,7 @@ async def get_comparison(
         base_web_page_id=comparison.base_web_page_id,
         status=comparison.status,
         progress_percentage=comparison.progress_percentage,
+        progress_message=comparison.progress_message,
         created_at=comparison.created_at,
         completed_at=comparison.completed_at,
         comparison_result=comparison_result,
@@ -786,6 +791,7 @@ async def create_url_validation(
         ai_instruction=request_body.ai_instruction,
         urls_raw=request_body.urls,
         status=UrlValidationStatus.PENDING,
+        progress_message="Validación en cola",
     )
 
     session.add(validation)
@@ -810,6 +816,7 @@ async def create_url_validation(
         task_id=validation.id,
         status=validation.status,
         progress_percentage=validation.progress_percentage,
+        progress_message=validation.progress_message,
         total_urls=len(urls),
         message=f"Validación iniciada para {len(urls)} URLs — {request_body.name_validation}",
     )
@@ -849,6 +856,7 @@ async def list_url_validations(
             description_validation,
             status,
             progress_percentage,
+            progress_message,
             global_severity,
             input_tokens,
             output_tokens,
@@ -879,6 +887,7 @@ async def list_url_validations(
                 description_validation=row["description_validation"],
                 status=row["status"],
                 progress_percentage=row["progress_percentage"],
+                progress_message=row["progress_message"],
                 global_severity=row["global_severity"],
                 input_tokens=row["input_tokens"],
                 output_tokens=row["output_tokens"],
@@ -1048,6 +1057,7 @@ async def rerun_url_validation(
 
     # Resetear el registro para nueva ejecución
     validation.status = UrlValidationStatus.PENDING
+    validation.progress_message = "Re-ejecución en cola"
     validation.results_json = []
     validation.global_severity = None
     validation.error_message = None
@@ -1070,6 +1080,8 @@ async def rerun_url_validation(
     return audit_schemas.AuditUrlValidationTaskResponse(
         task_id=validation.id,
         status=UrlValidationStatus.PENDING,
+        progress_percentage=validation.progress_percentage,
+        progress_message=validation.progress_message,
         total_urls=len(urls),
         message=f"Re-ejecución iniciada para {len(urls)} URLs — {validation.name_validation}",
     )
@@ -1150,11 +1162,13 @@ async def rerun_url_validation_single(
         ai_instruction=validation.ai_instruction or "",
         token=auth_token,
     )
+    validation.progress_message = f"Re-análisis en cola para {url}"
 
     return audit_schemas.AuditUrlValidationTaskResponse(
         task_id=validation.id,
         status=UrlValidationStatus.IN_PROGRESS,
         progress_percentage=validation.progress_percentage,
+        progress_message=validation.progress_message,
         total_urls=1,
         message=f"Re-análisis iniciado para: {url}",
     )
@@ -1203,6 +1217,7 @@ async def list_url_validation_schemas(
         name_validation=validation.name_validation,
         status=validation.status,
         progress_percentage=validation.progress_percentage,
+        progress_message=validation.progress_message,
         global_severity=validation.global_severity,
         total=len(schemas),
         schemas=schemas,
@@ -1251,6 +1266,7 @@ async def list_url_validation_schemas_public(
         name_validation=validation.name_validation,
         status=validation.status,
         progress_percentage=validation.progress_percentage,
+        progress_message=validation.progress_message,
         global_severity=validation.global_severity,
         total=len(schemas),
         schemas=schemas,
@@ -1652,6 +1668,7 @@ async def audits_compare(
         documentation_context=audit_request.documentation_context,
         status=ComparisonStatus.PENDING,
         progress_percentage=0,
+        progress_message="Comparación en cola",
     )
 
     session.add(comparison)
@@ -1676,5 +1693,60 @@ async def audits_compare(
         task_id=comparison.id,
         status=comparison.status,
         progress_percentage=comparison.progress_percentage,
+        progress_message=comparison.progress_message,
         message=f"Comparación iniciada para {base_webpage.url} vs {len(audit_request.web_page_id_to_compare)} competidores"
+    )
+
+
+@router.get("/audits/url-validations/{validation_id}/logs", response_model=TaskLogListResponse)
+async def get_url_validation_logs(
+        validation_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    validation = (await session.execute(
+        select(AuditUrlValidation).where(
+            AuditUrlValidation.id == validation_id,
+            AuditUrlValidation.user_id == current_user.id,
+        )
+    )).scalars().first()
+    if not validation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Validación de URLs no encontrada")
+
+    items = await get_task_progress_service().list_logs(
+        session,
+        task_type="audit_url_validation",
+        task_id=validation_id,
+    )
+    return TaskLogListResponse(
+        task_type="audit_url_validation",
+        task_id=validation_id,
+        items=[TaskLogEntryResponse.model_validate(item) for item in reversed(items)],
+    )
+
+
+@router.get("/audits/comparisons/{comparison_id}/logs", response_model=TaskLogListResponse)
+async def get_comparison_logs(
+        comparison_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    comparison = (await session.execute(
+        select(AuditComparison).where(
+            AuditComparison.id == comparison_id,
+            AuditComparison.user_id == current_user.id,
+        )
+    )).scalars().first()
+    if not comparison:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comparación no encontrada")
+
+    items = await get_task_progress_service().list_logs(
+        session,
+        task_type="audit_comparison",
+        task_id=comparison_id,
+    )
+    return TaskLogListResponse(
+        task_type="audit_comparison",
+        task_id=comparison_id,
+        items=[TaskLogEntryResponse.model_validate(item) for item in reversed(items)],
     )

@@ -17,7 +17,9 @@ from app.schemas.rich_results_schemas import (
     RichResultsReportStatusSummaryResponse,
     RichResultsReportTaskResponse,
 )
+from app.schemas.task_log_schemas import TaskLogEntryResponse, TaskLogListResponse
 from app.services.rich_results_report_service import get_rich_results_report_service
+from app.services.task_progress_service import get_task_progress_service
 
 router = APIRouter(prefix="/rich-results")
 
@@ -57,6 +59,7 @@ async def report_page(
         task_id=report.id,
         status=report.status,
         progress_percentage=report.progress_percentage,
+        progress_message=report.progress_message,
         url=report.url,
         message="Reporte de Google Rich Results encolado",
     )
@@ -94,6 +97,7 @@ async def report_page_batch(
                 task_id=report.id,
                 status=report.status,
                 progress_percentage=report.progress_percentage,
+                progress_message=report.progress_message,
                 url=report.url,
                 message="Reporte de Google Rich Results encolado",
             )
@@ -174,6 +178,37 @@ async def get_report_by_id(
         )
 
     return get_rich_results_report_service().build_report_detail(report)
+
+
+@router.get("/reports/{report_id}/logs", response_model=TaskLogListResponse)
+async def get_report_logs(
+    report_id: UUID,
+    url: str = Query(..., min_length=1, description="URL exacta del reporte"),
+    current_user: User | None = Depends(get_current_user_optional),
+    session=Depends(get_session),
+):
+    del current_user
+    report = await get_rich_results_report_service().get_report(
+        session,
+        report_id=report_id,
+        url=url,
+    )
+    if not report:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Reporte no encontrado",
+        )
+
+    items = await get_task_progress_service().list_logs(
+        session,
+        task_type="rich_results_report",
+        task_id=report_id,
+    )
+    return TaskLogListResponse(
+        task_type="rich_results_report",
+        task_id=report_id,
+        items=[TaskLogEntryResponse.model_validate(item) for item in reversed(items)],
+    )
 
 
 @router.delete("/reports/{report_id}", response_model=DeleteRichResultsReportResponse)

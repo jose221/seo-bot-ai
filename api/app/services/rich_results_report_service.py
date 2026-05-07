@@ -27,6 +27,7 @@ from app.schemas.rich_results_schemas import (
     RichResultsScreenshot,
 )
 from app.services.rich_results_service import get_rich_results_service
+from app.services.task_progress_service import get_task_progress_service
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +40,22 @@ class RichResultsReportService:
     @staticmethod
     def _clamp_progress(progress: int) -> int:
         return max(0, min(100, int(progress)))
+
+    @staticmethod
+    def _log_progress(
+        *,
+        report_id: UUID,
+        message: str,
+        level: str = "info",
+        progress_percentage: int | None = None,
+    ) -> None:
+        get_task_progress_service().log_sync(
+            task_type="rich_results_report",
+            task_id=report_id,
+            message=message,
+            level=level,
+            progress_percentage=progress_percentage,
+        )
 
     async def save_report(
         self,
@@ -86,6 +103,7 @@ class RichResultsReportService:
             url=self._normalize_url(payload.content),
             status=RichResultsReportStatus.PENDING,
             progress_percentage=0,
+            progress_message="Reporte de Google Rich Results en cola",
             input_type="url",
             requested_ai_result=payload.get_ai_result,
             success=False,
@@ -95,6 +113,11 @@ class RichResultsReportService:
         session.add(report)
         await session.commit()
         await session.refresh(report)
+        self._log_progress(
+            report_id=report.id,
+            message=f"Reporte en cola para {report.url}",
+            progress_percentage=0,
+        )
         return report
 
     async def list_reports(
@@ -113,6 +136,7 @@ class RichResultsReportService:
                 RichResultsReport.url,
                 RichResultsReport.status,
                 RichResultsReport.progress_percentage,
+                RichResultsReport.progress_message,
                 RichResultsReport.input_type,
                 RichResultsReport.requested_ai_result,
                 RichResultsReport.success,
@@ -158,6 +182,7 @@ class RichResultsReportService:
                 url=row.url,
                 status=row.status,
                 progress_percentage=row.progress_percentage,
+                progress_message=row.progress_message,
                 input_type=row.input_type,
                 requested_ai_result=row.requested_ai_result,
                 success=row.success,
@@ -233,6 +258,7 @@ class RichResultsReportService:
                     report_id=report.id if report else None,
                     report_status=report.status if report else None,
                     progress_percentage=report.progress_percentage if report else 0,
+                    progress_message=report.progress_message if report else None,
                     success=report.success if report else None,
                     blocked_by_google=report.blocked_by_google if report else None,
                     has_error=bool(report.error_message) if report else False,
@@ -312,9 +338,15 @@ class RichResultsReportService:
                     return
                 report.status = RichResultsReportStatus.IN_PROGRESS
                 report.progress_percentage = 10
+                report.progress_message = f"Iniciando validación Rich Results para {report.url}"
                 report.method_used = "processing"
                 report.message = "Generando reporte de Google Rich Results"
                 session.add(report)
+            self._log_progress(
+                report_id=report_id,
+                message=f"Iniciando validación Rich Results para {payload.content}",
+                progress_percentage=10,
+            )
 
             response = await get_rich_results_service().report_page(payload, token=token)
 
@@ -322,7 +354,21 @@ class RichResultsReportService:
                 report = session.get(RichResultsReport, report_id)
                 if report:
                     report.progress_percentage = 90 if payload.get_ai_result else 80
+                    report.progress_message = (
+                        "Google terminó la validación; guardando resultado y análisis con IA"
+                        if payload.get_ai_result
+                        else "Google terminó la validación; guardando resultado"
+                    )
                     session.add(report)
+            self._log_progress(
+                report_id=report_id,
+                message=(
+                    "Google terminó la validación; guardando resultado y análisis con IA"
+                    if payload.get_ai_result
+                    else "Google terminó la validación; guardando resultado"
+                ),
+                progress_percentage=90 if payload.get_ai_result else 80,
+            )
 
             with db_manager.sync_session_context() as session:
                 report = session.get(RichResultsReport, report_id)
@@ -332,6 +378,7 @@ class RichResultsReportService:
                 ai_result = response.get_ai_result
                 report.status = RichResultsReportStatus.COMPLETED
                 report.progress_percentage = 100
+                report.progress_message = response.message
                 report.input_type = response.input_type
                 report.requested_ai_result = payload.get_ai_result
                 report.success = response.success
@@ -347,6 +394,11 @@ class RichResultsReportService:
                 report.ai_generated_at = ai_result.generated_at if ai_result else None
                 report.ai_error_message = response.ai_error_message
                 session.add(report)
+            self._log_progress(
+                report_id=report_id,
+                message=response.message,
+                progress_percentage=100,
+            )
         except Exception as exc:
             log.exception("Error generando reporte Rich Results %s", report_id)
             with db_manager.sync_session_context() as session:
@@ -356,10 +408,16 @@ class RichResultsReportService:
                 report.status = RichResultsReportStatus.FAILED
                 report.success = False
                 report.progress_percentage = self._clamp_progress(report.progress_percentage or 0)
+                report.progress_message = f"Error generando reporte: {exc}"
                 report.method_used = "failed"
                 report.message = "No fue posible generar el reporte de Google Rich Results"
                 report.error_message = str(exc)
                 session.add(report)
+            self._log_progress(
+                report_id=report_id,
+                message=f"Error generando reporte Rich Results: {exc}",
+                level="error",
+            )
 
     async def run_batch_report_tasks(
         self,
@@ -444,6 +502,7 @@ class RichResultsReportService:
             url=report.url,
             status=report.status,
             progress_percentage=report.progress_percentage,
+            progress_message=report.progress_message,
             input_type=report.input_type,
             requested_ai_result=report.requested_ai_result,
             success=report.success,

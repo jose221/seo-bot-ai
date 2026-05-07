@@ -15,11 +15,13 @@ import {
   CompareAuditResponseDto,
   CreateAuditResponseDto, CreateCompareAuditResponseDto, FindCompareAuditResponseDto, SearchAuditResponseDto
 } from '@/app/infrastructure/dto/response/audit-response.dto';
+import { TaskLogListResponseDto } from '@/app/infrastructure/dto/response/task-log-response.dto';
 import {HttpClientHelper} from '@/app/helper/http-client.helper';
 import {environment} from '@/environments/environment';
 import {HttpItemsModel} from '@/app/infrastructure/dto/http/http-default.model';
 import {BaseService} from '@/app/infrastructure/services/base/base.service';
 import {SearchAuditRequestDto} from '@/app/infrastructure/dto/request/audit-request.dto';
+import { TaskLogEntryResponseModel, TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 
 
 @Injectable({
@@ -67,6 +69,29 @@ export class AuditService extends BaseService{
 
   async deleteComparisons(id: string): Promise<any> {
     return await this.httpService.delete<any>(`${environment.endpoints.audit.comparisons}/${id}`, {}, this.getToken);
+  }
+
+  async getComparisonLogs(id: string): Promise<TaskLogListResponseModel> {
+    const response = await this.httpService.get<TaskLogListResponseDto>(
+      `${environment.endpoints.audit.comparisons}/${id}/logs`,
+      {},
+      {},
+      this.getToken
+    );
+    return new TaskLogListResponseModel(
+      response.task_type,
+      response.task_id,
+      response.items.map(
+        (item) =>
+          new TaskLogEntryResponseModel(
+            item.id,
+            item.level,
+            item.message,
+            item.progress_percentage,
+            item.created_at
+          )
+      )
+    );
   }
 
   async search(params?: SearchAuditRequestModel): Promise<SearchAuditResponseModel[]>{

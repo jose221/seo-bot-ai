@@ -23,6 +23,8 @@ import {
   RichResultsReportStatusSummaryResponseDto,
   RichResultsReportTaskResponseDto,
 } from '@/app/infrastructure/dto/response/rich-results-response.dto';
+import { TaskLogListResponseDto } from '@/app/infrastructure/dto/response/task-log-response.dto';
+import { TaskLogListResponseModel, TaskLogEntryResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 
 @Injectable({ providedIn: 'root' })
 export class RichResultsService extends BaseService {
@@ -85,6 +87,28 @@ export class RichResultsService extends BaseService {
       {},
     );
     return this.mapper.mapResponseDetail(response);
+  }
+
+  async getLogs(id: string, url: string): Promise<TaskLogListResponseModel> {
+    const response = await this.httpService.get<TaskLogListResponseDto>(
+      `${this.endpoint}/reports/${id}/logs`,
+      { url },
+      {},
+    );
+    return new TaskLogListResponseModel(
+      response.task_type,
+      response.task_id,
+      response.items.map(
+        (item) =>
+          new TaskLogEntryResponseModel(
+            item.id,
+            item.level,
+            item.message,
+            item.progress_percentage,
+            item.created_at,
+          ),
+      ),
+    );
   }
 
   async delete(id: string, url: string): Promise<any> {

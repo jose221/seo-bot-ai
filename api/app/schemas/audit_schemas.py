@@ -318,6 +318,7 @@ class ComparisonTaskResponse(BaseModel):
     task_id: UUID
     status: ComparisonStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     message: str = "Comparación iniciada en segundo plano"
 
     class Config:
@@ -336,6 +337,7 @@ class ComparisonListItem(BaseModel):
     base_web_page_id: UUID
     status: ComparisonStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime]
     # Datos del resultado si está completado
@@ -369,6 +371,7 @@ class ComparisonDetailResponse(BaseModel):
     base_web_page_id: UUID
     status: ComparisonStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     created_at: datetime
     completed_at: Optional[datetime]
     comparison_result: Optional[AuditComparisonResponse] = None
@@ -519,6 +522,7 @@ class AuditUrlValidationTaskResponse(BaseModel):
     task_id: UUID
     status: UrlValidationStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     total_urls: int
     message: str = "Validación de URLs iniciada en segundo plano"
 
@@ -532,6 +536,7 @@ class AuditUrlValidationListItem(BaseModel):
     description_validation: Optional[str] = None
     status: UrlValidationStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     global_severity: Optional[str] = None
     input_tokens: Optional[int] = 0
     output_tokens: Optional[int] = 0
@@ -571,6 +576,7 @@ class AuditUrlValidationSchemasResponse(BaseModel):
     name_validation: str
     status: UrlValidationStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     global_severity: Optional[str] = None
     total: int
     schemas: List[AuditUrlValidationSchemaItem]
@@ -587,6 +593,7 @@ class AuditUrlValidationDetailResponse(BaseModel):
     ai_instruction: Optional[str] = None
     status: UrlValidationStatus
     progress_percentage: int = 0
+    progress_message: Optional[str] = None
     global_severity: Optional[str] = None
     results_json: Optional[Any] = None
     input_tokens: Optional[int] = 0

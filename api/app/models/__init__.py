@@ -11,6 +11,7 @@ from app.models.audit_url_validation import (
 )
 from app.models.url_validation_comment import UrlValidationComment, CommentStatus
 from app.models.rich_results_report import RichResultsReport, RichResultsReportStatus
+from app.models.task_execution_log import TaskExecutionLog
 
 __all__ = [
     "User",
@@ -30,4 +31,5 @@ __all__ = [
     "CommentStatus",
     "RichResultsReport",
     "RichResultsReportStatus",
+    "TaskExecutionLog",
 ]

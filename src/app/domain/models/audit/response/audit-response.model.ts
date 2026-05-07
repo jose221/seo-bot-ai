@@ -41,6 +41,7 @@ export class CreateCompareAuditResponseModel {
     public status: string,
     public task_id: string,
     public progress_percentage: number = 0,
+    public progress_message: string | null = null,
   ) {
   }
 
@@ -52,6 +53,7 @@ export class CompareAuditResponseModel{
     public base_web_page_id: string,
     public status: string,
     public progress_percentage: number,
+    public progress_message: string | null,
     public created_at: string,
     public completed_at: string,
     public base_url: string,
@@ -87,6 +89,7 @@ export class FindCompareAuditResponseModel {
     public base_web_page_id: string,
     public status: string,
     public progress_percentage: number,
+    public progress_message: string | null,
     public created_at: string,
     public completed_at: string,
     public comparison_result: ComparisonResultModel,

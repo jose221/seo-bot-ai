@@ -13,6 +13,7 @@ import {
   CreatePublicCommentRequestModel,
   AnswerCommentRequestModel,
 } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
+import { TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 
 export abstract class AuditUrlValidationRepository {
   abstract create(params: CreateAuditUrlValidationRequestModel): Promise<CreateAuditUrlValidationResponseModel>;
@@ -24,7 +25,7 @@ export abstract class AuditUrlValidationRepository {
   abstract getPublicComments(validationId: string, page?: number): Promise<PublicCommentsResponseModel>;
   abstract createPublicComment(schemaItemId: string, validationId: string, params: CreatePublicCommentRequestModel): Promise<CreatePublicCommentResponseModel>;
   abstract answerComment(commentId: string, params: AnswerCommentRequestModel): Promise<any>;
+  abstract getLogs(validationId: string): Promise<TaskLogListResponseModel>;
   abstract rerunValidation(validationId: string): Promise<RerunValidationResponseModel>;
   abstract rerunValidationUrl(validationId: string, url: string): Promise<RerunValidationResponseModel>;
 }
-

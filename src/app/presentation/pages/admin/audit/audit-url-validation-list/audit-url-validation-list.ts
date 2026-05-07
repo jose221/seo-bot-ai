@@ -81,6 +81,15 @@ export class AuditUrlValidationList
         this.renderProgress(element.progress_percentage, element.status),
     },
     {
+      key: 'progress_message',
+      name: 'Mensaje',
+      type: 'text',
+      innerHtml: (element: AuditUrlValidationItemResponseModel) =>
+        element.progress_message
+          ? `<span title="${this.escapeHtml(element.progress_message)}">${this.escapeHtml(this.truncate(element.progress_message, 70))}</span>`
+          : '<span class="text-muted">—</span>',
+    },
+    {
       key: 'global_severity',
       name: 'Severidad',
       type: 'text',
@@ -119,6 +128,13 @@ export class AuditUrlValidationList
       type: 'link',
       innerHtml: () => 'Ver',
       action: (item: AuditUrlValidationItemResponseModel) => this.toShow(item),
+    },
+    {
+      key: 'id',
+      name: 'Ver mensaje',
+      type: 'link',
+      innerHtml: () => 'Ver mensaje',
+      action: (item: AuditUrlValidationItemResponseModel) => this.showTaskMessage(item),
     },
     {
       key: 'id',
@@ -163,6 +179,19 @@ export class AuditUrlValidationList
         </div>
       </div>
     `;
+  }
+
+  private truncate(value: string, maxLength: number): string {
+    return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   override async ngOnInit() {
@@ -269,6 +298,30 @@ export class AuditUrlValidationList
       );
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  async showTaskMessage(item: AuditUrlValidationItemResponseModel): Promise<void> {
+    try {
+      const logs = await this._repository.getLogs(item.id);
+      const content = logs.items.length
+        ? logs.items
+            .map(
+              (log) =>
+                `[${new Date(log.created_at).toLocaleString('es-MX')}] ${String(log.level || 'info').toUpperCase()}${log.progress_percentage != null ? ` (${log.progress_percentage}%)` : ''}\n${log.message}`
+            )
+            .join('\n\n')
+        : item.progress_message || item.error_message || 'No hay mensajes registrados todavía.';
+
+      await this._sweetAlertUtil.fire({
+        title: 'Mensaje de tarea',
+        html: `<div style="text-align:left; max-height:60vh; overflow:auto;"><pre style="white-space:pre-wrap; margin:0;">${this.escapeHtml(content)}</pre></div>`,
+        width: 800,
+        confirmButtonText: 'Cerrar',
+      });
+    } catch (error) {
+      console.error('Error al cargar logs de la validacion:', error);
+      await this._sweetAlertUtil.error('', 'No se pudieron cargar los mensajes de la tarea.');
     }
   }
 

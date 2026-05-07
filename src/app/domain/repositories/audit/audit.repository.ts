@@ -3,6 +3,7 @@ import {
   CreateAuditResponseModel, CreateCompareAuditResponseModel, FindCompareAuditResponseModel,
   SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
+import { TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 import {
   CreateAuditRequestModel, CreateCompareAuditRequestModel,
   FilterAuditRequestModel, FilterCompareAuditRequestModel,
@@ -18,6 +19,7 @@ export abstract class AuditRepository {
   abstract compare(params: CreateCompareAuditRequestModel): Promise<CreateCompareAuditResponseModel>;
   abstract findComparisons(id: string): Promise<FindCompareAuditResponseModel>;
   abstract getComparisons(params?: FilterCompareAuditRequestModel): Promise<CompareAuditResponseModel[]>;
+  abstract getComparisonLogs(id: string): Promise<TaskLogListResponseModel>;
   abstract deleteComparisons(id: string): Promise<any>
 
 }

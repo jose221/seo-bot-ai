@@ -115,6 +115,9 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   richResultsStatusMap = signal<Map<string, RichResultsReportStatusSummaryItemModel>>(new Map());
   selectedRichResultsUrls = signal<Set<string>>(new Set());
   richResultsBatchSubmitting = signal<boolean>(false);
+  autoReload = signal<boolean>(true);
+  richResultsBatchAnalyzeWithAi = signal<boolean>(true);
+  richResultsSingleAnalyzeWithAi = signal<boolean>(true);
   private richResultsPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly richResultsApiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
   private readonly trackedRichResultsTasks = new Map<string, TrackedRichResultsTask>();
@@ -685,9 +688,18 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     return Math.max(0, Math.min(100, report.progress_percentage ?? 0));
   }
 
+  toggleAutoReload(): void {
+    this.autoReload.update((value) => !value);
+  }
+
+  getRichResultsReportMessage(report: RichResultsReportListItemModel): string {
+    return report.progress_message || report.message || report.error_message || 'Sin mensaje disponible.';
+  }
+
   private startRichResultsPolling(): void {
     if (this.richResultsPollTimer || !isPlatformBrowser(this._platformId)) return;
     this.richResultsPollTimer = setInterval(() => {
+      if (!this.autoReload()) return;
       void this.pollPendingRichResults();
     }, 15000);
   }
@@ -810,7 +822,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     this.updateUrlSet(this.richResultsCreatingSet, url, true);
     try {
       const response = await this._richResultsRepository.create(
-        new CreateRichResultsReportRequestModel(url, true, true),
+        new CreateRichResultsReportRequestModel(url, true, this.richResultsSingleAnalyzeWithAi()),
       );
       this.trackRichResultsTask(response);
       await this.ensureRichResultsLoaded(url, true);
@@ -843,7 +855,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     this.richResultsBatchSubmitting.set(true);
     try {
       const response = await this._richResultsRepository.createBatch(
-        new CreateRichResultsBatchReportRequestModel(urls, true),
+        new CreateRichResultsBatchReportRequestModel(urls, this.richResultsBatchAnalyzeWithAi()),
       );
       response.items.forEach((item) => this.trackRichResultsTask(item));
 
@@ -926,15 +938,16 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       next.set(url, []);
       this.richResultsMap.set(next);
       const statusMap = new Map(this.richResultsStatusMap());
-      statusMap.set(url, {
-        url,
-        state: 'none',
-        report_id: null,
-        report_status: null,
-        progress_percentage: 0,
-        success: null,
-        blocked_by_google: null,
-        has_error: false,
+        statusMap.set(url, {
+          url,
+          state: 'none',
+          report_id: null,
+          report_status: null,
+          progress_percentage: 0,
+          progress_message: null,
+          success: null,
+          blocked_by_google: null,
+          has_error: false,
         message: null,
         error_message: null,
         created_at: null,
@@ -1029,6 +1042,68 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     }
 
     return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  async showValidationTaskMessage(): Promise<void> {
+    const validationId = this.validationId();
+    if (!validationId) return;
+
+    try {
+      const logs = await this._repository.getLogs(validationId);
+      const fallback = this.data()?.progress_message || 'No hay mensajes registrados todavía.';
+      const content = logs.items.length
+        ? logs.items
+            .map(
+              (log) =>
+                `[${this.formatDate(log.created_at)}] ${String(log.level || 'info').toUpperCase()}${log.progress_percentage != null ? ` (${log.progress_percentage}%)` : ''}\n${log.message}`
+            )
+            .join('\n\n')
+        : fallback;
+
+      await this._sweetAlertUtil.fire({
+        title: 'Mensaje de tarea',
+        html: `<div style="text-align:left; max-height:60vh; overflow:auto;"><pre style="white-space:pre-wrap; margin:0;">${this.escapeHtml(content)}</pre></div>`,
+        width: 800,
+        confirmButtonText: 'Cerrar',
+      });
+    } catch (error) {
+      console.error('Error loading validation task logs:', error);
+      await this._sweetAlertUtil.error('', 'No se pudieron cargar los mensajes de la validación.');
+    }
+  }
+
+  async showRichResultsTaskMessage(report: RichResultsReportListItemModel): Promise<void> {
+    try {
+      const logs = await this._richResultsRepository.getLogs(report.id, report.url);
+      const fallback = this.getRichResultsReportMessage(report);
+      const content = logs.items.length
+        ? logs.items
+            .map(
+              (log) =>
+                `[${this.formatDate(log.created_at)}] ${String(log.level || 'info').toUpperCase()}${log.progress_percentage != null ? ` (${log.progress_percentage}%)` : ''}\n${log.message}`
+            )
+            .join('\n\n')
+        : fallback;
+
+      await this._sweetAlertUtil.fire({
+        title: 'Mensaje de tarea',
+        html: `<div style="text-align:left; max-height:60vh; overflow:auto;"><pre style="white-space:pre-wrap; margin:0;">${this.escapeHtml(content)}</pre></div>`,
+        width: 800,
+        confirmButtonText: 'Cerrar',
+      });
+    } catch (error) {
+      console.error('Error loading rich results logs:', error);
+      await this._sweetAlertUtil.error('', 'No se pudieron cargar los mensajes del reporte.');
+    }
   }
 
   async rerunAll(): Promise<void> {

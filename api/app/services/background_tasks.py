@@ -18,6 +18,7 @@ from app.services.cache import Cache
 from app.services.seo_analyzer import SEOAnalyzer, filter_open_graph_schemas
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
+from app.services.task_progress_service import get_task_progress_service
 from app.helpers import extract_domain
 from sqlalchemy import String, cast as sql_cast, desc
 from sqlalchemy.orm import joinedload
@@ -38,6 +39,23 @@ def _calculate_in_progress_percentage(
         return 0
     completed = max(0, min(completed_units, total_units))
     return _clamp_progress(int((completed / total_units) * max_percentage))
+
+
+def _log_task_progress(
+    *,
+    task_type: str,
+    task_id: UUID,
+    message: str,
+    level: str = "info",
+    progress_percentage: int | None = None,
+) -> None:
+    get_task_progress_service().log_sync(
+        task_type=task_type,
+        task_id=task_id,
+        message=message,
+        level=level,
+        progress_percentage=progress_percentage,
+    )
 
 
 async def run_audit_task(
@@ -217,7 +235,14 @@ async def run_comparison_task(
             documentation_context = comparison.documentation_context
             comparison.status = ComparisonStatus.IN_PROGRESS
             comparison.progress_percentage = 0
+            comparison.progress_message = "Preparando comparación de auditorías"
             session.add(comparison)
+        _log_task_progress(
+            task_type="audit_comparison",
+            task_id=comparison_id,
+            message="Preparando comparación de auditorías",
+            progress_percentage=0,
+        )
 
         print(f"🚀 Iniciando comparación {comparison_id}")
 
@@ -256,6 +281,18 @@ async def run_comparison_task(
                     if not competitor_webpage:
                         print(f"⚠️  Target {competitor_id} no encontrado")
                         continue
+                    with db_manager.sync_session_context() as progress_session:
+                        progress_comparison = progress_session.get(AuditComparison, comparison_id)
+                        if progress_comparison:
+                            progress_comparison.progress_message = (
+                                f"Comparando contra {competitor_webpage.url}"
+                            )
+                            progress_session.add(progress_comparison)
+                    _log_task_progress(
+                        task_type="audit_comparison",
+                        task_id=comparison_id,
+                        message=f"Comparando contra {competitor_webpage.url}",
+                    )
 
                     # Obtener auditoría del competidor
                     competitor_audit_stmt = select(AuditReport).options(joinedload(AuditReport.web_page)).where(
@@ -325,7 +362,19 @@ async def run_comparison_task(
                                 completed_steps,
                                 total_steps or len(competitor_ids) or 1,
                             )
+                            progress_comparison.progress_message = (
+                                f"Se completó {completed_steps} de {len(competitor_ids)} comparaciones"
+                            )
                             progress_session.add(progress_comparison)
+                    _log_task_progress(
+                        task_type="audit_comparison",
+                        task_id=comparison_id,
+                        message=f"Se completó {completed_steps} de {len(competitor_ids)} comparaciones",
+                        progress_percentage=_calculate_in_progress_percentage(
+                            completed_steps,
+                            total_steps or len(competitor_ids) or 1,
+                        ),
+                    )
 
         if not comparisons:
             raise Exception("No se pudieron generar comparaciones")
@@ -336,6 +385,16 @@ async def run_comparison_task(
         # Generar comparación de schemas con IA
         ai_schema_comparison_text = ""
         try:
+            with db_manager.sync_session_context() as progress_session:
+                progress_comparison = progress_session.get(AuditComparison, comparison_id)
+                if progress_comparison:
+                    progress_comparison.progress_message = "Generando resumen global y análisis final"
+                    progress_session.add(progress_comparison)
+            _log_task_progress(
+                task_type="audit_comparison",
+                task_id=comparison_id,
+                message="Generando resumen global y análisis final",
+            )
             ai_schema_comparison = await comparator.generate_ai_schema_comparison(
                 base_audit=base_audit,
                 compare_audits=competitors_audit,
@@ -359,10 +418,26 @@ async def run_comparison_task(
                         completed_steps,
                         total_steps or 1,
                     )
+                    progress_comparison.progress_message = "Resumen global listo; guardando resultado"
                     progress_session.add(progress_comparison)
+            _log_task_progress(
+                task_type="audit_comparison",
+                task_id=comparison_id,
+                message="Resumen global listo; guardando resultado",
+                progress_percentage=_calculate_in_progress_percentage(
+                    completed_steps,
+                    total_steps or 1,
+                ),
+            )
         except Exception as e:
              print(f"⚠️ Error generando comparación de schemas con IA: {e}")
              ai_schema_comparison_text = f"No se pudo generar el análisis de IA para schemas debido a un error en el servicio. {e}"
+             _log_task_progress(
+                 task_type="audit_comparison",
+                 task_id=comparison_id,
+                 message=f"Warning en análisis final: {e}",
+                 level="warning",
+             )
 
         # Extract base schemas for report
         base_schemas = []
@@ -384,6 +459,7 @@ async def run_comparison_task(
             if comparison:
                 comparison.status = ComparisonStatus.COMPLETED
                 comparison.progress_percentage = 100
+                comparison.progress_message = "Comparación completada"
                 comparison.comparison_result = comparison_result
                 comparison.completed_at = datetime.utcnow()
 
@@ -399,6 +475,12 @@ async def run_comparison_task(
                 comparison.proposal_report_word_path = None
 
                 session.add(comparison)
+        _log_task_progress(
+            task_type="audit_comparison",
+            task_id=comparison_id,
+            message="Comparación completada",
+            progress_percentage=100,
+        )
 
         print(f"✅ Comparación completada: {comparison_id}")
     except Exception as e:
@@ -415,9 +497,16 @@ async def run_comparison_task(
                 if comparison:
                     comparison.status = ComparisonStatus.FAILED
                     comparison.progress_percentage = _clamp_progress(comparison.progress_percentage or 0)
+                    comparison.progress_message = f"Error en la comparación: {e}"
                     comparison.error_message = str(e)
                     comparison.completed_at = datetime.utcnow()
                     session.add(comparison)
+            _log_task_progress(
+                task_type="audit_comparison",
+                task_id=comparison_id,
+                message=f"Error en la comparación: {e}",
+                level="error",
+            )
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo: {inner_error}")
 
@@ -580,10 +669,17 @@ async def run_url_validation_task(
                 return
             validation.status = UrlValidationStatus.IN_PROGRESS
             validation.progress_percentage = 0
+            validation.progress_message = "Preparando validación masiva de URLs"
             validation.results_json = []
             validation.global_severity = None
             validation.error_message = None
             session.add(validation)
+        _log_task_progress(
+            task_type="audit_url_validation",
+            task_id=validation_id,
+            message="Preparando validación masiva de URLs",
+            progress_percentage=0,
+        )
 
         service = get_url_validation_service()
         total_input_tokens = 0
@@ -682,6 +778,19 @@ async def run_url_validation_task(
         processed = 0
         for batch_num, chunk in enumerate(chunks, 1):
             print(f"  🔄 Grupo {batch_num}/{len(chunks)}: {len(chunk)} URLs en paralelo")
+            batch_urls_preview = ", ".join(chunk[:3])
+            with db_manager.sync_session_context() as progress_session:
+                progress_validation = progress_session.get(AuditUrlValidation, validation_id)
+                if progress_validation:
+                    progress_validation.progress_message = (
+                        f"Analizando grupo {batch_num}/{len(chunks)}: {batch_urls_preview}"
+                    )
+                    progress_session.add(progress_validation)
+            _log_task_progress(
+                task_type="audit_url_validation",
+                task_id=validation_id,
+                message=f"Analizando grupo {batch_num}/{len(chunks)} con {len(chunk)} URLs: {batch_urls_preview}",
+            )
             tasks = [
                 _process_single_url(url, processed + i + 1)
                 for i, url in enumerate(chunk)
@@ -692,17 +801,27 @@ async def run_url_validation_task(
                 total_input_tokens += in_tok
                 total_output_tokens += out_tok
             processed += len(chunk)
+            progress_value = _calculate_in_progress_percentage(
+                processed,
+                total_urls + 1,
+            )
             with db_manager.sync_session_context() as progress_session:
                 progress_validation = progress_session.get(AuditUrlValidation, validation_id)
                 if progress_validation:
-                    progress_validation.progress_percentage = _calculate_in_progress_percentage(
-                        processed,
-                        total_urls + 1,
+                    progress_validation.progress_percentage = progress_value
+                    progress_validation.progress_message = (
+                        f"Se analizaron {processed} de {total_urls} URLs"
                     )
                     progress_validation.results_json = list(results)
                     progress_validation.input_tokens = total_input_tokens
                     progress_validation.output_tokens = total_output_tokens
                     progress_session.add(progress_validation)
+            _log_task_progress(
+                task_type="audit_url_validation",
+                task_id=validation_id,
+                message=f"Se analizaron {processed} de {total_urls} URLs",
+                progress_percentage=progress_value,
+            )
 
             # Delay entre grupos (no dentro del grupo)
             if batch_num < len(chunks):
@@ -716,6 +835,16 @@ async def run_url_validation_task(
         global_report_ai_text = ""
         try:
             print(f"🌐 Generando reporte global con IA para {len(results)} URLs...")
+            with db_manager.sync_session_context() as progress_session:
+                progress_validation = progress_session.get(AuditUrlValidation, validation_id)
+                if progress_validation:
+                    progress_validation.progress_message = "Generando resumen global de la validación"
+                    progress_session.add(progress_validation)
+            _log_task_progress(
+                task_type="audit_url_validation",
+                task_id=validation_id,
+                message="Generando resumen global de la validación",
+            )
             global_ai_result = await service.generate_global_report_ai(
                 results=results,
                 name_validation=name_validation,
@@ -740,6 +869,7 @@ async def run_url_validation_task(
             if validation:
                 validation.status = UrlValidationStatus.COMPLETED
                 validation.progress_percentage = 100
+                validation.progress_message = "Validación completada"
                 validation.results_json = results
                 validation.global_severity = global_severity
                 validation.input_tokens = total_input_tokens
@@ -751,6 +881,12 @@ async def run_url_validation_task(
                 validation.global_report_ai_text = global_report_ai_text
                 validation.completed_at = datetime.utcnow()
                 session.add(validation)
+        _log_task_progress(
+            task_type="audit_url_validation",
+            task_id=validation_id,
+            message="Validación completada",
+            progress_percentage=100,
+        )
 
         print(f"✅ Validación de URLs completada: {validation_id} — Severidad global: {global_severity}")
     except Exception as e:
@@ -765,9 +901,16 @@ async def run_url_validation_task(
                 if validation:
                     validation.status = UrlValidationStatus.FAILED
                     validation.progress_percentage = _clamp_progress(validation.progress_percentage or 0)
+                    validation.progress_message = f"Error en la validación: {e}"
                     validation.error_message = str(e)
                     validation.completed_at = datetime.utcnow()
                     session.add(validation)
+            _log_task_progress(
+                task_type="audit_url_validation",
+                task_id=validation_id,
+                message=f"Error en la validación: {e}",
+                level="error",
+            )
         except Exception as inner_error:
             print(f"❌ Error al guardar estado de fallo url_validation: {inner_error}")
 
@@ -854,8 +997,15 @@ async def run_url_validation_single_url_task(
                 return
             validation.status = UrlValidationStatus.IN_PROGRESS
             validation.progress_percentage = 0
+            validation.progress_message = f"Re-analizando {target_url}"
             validation.error_message = None
             session.add(validation)
+        _log_task_progress(
+            task_type="audit_url_validation",
+            task_id=validation_id,
+            message=f"Re-analizando {target_url}",
+            progress_percentage=0,
+        )
 
         service = get_url_validation_service()
         print(f"🔁 Re-analizando URL individual: {target_url} — {name_validation}")
@@ -956,8 +1106,15 @@ async def run_url_validation_single_url_task(
             validation.global_report_word_path = None
             validation.status = UrlValidationStatus.COMPLETED
             validation.progress_percentage = 100
+            validation.progress_message = f"Re-análisis completado para {target_url}"
             validation.completed_at = datetime.utcnow()
             session.add(validation)
+        _log_task_progress(
+            task_type="audit_url_validation",
+            task_id=validation_id,
+            message=f"Re-análisis completado para {target_url}",
+            progress_percentage=100,
+        )
 
         print(f"✅ Re-análisis de URL individual completado: {target_url} — validación {validation_id}")
     except Exception as e:
@@ -970,7 +1127,14 @@ async def run_url_validation_single_url_task(
                 if validation:
                     validation.status = UrlValidationStatus.FAILED
                     validation.progress_percentage = _clamp_progress(validation.progress_percentage or 0)
+                    validation.progress_message = f"Error re-analizando {target_url}: {e}"
                     validation.error_message = str(e)
                     session.add(validation)
+            _log_task_progress(
+                task_type="audit_url_validation",
+                task_id=validation_id,
+                message=f"Error re-analizando {target_url}: {e}",
+                level="error",
+            )
         except Exception as inner:
             print(f"❌ Error al guardar estado de fallo: {inner}")

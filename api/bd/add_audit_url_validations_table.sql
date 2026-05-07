@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS audit_url_validations (
     -- Estado
     status VARCHAR NOT NULL DEFAULT 'pending',
     progress_percentage INTEGER NOT NULL DEFAULT 0,
+    progress_message TEXT,
 
     -- Severidad global (peor caso entre todas las URLs)
     global_severity VARCHAR,

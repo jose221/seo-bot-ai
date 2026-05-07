@@ -16,6 +16,7 @@ import {
   CreatePublicCommentResponseModel,
   RerunValidationResponseModel,
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
+import { TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 
 @Injectable({
   providedIn: 'root',
@@ -59,6 +60,10 @@ export class AuditUrlValidationImplementationRepository implements AuditUrlValid
     return await this.primaryService.answerComment(commentId, params);
   }
 
+  async getLogs(validationId: string): Promise<TaskLogListResponseModel> {
+    return await this.primaryService.getLogs(validationId);
+  }
+
   async rerunValidation(validationId: string): Promise<RerunValidationResponseModel> {
     return await this.primaryService.rerunValidation(validationId);
   }
@@ -67,4 +72,3 @@ export class AuditUrlValidationImplementationRepository implements AuditUrlValid
     return await this.primaryService.rerunValidationUrl(validationId, url);
   }
 }
-

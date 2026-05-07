@@ -7,6 +7,7 @@ export interface AuditUrlValidationItemResponseDto {
   description_validation: string;
   status: string;
   progress_percentage: number;
+  progress_message: string | null;
   global_severity: string | null;
   input_tokens: number | null;
   output_tokens: number | null;
@@ -32,6 +33,7 @@ export interface CreateAuditUrlValidationResponseDto {
   description_validation: string;
   status: string;
   progress_percentage: number;
+  progress_message: string | null;
   created_at: string;
   completed_at: string | null;
   error_message: string | null;
@@ -48,6 +50,7 @@ export interface FindAuditUrlValidationResponseDto {
   ai_instruction: string;
   status: string;
   progress_percentage: number;
+  progress_message: string | null;
   global_severity: string | null;
   results_json: any | null;
   input_tokens: number | null;
@@ -97,6 +100,7 @@ export interface RerunValidationResponseDto {
   task_id: string;
   status: string;
   progress_percentage: number;
+  progress_message: string | null;
   total_urls: number;
   message: string;
 }
@@ -119,6 +123,7 @@ export interface AuditUrlValidationSchemasResponseDto {
   name_validation: string;
   status: string;
   progress_percentage: number;
+  progress_message: string | null;
   global_severity: string | null;
   total: number;
   schemas: AuditUrlValidationSchemaItemDto[];

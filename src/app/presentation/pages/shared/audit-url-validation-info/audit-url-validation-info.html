@@ -60,6 +60,11 @@
                 <span class="sv-badge sv-info">
                   Progreso {{ info.progress_percentage }}%
                 </span>
+                @if (info.progress_message) {
+                  <span class="text-muted small">
+                    {{ info.progress_message }}
+                  </span>
+                }
                 <span class="text-muted small">
                   {{ info.total }} URL(s) analizadas
                 </span>
@@ -75,7 +80,19 @@
                   <i class="bi bi-share me-1"></i>
                   Compartir reporte
                 </button>
+                <button class="btn btn-sm btn-outline-dark"
+                        (click)="showValidationTaskMessage()"
+                        title="Ver mensaje o log de la tarea">
+                  <i class="bi bi-card-text me-1"></i>
+                  Ver mensaje de tarea
+                </button>
                 @if (isLoggedIn()) {
+                  <button class="btn btn-sm btn-outline-secondary"
+                          (click)="toggleAutoReload()"
+                          title="Activar o pausar autoactualización">
+                    <i class="bi" [ngClass]="autoReload() ? 'bi-pause-circle' : 'bi-play-circle'"></i>
+                    {{ autoReload() ? 'Pausar autoactualización' : 'Reactivar autoactualización' }}
+                  </button>
                   <button class="btn btn-sm btn-outline-primary"
                           (click)="rerunAll()"
                           [disabled]="rerunLoading()"
@@ -269,6 +286,15 @@
             }
 
             <div class="rich-results-batch-panel__actions">
+              <label class="filter-switch">
+                <input
+                  type="checkbox"
+                  [ngModel]="richResultsBatchAnalyzeWithAi()"
+                  (ngModelChange)="richResultsBatchAnalyzeWithAi.set($event)"
+                >
+                <span class="filter-switch-slider"></span>
+                <span class="filter-switch-label">Analizar con IA</span>
+              </label>
               <button class="btn-action" type="button" (click)="addFilteredUrlsToRichResultsBatch()">
                 Seleccionar visibles
               </button>
@@ -548,6 +574,15 @@
                         }
                       </button>
                       @if (isLoggedIn()) {
+                        <label class="filter-switch">
+                          <input
+                            type="checkbox"
+                            [ngModel]="richResultsSingleAnalyzeWithAi()"
+                            (ngModelChange)="richResultsSingleAnalyzeWithAi.set($event)"
+                          >
+                          <span class="filter-switch-slider"></span>
+                          <span class="filter-switch-label">Analizar con IA</span>
+                        </label>
                         <button class="btn-action btn-action--rerun" (click)="createRichResultsReport(schema.url)" [disabled]="isRichResultsCreating(schema.url)">
                           @if (isRichResultsCreating(schema.url)) {
                             <span class="spinner-border spinner-border-sm me-1" role="status"></span>
@@ -601,6 +636,9 @@
                                 ></div>
                               </div>
                               <div class="small">{{ report.message }}</div>
+                              @if (report.progress_message) {
+                                <div class="small text-muted">{{ report.progress_message }}</div>
+                              }
                               @if (report.error_message) {
                                 <div class="small text-danger">{{ report.error_message }}</div>
                               }
@@ -613,6 +651,9 @@
                             <div class="d-flex flex-wrap gap-2">
                               <button class="btn-action" (click)="toggleRichResultDetail(report.id, schema.url)">
                                 {{ isRichResultExpanded(report.id) ? 'Ocultar detalle' : 'Ver detalle' }}
+                              </button>
+                              <button class="btn-action" (click)="showRichResultsTaskMessage(report)">
+                                Ver mensaje
                               </button>
                               @if (isLoggedIn()) {
                                 <button class="btn-action btn-action--comment" (click)="deleteRichResultsReport(report.id, schema.url)" [disabled]="isRichResultsDeleting(schema.url)">

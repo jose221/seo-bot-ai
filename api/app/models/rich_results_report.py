@@ -37,6 +37,7 @@ class RichResultsReport(SQLModel, table=True):
         sa_column=Column(Integer, nullable=False, default=0),
         description="Porcentaje de avance del reporte Rich Results (0-100)",
     )
+    progress_message: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     input_type: str = Field(sa_column=Column(String, nullable=False))
     requested_ai_result: bool = Field(default=False)
     success: bool = Field(default=False)

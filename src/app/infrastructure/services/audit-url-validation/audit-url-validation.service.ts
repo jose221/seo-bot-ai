@@ -27,6 +27,8 @@ import {
   CreatePublicCommentResponseDto,
   RerunValidationResponseDto,
 } from '@/app/infrastructure/dto/response/audit-url-validation-response.dto';
+import { TaskLogListResponseDto } from '@/app/infrastructure/dto/response/task-log-response.dto';
+import { TaskLogEntryResponseModel, TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 
 @Injectable({
   providedIn: 'root',
@@ -125,6 +127,29 @@ export class AuditUrlValidationService extends BaseService {
     );
   }
 
+  async getLogs(validationId: string): Promise<TaskLogListResponseModel> {
+    const response = await this.httpService.get<TaskLogListResponseDto>(
+      `${this.endpoint}/${validationId}/logs`,
+      {},
+      {},
+      this.getToken
+    );
+    return new TaskLogListResponseModel(
+      response.task_type,
+      response.task_id,
+      response.items.map(
+        (item) =>
+          new TaskLogEntryResponseModel(
+            item.id,
+            item.level,
+            item.message,
+            item.progress_percentage,
+            item.created_at
+          )
+      )
+    );
+  }
+
   async rerunValidation(validationId: string): Promise<RerunValidationResponseModel> {
     const response = await this.httpService.post<RerunValidationResponseDto>(
       `${this.endpoint}/${validationId}/rerun`,
@@ -146,4 +171,3 @@ export class AuditUrlValidationService extends BaseService {
     return this.mapper.mapResponseRerun(response);
   }
 }
-

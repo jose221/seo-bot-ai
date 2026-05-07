@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS rich_results_reports (
     url TEXT NOT NULL,
     status VARCHAR NOT NULL DEFAULT 'pending',
     progress_percentage INTEGER NOT NULL DEFAULT 0,
+    progress_message TEXT,
     input_type VARCHAR NOT NULL,
     requested_ai_result BOOLEAN NOT NULL DEFAULT FALSE,
     success BOOLEAN NOT NULL DEFAULT FALSE,

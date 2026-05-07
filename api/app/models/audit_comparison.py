@@ -48,6 +48,7 @@ class AuditComparison(SQLModel, table=True):
         sa_column=Column(Integer, nullable=False, default=0),
         description="Porcentaje de avance del proceso de comparación (0-100)",
     )
+    progress_message: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
 
     # Resultado de la comparación (JSONB)
     comparison_result: Optional[Dict[str, Any]] = Field(

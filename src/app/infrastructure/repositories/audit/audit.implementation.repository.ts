@@ -5,6 +5,7 @@ import {
   CreateAuditResponseModel, CreateCompareAuditResponseModel, FindCompareAuditResponseModel,
   SearchAuditResponseModel
 } from '@/app/domain/models/audit/response/audit-response.model';
+import { TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 import {
   CreateCompareAuditRequestModel,
   CreateAuditRequestModel,
@@ -43,6 +44,10 @@ export class AuditImplementationRepository implements AuditRepository {
   }
   async getComparisons(params?: FilterCompareAuditRequestModel): Promise<CompareAuditResponseModel[]>{
     return await this.primaryService.getComparisons(params);
+  }
+
+  async getComparisonLogs(id: string): Promise<TaskLogListResponseModel> {
+    return await this.primaryService.getComparisonLogs(id);
   }
 
   async deleteComparisons(id: string): Promise<any> {

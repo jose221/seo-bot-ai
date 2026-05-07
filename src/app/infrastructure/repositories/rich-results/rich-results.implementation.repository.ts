@@ -14,6 +14,7 @@ import {
   RichResultsReportStatusSummaryResponseModel,
   RichResultsReportTaskResponseModel,
 } from '@/app/domain/models/rich-results/response/rich-results-response.model';
+import { TaskLogListResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 
 @Injectable({ providedIn: 'root' })
 export class RichResultsImplementationRepository implements RichResultsRepository {
@@ -41,6 +42,10 @@ export class RichResultsImplementationRepository implements RichResultsRepositor
 
   async find(id: string, url: string): Promise<RichResultsReportDetailResponseModel> {
     return this.primaryService.find(id, url);
+  }
+
+  async getLogs(id: string, url: string): Promise<TaskLogListResponseModel> {
+    return this.primaryService.getLogs(id, url);
   }
 
   async delete(id: string, url: string): Promise<any> {
