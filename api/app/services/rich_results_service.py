@@ -14,6 +14,7 @@ from sqlmodel import select
 from app.core.config import settings
 from app.core.database import db_manager
 from app.handlers.seo_scrapper.google_rich_results_engine import GoogleRichResultsEngine, InputType
+from app.handlers.seo_scrapper.schema_org_validator import SchemaOrgValidatorEngine
 from app.models.webpage import WebPage
 from app.schemas.rich_results_schemas import (
     RichResultsAnalysisFinding,
@@ -22,6 +23,7 @@ from app.schemas.rich_results_schemas import (
     RichResultsReportRequest,
     RichResultsReportResponse,
 )
+from app.services.schema_validators import SchemaOrgValidator
 from app.shared.rich_results_html_analyzer import (
     RichResultsHtmlFinding,
     analyze_rich_results_html,
@@ -54,6 +56,21 @@ class RichResultsService:
             screenshots_dir=f"{settings.STORAGE_PATH}/images",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images"
         )
+
+    def _build_engine_schema_validator(self, proxy_url: Optional[str]) -> SchemaOrgValidatorEngine:
+      proxy_server = None
+
+      if proxy_url:
+        parsed = urlparse(proxy_url)
+        proxy_server = f"{parsed.scheme}://{parsed.hostname}"
+        if parsed.port:
+          proxy_server = f"{proxy_server}:{parsed.port}"
+
+      return SchemaOrgValidatorEngine(
+        proxy_server=proxy_server,
+        screenshots_dir=f"{settings.STORAGE_PATH}/images",
+        storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images"
+      )
 
     def _html_to_markdown(self, html_content: str) -> str:
         markdown = trafilatura.extract(
@@ -139,8 +156,10 @@ class RichResultsService:
         input_type, content, source_url = await self._build_effective_input(payload)
         proxy_url = self._resolve_proxy_url()
         engine = self._build_engine(proxy_url)
+        engine_schema_validator = self._build_engine_schema_validator(proxy_url)
 
         validation = await engine.validate(input_type=input_type, content=content or "")
+        validation_schema = await engine_schema_validator.validate(input_type=input_type, content=content or "")
         findings = self.analyze_validation_html(validation.html_content or "")
         findings_summary = self.build_findings_summary(findings)
         ai_result: Optional[RichResultsAIResult] = None
