@@ -11,6 +11,12 @@ from app.models.audit_url_validation import (
 )
 from app.models.url_validation_comment import UrlValidationComment, CommentStatus
 from app.models.rich_results_report import RichResultsReport, RichResultsReportStatus
+from app.models.structured_validation_task import (
+    StructuredValidationTask,
+    StructuredValidationTaskStatus,
+    StructuredValidationInputMode,
+)
+from app.models.structured_validation_comment import StructuredValidationComment
 from app.models.task_execution_log import TaskExecutionLog
 
 __all__ = [
@@ -31,5 +37,9 @@ __all__ = [
     "CommentStatus",
     "RichResultsReport",
     "RichResultsReportStatus",
+    "StructuredValidationTask",
+    "StructuredValidationTaskStatus",
+    "StructuredValidationInputMode",
+    "StructuredValidationComment",
     "TaskExecutionLog",
 ]

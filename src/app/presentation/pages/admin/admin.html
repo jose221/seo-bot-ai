@@ -49,6 +49,14 @@
           </a>
           <a
             class="admin-nav__link"
+            routerLink="/admin/audit/structured-validations"
+            routerLinkActive="active"
+            [routerLinkActiveOptions]="{ exact: false }"
+          >
+            {{ 'admin.navbar.structuredValidations' | translate }}
+          </a>
+          <a
+            class="admin-nav__link"
             routerLink="/admin/json-tools"
             routerLinkActive="active"
             [routerLinkActiveOptions]="{ exact: false }"

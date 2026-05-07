@@ -1,0 +1,120 @@
+<section class="app-page">
+  <div class="app-page__header">
+    <div>
+      <span class="app-page__eyebrow"><i class="bi bi-magic"></i> Nueva tarea</span>
+      <h1 class="app-page__title">Crear validación estructurada</h1>
+      <p class="app-page__subtitle">Captura varias URLs o varios bloques HTML y ejecútalos en un solo lote.</p>
+    </div>
+    <div class="app-page__actions">
+      <a routerLink="/admin/audit/structured-validations" class="btn btn-outline-secondary">
+        <i class="bi bi-list-ul me-1"></i>Listado
+      </a>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4 p-lg-5">
+      @if (error()) {
+        <div class="alert alert-danger">{{ error() }}</div>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <div class="row g-4">
+          <div class="col-md-4">
+            <label class="form-label">Modo</label>
+            <select class="form-select" formControlName="input_mode" (change)="onModeChange()">
+              <option value="url">URLs</option>
+              <option value="html">HTML</option>
+            </select>
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">Nombre</label>
+            <input class="form-control" formControlName="name" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Descripción</label>
+            <input class="form-control" formControlName="description" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">Instrucción para IA</label>
+            <textarea class="form-control" rows="3" formControlName="ai_instruction"></textarea>
+          </div>
+        </div>
+
+        <hr class="my-4" />
+
+        <div class="row g-4 mb-4">
+          <div class="col-md-4">
+            <div class="form-check form-switch">
+              <input id="get_ai_result" class="form-check-input" type="checkbox" formControlName="get_ai_result" />
+              <label class="form-check-label" for="get_ai_result">Generar reporte IA</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check form-switch">
+              <input id="validate_google" class="form-check-input" type="checkbox" formControlName="validate_google" />
+              <label class="form-check-label" for="validate_google">Google Rich Results</label>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="form-check form-switch">
+              <input id="validate_schema_org" class="form-check-input" type="checkbox" formControlName="validate_schema_org" />
+              <label class="form-check-label" for="validate_schema_org">Schema.org</label>
+            </div>
+          </div>
+          @if (form.get('input_mode')?.value === 'url') {
+            <div class="col-12">
+              <div class="form-check form-switch">
+                <input id="auto_extract_html" class="form-check-input" type="checkbox" formControlName="auto_extract_html" />
+                <label class="form-check-label" for="auto_extract_html">Extraer HTML antes de validar</label>
+              </div>
+            </div>
+          }
+        </div>
+
+        @if (form.get('input_mode')?.value === 'url') {
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <label class="form-label mb-0">URLs</label>
+              <span class="badge text-bg-primary rounded-pill px-3 py-2">
+                <i class="bi bi-link-45deg me-1"></i>{{ countUrls() }} URL{{ countUrls() === 1 ? '' : 's' }}
+              </span>
+            </div>
+            <textarea class="form-control code-area" rows="8" formControlName="raw_urls" placeholder="https://example.com, https://example.org&#10;https://foo.com"></textarea>
+            <div class="form-text">Puedes separar por espacios, comas o saltos de línea.</div>
+          </div>
+        } @else {
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <label class="form-label mb-0">Bloques HTML</label>
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="addHtmlItem()">
+              <i class="bi bi-plus-circle me-1"></i>Agregar HTML
+            </button>
+          </div>
+          <div class="d-flex flex-column gap-3">
+            @for (control of htmlItems.controls; track $index) {
+              <div class="border rounded-3 p-3 bg-light-subtle">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <strong>HTML #{{ $index + 1 }}</strong>
+                  <button type="button" class="btn btn-outline-danger btn-sm" (click)="removeHtmlItem($index)">
+                    Quitar
+                  </button>
+                </div>
+                <textarea class="form-control code-area" rows="8" [formControl]="control"></textarea>
+              </div>
+            }
+          </div>
+        }
+
+        <div class="d-flex justify-content-end mt-4">
+          <button type="submit" class="btn btn-primary btn-lg" [disabled]="loading()">
+            @if (loading()) {
+              <span class="spinner-border spinner-border-sm me-2"></span>Creando...
+            } @else {
+              <i class="bi bi-play-circle me-2"></i>Crear tarea
+            }
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>

@@ -20,6 +20,8 @@ import {AuditDetail} from '@/app/presentation/pages/admin/audit/audit-detail/aud
 import {CompareAuditDetail} from '@/app/presentation/pages/admin/audit/compare-audit-detail/compare-audit-detail';
 import {AuditSchemaDetail} from '@/app/presentation/pages/admin/audit/audit-schema-detail/audit-schema-detail';
 import {AuditUrlValidationDetail} from '@/app/presentation/pages/admin/audit/audit-url-validation-detail/audit-url-validation-detail';
+import { StructuredValidationList } from '@/app/presentation/pages/admin/audit/structured-validation-list/structured-validation-list';
+import { StructuredValidationForm } from '@/app/presentation/pages/admin/audit/structured-validation-form/structured-validation-form';
 
 export const routes: Routes = [
   { path: '', component: Login, canActivate: [loginGuard] },
@@ -47,6 +49,13 @@ export const routes: Routes = [
         loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info'),
         data: { layout: 'admin' }
       },
+      { path: 'audit/structured-validations', component: StructuredValidationList },
+      { path: 'audit/structured-validations/create', component: StructuredValidationForm },
+      {
+        path: 'audit/structured-validations/:id/info',
+        loadComponent: () => import('@/app/presentation/pages/shared/structured-validation-info/structured-validation-info'),
+        data: { layout: 'admin' }
+      },
       {path: 'audit/url-validations/:id', component: AuditUrlValidationDetail},
       {path: 'audit/:id', component: AuditDetail},
       {path: 'metrics', component: MetricsDashboardComponent},
@@ -56,6 +65,11 @@ export const routes: Routes = [
   {
     path: 'shared/audit/url-validations/:id/info',
     loadComponent: () => import('@/app/presentation/pages/shared/audit-url-validation-info/audit-url-validation-info'),
+    data: { layout: 'shared' }
+  },
+  {
+    path: 'shared/audit/structured-validations/:id/info',
+    loadComponent: () => import('@/app/presentation/pages/shared/structured-validation-info/structured-validation-info'),
     data: { layout: 'shared' }
   },
   { path: '**', redirectTo: '/admin' }

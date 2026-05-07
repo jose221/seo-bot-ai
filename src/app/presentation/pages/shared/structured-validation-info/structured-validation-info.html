@@ -1,0 +1,300 @@
+<section class="app-page structured-detail-page">
+  <div class="app-page__header">
+    <div>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb mb-2">
+          @if (layout() === 'admin') {
+            <li class="breadcrumb-item"><a routerLink="/admin/audit/structured-validations">Validaciones estructuradas</a></li>
+          }
+          <li class="breadcrumb-item active">Detalle</li>
+        </ol>
+      </nav>
+      <span class="app-page__eyebrow"><i class="bi bi-diagram-3"></i> Structured validation task</span>
+      <h1 class="app-page__title">{{ task()?.name || 'Detalle de tarea' }}</h1>
+      <p class="app-page__subtitle">ID: {{ task()?.id }}</p>
+    </div>
+
+    <div class="app-page__actions">
+      @if (layout() === 'admin') {
+        <a routerLink="/admin/audit/structured-validations" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Volver
+        </a>
+        <button type="button" class="btn btn-outline-dark" (click)="showTaskMessage()">
+          <i class="bi bi-chat-left-text me-1"></i>Ver mensaje
+        </button>
+        <button type="button" class="btn btn-outline-primary" (click)="copySharedUrl()">
+          <i class="bi bi-share me-1"></i>Compartir
+        </button>
+        <button type="button" class="btn btn-outline-secondary" (click)="cloneTask()">
+          <i class="bi bi-files me-1"></i>Clonar
+        </button>
+        <button type="button" class="btn btn-primary" (click)="rerunSameTask()">
+          <i class="bi bi-arrow-repeat me-1"></i>Re-ejecutar
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+  } @else if (!task()) {
+    <div class="alert alert-warning">No se encontró la tarea.</div>
+  } @else {
+    <div class="structured-hero">
+      <div class="structured-hero__meta">
+        <div class="d-flex flex-wrap gap-2">
+          <span class="sv-badge" [ngClass]="getStatusClass(task()!.status)">{{ getReadableStatus(task()!.status) }}</span>
+          <span class="sv-badge sv-badge--neutral text-uppercase">{{ task()!.input_mode }}</span>
+          <span class="sv-badge" [ngClass]="task()!.validate_google ? 'sv-badge--success' : 'sv-badge--neutral'">Google {{ task()!.validate_google ? 'activo' : 'off' }}</span>
+          <span class="sv-badge" [ngClass]="task()!.validate_schema_org ? 'sv-badge--success' : 'sv-badge--neutral'">Schema.org {{ task()!.validate_schema_org ? 'activo' : 'off' }}</span>
+        </div>
+
+        @if (task()!.description) {
+          <p class="structured-hero__description">{{ task()!.description }}</p>
+        }
+
+        @if (task()!.progress_message || task()!.message) {
+          <div class="structured-message">
+            <div class="structured-message__label">Mensaje actual</div>
+            <div class="structured-message__content">{{ task()!.progress_message || task()!.message }}</div>
+          </div>
+        }
+      </div>
+
+      <div class="structured-summary-grid">
+        <article class="summary-card summary-card--neutral">
+          <span class="summary-card__label">Total</span>
+          <strong class="summary-card__value">{{ summary().total }}</strong>
+        </article>
+        <article class="summary-card summary-card--success">
+          <span class="summary-card__label">OK</span>
+          <strong class="summary-card__value">{{ summary().ok }}</strong>
+        </article>
+        <article class="summary-card summary-card--warning">
+          <span class="summary-card__label">Warning</span>
+          <strong class="summary-card__value">{{ summary().warning }}</strong>
+        </article>
+        <article class="summary-card summary-card--danger">
+          <span class="summary-card__label">Crítico/Error</span>
+          <strong class="summary-card__value">{{ summary().critical }}</strong>
+        </article>
+        <article class="summary-card summary-card--info">
+          <span class="summary-card__label">Pendiente</span>
+          <strong class="summary-card__value">{{ summary().pending }}</strong>
+        </article>
+      </div>
+    </div>
+
+    <div class="surface-panel surface-panel--soft mb-4">
+      <div class="surface-panel__body">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-6 col-xl-7">
+            <label class="form-label">Buscar elemento</label>
+            <input
+              class="form-control"
+              [ngModel]="search()"
+              (ngModelChange)="search.set($event)"
+              placeholder="Filtra por URL, HTML o mensaje"
+            />
+          </div>
+          <div class="col-md-3 col-xl-2">
+            <label class="form-label">Severidad</label>
+            <select class="form-select" [ngModel]="severity()" (ngModelChange)="severity.set($event)">
+              <option value="all">Todas</option>
+              <option value="ok">OK</option>
+              <option value="warning">Warning</option>
+              <option value="critical">Critical</option>
+              <option value="error">Error</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label d-block">Vista</label>
+            <div class="form-check form-switch pt-2">
+              <input class="form-check-input" type="checkbox" [ngModel]="onlyIssues()" (ngModelChange)="onlyIssues.set($event)" />
+              <label class="form-check-label">Solo incidencias</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="structured-item-list">
+      @for (item of filteredItems(); track item.item_key) {
+        <article [ngClass]="getItemCardClass(item.severity, item.success)">
+          <div class="structured-item-card__header">
+            <div class="structured-item-card__title-wrap">
+              <div class="d-flex flex-wrap gap-2 mb-2">
+                <span [ngClass]="getSeverityClass(item.severity)">{{ getSeverityLabel(item.severity) }}</span>
+                <span class="sv-badge sv-badge--neutral text-uppercase">{{ item.input_type }}</span>
+                <span [ngClass]="item.success ? 'sv-badge sv-badge--success' : 'sv-badge sv-badge--neutral'">
+                  {{ item.success ? 'Completado' : 'Pendiente / revisión' }}
+                </span>
+              </div>
+              <h2 class="structured-item-card__title">{{ item.label }}</h2>
+              @if (item.source_preview) {
+                <p class="structured-item-card__source">{{ item.source_preview }}</p>
+              }
+            </div>
+
+            <div class="structured-item-card__actions">
+              @if (item.input_type === 'url' && item.source_value) {
+                <a class="btn btn-outline-secondary btn-sm" [href]="item.source_value" target="_blank">
+                  <i class="bi bi-box-arrow-up-right me-1"></i>Abrir fuente
+                </a>
+              }
+              <button type="button" class="btn btn-outline-primary btn-sm" (click)="toggleComments(item.item_key)">
+                <i class="bi bi-chat-left-text me-1"></i>Comentarios ({{ commentsFor(item.item_key).length }})
+              </button>
+            </div>
+          </div>
+
+          <div class="structured-item-card__body">
+            @if (item.report.get_ai_result?.content) {
+              <section class="ai-panel">
+                <div class="ai-panel__header">
+                  <h3><i class="bi bi-robot me-2"></i>Reporte IA</h3>
+                </div>
+                <div class="ai-panel__body">
+                  <markdown [data]="item.report.get_ai_result!.content"></markdown>
+                </div>
+              </section>
+            }
+
+            <div class="validator-grid">
+              @for (validator of [item.report.google_validation, item.report.schema_org_validation]; track validator.validator) {
+                @let warningCount = getValidatorWarningCount(validator);
+                @let errorCount = getValidatorErrorCount(validator);
+                <section [ngClass]="getValidatorCardClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
+                  <div class="validator-panel__header">
+                    <div>
+                      <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                        <h3 class="validator-panel__title">{{ validator.label }}</h3>
+                        <span [ngClass]="getValidatorStateClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
+                          {{ !validator.executed ? 'No ejecutado' : validator.success ? 'OK' : warningCount > 0 ? 'Warning' : 'Error' }}
+                        </span>
+                      </div>
+                      <p class="validator-panel__message">{{ validator.message || validator.error_message || 'Sin mensaje adicional' }}</p>
+                    </div>
+
+                    @if (validator.result_url) {
+                      <a class="btn btn-sm btn-outline-secondary" [href]="validator.result_url" target="_blank">
+                        <i class="bi bi-box-arrow-up-right me-1"></i>Abrir validador
+                      </a>
+                    }
+                  </div>
+
+                  <div class="validator-panel__stats">
+                    <span class="validator-stat validator-stat--neutral">{{ validator.findings_summary.total }} hallazgo(s)</span>
+                    @if (warningCount > 0) {
+                      <span class="validator-stat validator-stat--warning">{{ warningCount }} warning</span>
+                    }
+                    @if (errorCount > 0) {
+                      <span class="validator-stat validator-stat--danger">{{ errorCount }} error</span>
+                    }
+                  </div>
+
+                  @if (validator.findings.length > 0) {
+                    <div class="finding-list">
+                      @for (finding of validator.findings; track finding.key) {
+                        <article class="finding-item">
+                          <div class="finding-item__header">
+                            <strong>{{ finding.item_name || finding.code }}</strong>
+                            <span [ngClass]="getSeverityClass(finding.severity)">{{ getSeverityLabel(finding.severity) }}</span>
+                          </div>
+                          <p class="finding-item__message">{{ finding.message }}</p>
+                          <div class="finding-item__links">
+                            @if (finding.element_url) {
+                              <a [href]="finding.element_url" target="_blank">Abrir detalle</a>
+                            }
+                            @if (finding.document_url) {
+                              <a [href]="finding.document_url" target="_blank">{{ finding.document_label || 'Ver documentación' }}</a>
+                            }
+                          </div>
+                        </article>
+                      }
+                    </div>
+                  } @else {
+                    <div class="validator-empty">Sin hallazgos detectados.</div>
+                  }
+
+                  @if (validator.screenshots.length > 0) {
+                    <div class="screenshot-grid">
+                      @for (shot of validator.screenshots; track shot.path) {
+                        <a class="screenshot-card" [href]="getScreenshotPreviewUrl(shot.url)" target="_blank">
+                          <img [src]="getScreenshotPreviewUrl(shot.url)" alt="Screenshot de validación" />
+                          <span class="screenshot-card__path">{{ getScreenshotApiPath(shot.url) }}</span>
+                        </a>
+                      }
+                    </div>
+                  }
+                </section>
+              }
+            </div>
+
+            @if (openComments() === item.item_key) {
+              <section class="comment-panel">
+                <div class="comment-panel__header">
+                  <h3>Comentarios</h3>
+                </div>
+
+                <div class="row g-3 mb-3">
+                  <div class="col-md-4">
+                    <input class="form-control" [ngModel]="commentUsername()" (ngModelChange)="commentUsername.set($event)" placeholder="Tu nombre" />
+                  </div>
+                  <div class="col-md-8">
+                    <div class="input-group">
+                      <input class="form-control" [ngModel]="commentDrafts()[item.item_key] || ''" (ngModelChange)="setCommentDraft(item.item_key, $event)" placeholder="Agregar comentario" />
+                      <button type="button" class="btn btn-primary" (click)="submitComment(item.item_key)">Enviar</button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="comment-list">
+                  @for (comment of commentsFor(item.item_key); track comment.id) {
+                    <article class="comment-card">
+                      <div class="comment-card__header">
+                        <div>
+                          <strong>{{ comment.username }}</strong>
+                          <div class="text-muted small">{{ comment.created_at | date:'medium' }}</div>
+                        </div>
+                        <span class="sv-badge sv-badge--neutral">{{ comment.status }}</span>
+                      </div>
+                      <p class="mb-2 mt-2">{{ comment.comment }}</p>
+                      @if (comment.answer) {
+                        <div class="comment-answer">
+                          <strong>Respuesta:</strong> {{ comment.answer }}
+                        </div>
+                      } @else if (layout() === 'admin') {
+                        <div class="d-flex flex-column gap-2">
+                          <textarea class="form-control" rows="2" [ngModel]="answerDrafts()[comment.id] || ''" (ngModelChange)="setAnswerDraft(comment.id, $event)" placeholder="Responder comentario"></textarea>
+                          <div class="d-flex gap-2">
+                            <select class="form-select w-auto" [ngModel]="answerStatuses()[comment.id] || 'done'" (ngModelChange)="setAnswerStatus(comment.id, $event)">
+                              <option value="done">done</option>
+                              <option value="rejected">rejected</option>
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" (click)="answerComment(comment)">Responder</button>
+                          </div>
+                        </div>
+                      }
+                    </article>
+                  } @empty {
+                    <div class="validator-empty">Todavía no hay comentarios para este elemento.</div>
+                  }
+                </div>
+              </section>
+            }
+          </div>
+        </article>
+      } @empty {
+        <div class="surface-panel surface-panel--soft">
+          <div class="surface-panel__body text-center py-5">
+            <i class="bi bi-inbox text-muted fs-1"></i>
+            <h5 class="mt-3">No hay elementos para mostrar</h5>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,93 @@
+<section class="app-page">
+  <div class="app-page__header">
+    <div>
+      <span class="app-page__eyebrow"><i class="bi bi-diagram-3"></i> Structured validations</span>
+      <h1 class="app-page__title">Validaciones estructuradas</h1>
+      <p class="app-page__subtitle">Tareas masivas para URLs o bloques HTML con Google y Schema.org.</p>
+    </div>
+    <div class="app-page__actions">
+      <a routerLink="/admin/audit/structured-validations/create" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-1"></i>Nueva tarea
+      </a>
+      <button type="button" class="btn btn-outline-secondary" (click)="autoReload.set(!autoReload())">
+        <i class="bi" [ngClass]="autoReload() ? 'bi-pause-circle' : 'bi-arrow-repeat'"></i>
+        <span class="ms-1">{{ autoReload() ? 'Auto' : 'Pausado' }}</span>
+      </button>
+    </div>
+  </div>
+
+  @if (isLoading()) {
+    <div class="text-center py-5">
+      <div class="spinner-border text-primary" role="status"></div>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-5">
+        <i class="bi bi-inbox text-muted fs-1"></i>
+        <h5 class="mt-3">Todavía no hay tareas</h5>
+      </div>
+    </div>
+  } @else {
+    <div class="card border-0 shadow-sm">
+      <div class="table-responsive">
+        <table class="table align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Nombre</th>
+              <th>Modo</th>
+              <th>Estado</th>
+              <th>Progreso</th>
+              <th>Items</th>
+              <th>Validadores</th>
+              <th>Creada</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of items(); track item.id) {
+              <tr>
+                <td>
+                  <div class="fw-semibold">{{ item.name }}</div>
+                  @if (item.description) {
+                    <div class="text-muted small">{{ item.description }}</div>
+                  }
+                </td>
+                <td><span class="badge text-bg-light text-uppercase">{{ item.input_mode }}</span></td>
+                <td><span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span></td>
+                <td style="min-width: 180px;">
+                  <div class="small fw-semibold mb-1">{{ item.progress_percentage }}%</div>
+                  <div class="progress" style="height: 8px;">
+                    <div class="progress-bar" [style.width.%]="item.progress_percentage"></div>
+                  </div>
+                  @if (item.progress_message) {
+                    <div class="text-muted small mt-1">{{ item.progress_message }}</div>
+                  }
+                </td>
+                <td>
+                  <div class="small">{{ item.completed_items }}/{{ item.total_items }}</div>
+                  <div class="text-muted small">{{ item.successful_items }} ok · {{ item.failed_items }} fallo</div>
+                </td>
+                <td>
+                  <div class="d-flex flex-column gap-1 small">
+                    <span [class.text-success]="item.validate_google" [class.text-muted]="!item.validate_google">Google</span>
+                    <span [class.text-success]="item.validate_schema_org" [class.text-muted]="!item.validate_schema_org">Schema.org</span>
+                  </div>
+                </td>
+                <td>{{ item.created_at | date:'medium' }}</td>
+                <td>
+                  <div class="d-flex flex-column gap-2 align-items-start">
+                    <a [routerLink]="['/admin/audit/structured-validations', item.id, 'info']" class="btn btn-sm btn-outline-primary">Ver detalle</a>
+                    <button type="button" class="btn btn-sm btn-outline-dark" (click)="showTaskMessage(item)">Ver mensaje</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openClone(item)">Clonar</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" (click)="rerun(item)">Re-ejecutar</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(item)">Eliminar</button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</section>

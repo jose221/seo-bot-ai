@@ -1,11 +1,12 @@
 import { Component, inject, signal, OnInit, OnDestroy, computed, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser, CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import { TaskNotificationService } from '@/app/infrastructure/services/general/task-notification.service';
 import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
 import { TargetRepository } from '@/app/domain/repositories/target/target.repository';
 import { RichResultsRepository } from '@/app/domain/repositories/rich-results/rich-results.repository';
+import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
 import {
   AuditUrlValidationSchemasResponseModel,
   AuditUrlValidationSchemaItemModel,
@@ -19,6 +20,7 @@ import {
   CreateRichResultsBatchReportRequestModel,
   CreateRichResultsReportRequestModel,
 } from '@/app/domain/models/rich-results/request/rich-results-request.model';
+import { StructuredValidationCreateRequestModel } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
   RichResultsAnalysisFindingModel,
   RichResultsAnalysisSummaryModel,
@@ -56,11 +58,13 @@ type TrackedRichResultsTask = {
 })
 export default class PublicAuditUrlValidationInfoComponent implements OnInit, OnDestroy {
   private readonly _route = inject(ActivatedRoute);
+  private readonly _router = inject(Router);
   private readonly _repository = inject(AuditUrlValidationRepository);
   private readonly _taskNotificationService = inject(TaskNotificationService);
   private readonly _authRepository = inject(AuthRepository);
   private readonly _targetRepository = inject(TargetRepository);
   private readonly _richResultsRepository = inject(RichResultsRepository);
+  private readonly _structuredValidationRepository = inject(StructuredValidationRepository);
   private readonly _sweetAlertUtil = inject(SweetAlertUtil);
   private readonly _platformId = inject(PLATFORM_ID);
 
@@ -963,21 +967,22 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
     this.richResultsBatchSubmitting.set(true);
     try {
-      const response = await this._richResultsRepository.createBatch(
-        new CreateRichResultsBatchReportRequestModel(
-          urls,
+      const validationName = this.data()?.name_validation?.trim() || 'Validacion estructurada';
+      const response = await this._structuredValidationRepository.create(
+        new StructuredValidationCreateRequestModel(
+          'url',
+          `${validationName} · lote estructurado`,
+          'Lote generado desde validaciones URL',
+          null,
+          urls.join('\n'),
+          [],
           this.richResultsBatchAnalyzeWithAi(),
           this.richResultsBatchAutoExtractHtml(),
           this.richResultsBatchValidateGoogle(),
           this.richResultsBatchValidateSchemaOrg(),
         ),
       );
-      response.items.forEach((item) => this.trackRichResultsTask(item));
-
-      for (const url of urls) {
-        await this.ensureRichResultsLoaded(url, true);
-      }
-      await this.loadRichResultsStatuses(urls);
+      this.clearRichResultsBatch();
 
       this._sweetAlertUtil.fire({
         toast: true,
@@ -986,11 +991,12 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
         timer: 4500,
         timerProgressBar: true,
         icon: 'success',
-        title: `Se encolaron ${urls.length} reporte(s) de validación`,
+        title: `Se creó un paquete con ${urls.length} URL(s)`,
       });
+      await this._router.navigate(['/admin/audit/structured-validations', response.task_id, 'info']);
     } catch (error) {
       console.error('Error creating rich results batch:', error);
-      await this._sweetAlertUtil.error('', 'No se pudo iniciar el lote de reportes de validación.');
+      await this._sweetAlertUtil.error('', 'No se pudo crear el paquete masivo de validación.');
     } finally {
       this.richResultsBatchSubmitting.set(false);
     }
