@@ -8,11 +8,11 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import Dict, Optional
+import nodriver.cdp.input_ as cdp_input
 
 from pydantic import BaseModel, Field
 
 import nodriver as uc
-import nodriver.cdp.input_ as cdp_input
 
 logger = logging.getLogger(__name__)
 
@@ -30,11 +30,16 @@ class ValidationResult(BaseModel):
   screenshots: list[dict[str, str]] = Field(default_factory=list)
 
 class GoogleRichResultsEngine:
+  # Candado estático a nivel de clase para evitar Race Conditions
+  # al mutar la variable de entorno os.environ['DISPLAY']
+  _startup_lock = asyncio.Lock()
+
   def __init__(
     self,
     proxy_server: Optional[str] = None,
     screenshots_dir: str = "storage/images",
-    storage_url_prefix: str = "/storage/images"
+    storage_url_prefix: str = "/storage/images",
+    max_concurrent_tasks: int = 3 # Límite de navegadores simultáneos
   ):
     """
     Inicializa el motor de validación exclusivo con Nodriver.
@@ -45,6 +50,9 @@ class GoogleRichResultsEngine:
     self.screenshots_dir = Path(screenshots_dir)
     self.storage_url_prefix = storage_url_prefix.rstrip("/")
     self.screenshots_dir.mkdir(parents=True, exist_ok=True)
+
+    # Semáforo para controlar cuánta RAM le exigimos al servidor
+    self._semaphore = asyncio.Semaphore(max_concurrent_tasks)
 
   def _build_screenshot_artifact(self, filename: str) -> dict[str, str]:
     return {
@@ -68,39 +76,47 @@ class GoogleRichResultsEngine:
       return None
 
   async def validate(self, input_type: InputType, content: str) -> ValidationResult:
-    """Punto de entrada principal. Ejecuta la validación en Google Rich Results."""
+    """Punto de entrada seguro para concurrencia."""
+    # El semáforo pone en cola las peticiones si llegan más de 'max_concurrent_tasks'
+    async with self._semaphore:
+      return await self._validate_internal(input_type, content)
+
+  async def _validate_internal(self, input_type: InputType, content: str) -> ValidationResult:
+    """Lógica central de validación."""
     logger.info(f"Starting validation for {input_type.value}...")
     browser = None
     display = None
     page = None
 
     try:
-      # 1. Configuración de Display Virtual (Para servidores Linux sin interfaz gráfica)
-      if sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
-        try:
-          from pyvirtualdisplay import Display
-          logger.info("Starting Xvfb virtual display...")
-          display = Display(visible=False, size=(1920, 1080))
-          display.start()
-          os.environ['DISPLAY'] = display.new_display_var
-        except ImportError:
-          logger.warning("pyvirtualdisplay not found. Browsing might fail on headless server.")
+      # BLOQUE PROTEGIDO: Solo un proceso a la vez puede crear un display virtual y abrir Chrome
+      # Esto evita que las peticiones paralelas se roben la variable os.environ['DISPLAY']
+      async with self._startup_lock:
+        if sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
+          try:
+            from pyvirtualdisplay import Display
+            logger.info("Starting Xvfb virtual display...")
+            display = Display(visible=False, size=(1920, 1080))
+            display.start()
+            os.environ['DISPLAY'] = display.new_display_var
+          except ImportError:
+            logger.warning("pyvirtualdisplay not found. Browsing might fail on headless server.")
 
-      # 2. Argumentos de Evasión
-      browser_args = [
-        "--window-size=1920,1080",
-        "--no-sandbox",
-        "--disable-blink-features=AutomationControlled"
-      ]
+        browser_args = [
+          "--window-size=1920,1080",
+          "--no-sandbox",
+          "--disable-blink-features=AutomationControlled"
+        ]
 
-      if self._proxy_server:
-        browser_args.append(f"--proxy-server={self._proxy_server}")
+        if self._proxy_server:
+          browser_args.append(f"--proxy-server={self._proxy_server}")
 
-      # Iniciamos headless=False obligatoriamente para evadir detección.
-      browser = await uc.start(headless=False, browser_args=browser_args)
+        # Lanzamos el navegador heredando el entorno seguro
+        browser = await uc.start(headless=False, browser_args=browser_args)
+
+      # --- FIN DEL BLOQUE PROTEGIDO ---
+
       page = await browser.get(self.target_url)
-
-      # Pausa humana inicial
       await asyncio.sleep(random.uniform(2.0, 4.0))
 
       # 3. Interacción con la UI de Google
@@ -119,26 +135,24 @@ class GoogleRichResultsEngine:
 
         await asyncio.sleep(2)
 
-        # 3.2 Enfocar el textarea e inyectar el HTML ("Pegar" simulado)
+        # 3.2 Enfocar el textarea para asegurar el cursor
         logger.info("Enfocando el textarea oculto de CodeMirror...")
         textarea = await page.select(".CodeMirror.cm-s-search-console-code-input textarea")
         await textarea.click()
-        await asyncio.sleep(0.5)
-
-        logger.info("Pegando HTML masivo (Copy/Paste simulado vía CDP)...")
-        # Esta línea es la magia: inserta todo el HTML de golpe como si hicieras Ctrl+V
-        await page.send(cdp_input.insert_text(text=content))
         await asyncio.sleep(1)
 
-        # 3.3 Asegurar validadores tecleando y borrando un espacio
-        logger.info("Activando validadores de Google enviando teclas al textarea...")
-        await textarea.send_keys(" ")
-        await textarea.send_keys("\b")
+        # 3.3 Simular evento de Pegado (Paste) a nivel del motor del navegador
+        logger.info("Inyectando HTML masivo vía document.execCommand('insertText')...")
+        await textarea.send_keys("<!--Proyecto-->")
+        await page.send(cdp_input.insert_text(text=content))
+        await asyncio.sleep(1)
+        # 3.4 Asegurar validadores tecleando y borrando un espacio (Redundancia de seguridad)
+        logger.info("Asegurando validación del framework enviando tecla de espacio...")
 
         logger.info("HTML injected and validated. Waiting 3 seconds...")
-        await asyncio.sleep(3)
+        await asyncio.sleep(2)
 
-        # 3.4 Clic en el botón "probar código" (jsname oe2Hje)
+        # 3.5 Clic en el botón "probar código" (jsname oe2Hje)
         logger.info("Clicking 'probar código' button...")
         try:
           submit_btn = await page.select("div[jsname='oe2Hje']")
