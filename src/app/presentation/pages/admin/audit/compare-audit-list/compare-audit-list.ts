@@ -139,18 +139,24 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
 
   private renderProgress(progress: number | null | undefined, status: string): string {
     const value = Math.max(0, Math.min(100, Number(progress ?? 0)));
-    const barClass =
+    const barColor =
       status === 'completed'
-        ? 'bg-success'
+        ? '#198754'
         : status === 'failed'
-          ? 'bg-danger'
-          : 'bg-info';
+          ? '#dc3545'
+          : '#0dcaf0';
 
     return `
       <div class="d-flex flex-column gap-1 align-items-center">
         <span class="small fw-semibold">${value}%</span>
-        <div class="progress w-100" style="min-width: 120px; height: 8px;">
-          <div class="progress-bar ${barClass}" role="progressbar" style="width: ${value}%"></div>
+        <div style="min-width: 120px; width: 100%; height: 8px; background: #e9ecef; border-radius: 999px; overflow: hidden;">
+          <div
+            role="progressbar"
+            aria-valuenow="${value}"
+            aria-valuemin="0"
+            aria-valuemax="100"
+            style="width: ${value}%; height: 100%; background: ${barColor}; border-radius: 999px; transition: width 0.2s ease;"
+          ></div>
         </div>
       </div>
     `;
