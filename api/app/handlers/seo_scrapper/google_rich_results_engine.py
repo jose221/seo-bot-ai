@@ -12,6 +12,7 @@ from typing import Dict, Optional
 from pydantic import BaseModel, Field
 
 import nodriver as uc
+import nodriver.cdp.input_ as cdp_input
 
 logger = logging.getLogger(__name__)
 
@@ -108,41 +109,33 @@ class GoogleRichResultsEngine:
 
         # 3.1 Clic literal apuntando al contenedor div principal
         try:
-          # Usamos el jsname del contenedor (más estable que las clases)
           codigo_tab = await page.select("div[aria-controls='fmefR']")
           await codigo_tab.click()
         except Exception as e:
-          logger.warning(f"No se encontró el jsname exacto, usando fallback de clases: {e}")
-          # Fallback con las clases exactas que propusiste
+          logger.warning(f"No se encontró el aria-controls exacto, usando fallback de clases: {e}")
           codigo_tab = await page.select("div.ThdJC.kaAt2.Y8xidc.RPhebf.KKjvXb.j7nIZb")
           if codigo_tab:
             await codigo_tab.click()
 
-        await asyncio.sleep(2) # Dar tiempo a que el DOM cargue el editor CodeMirror
+        await asyncio.sleep(2)
 
-        # 3.2 Clic físico en el contenedor del editor para enfocarlo
-        try:
-          cm_container = await page.select('.CodeMirror')
-          await cm_container.click()
-        except Exception as e:
-          logger.warning(f"No se pudo hacer clic físico en CodeMirror: {e}")
+        # 3.2 Enfocar el textarea e inyectar el HTML ("Pegar" simulado)
+        logger.info("Enfocando el textarea oculto de CodeMirror...")
+        textarea = await page.select(".CodeMirror.cm-s-search-console-code-input textarea")
+        await textarea.click()
+        await asyncio.sleep(0.5)
 
+        logger.info("Pegando HTML masivo (Copy/Paste simulado vía CDP)...")
+        # Esta línea es la magia: inserta todo el HTML de golpe como si hicieras Ctrl+V
+        await page.send(cdp_input.insert_text(text=content))
         await asyncio.sleep(1)
 
-        # 3.3 Inyección limpia de HTML (Equivalente a un Ctrl+V)
-        content_json = json.dumps(content)
-        await page.evaluate(f"""
-                    () => {{
-                        const cmElement = document.querySelector('.CodeMirror');
-                        if (cmElement && cmElement.CodeMirror) {{
-                            const cm = cmElement.CodeMirror;
-                            cm.setValue({content_json});
-                            cm.refresh(); // Forzar renderizado
-                        }}
-                    }}
-                """)
+        # 3.3 Asegurar validadores tecleando y borrando un espacio
+        logger.info("Activando validadores de Google enviando teclas al textarea...")
+        await textarea.send_keys(" ")
+        await textarea.send_keys("\b")
 
-        logger.info("HTML injected. Waiting 3 seconds for Google to validate input...")
+        logger.info("HTML injected and validated. Waiting 3 seconds...")
         await asyncio.sleep(3)
 
         # 3.4 Clic en el botón "probar código" (jsname oe2Hje)
