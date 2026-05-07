@@ -139,7 +139,6 @@ class GoogleRichResultsEngine:
         )
         page = await context.new_page()
         page.set_default_timeout(10000)
-        # Ampliamos el timeout global de navegación porque Google toma su tiempo analizando
         page.set_default_navigation_timeout(90000)
 
         if stealth_async:
@@ -188,38 +187,49 @@ class GoogleRichResultsEngine:
         await browser.close()
 
   async def _interact_with_ui_playwright(self, page: Page, input_type: InputType, content: str) -> str:
+    """Handles Google UI interactions mirroring the successful Nodriver strategy."""
     if input_type == InputType.HTML:
+      logger.info("Submitting HTML content to Google Rich Results via Playwright")
       await page.get_by_text("Código", exact=True).click()
-      editor_area = page.locator(".CodeMirror")
-      await editor_area.click()
-      await page.keyboard.press("Control+A")
-      await page.keyboard.press("Backspace")
-      await page.keyboard.insert_text(content)
-      await page.get_by_role("button", name="Probar código").click()
+      await asyncio.sleep(1)
+
+      content_json = json.dumps(content)
+      await page.evaluate(f"""
+                () => {{
+                    const cm = document.querySelector('.CodeMirror').CodeMirror;
+                    const value = {content_json};
+                    cm.setValue(value);
+                }}
+            """)
+
+      await page.get_by_role("button", name="Probar código").click(force=True)
+
     else:
+      logger.info("Submitting URL to Google Rich Results via Playwright")
       url_input = page.locator("input[type='url']")
       await url_input.wait_for(state="visible", timeout=10000)
 
-      await page.keyboard.press("Backspace")
-      await self._type_text_like_keyboard(url_input, content)
+      await url_input.fill(content)
 
-      # Requisito explícito: Esperar mínimo 3 segundos
-      logger.info("URL typed. Waiting 3 seconds before submission...")
+      logger.info("URL filled in Playwright. Waiting 3 seconds before submission...")
       await asyncio.sleep(3)
 
-      # Click explicitly using the provided DOM structure
-      submit_btn = page.locator("div[role='button'][jsname='LZQqje']")
-      await submit_btn.click()
-      logger.info("Submit button clicked")
+      submit_btn = page.locator("div[jsname='LZQqje']")
+      await submit_btn.click(force=True)
+      logger.info("Submit button clicked in Playwright")
 
-    logger.info("Waiting for Google processing modal to finish...")
-    # Esperar a que la URL cambie al patrón result?id=. El timeout es alto porque el análisis tarda.
-    await page.wait_for_url("**/test/rich-results/result?id=*", timeout=90000)
-    return page.url
+    logger.info("Polling for URL change indicating analysis completion...")
+    current_url = ""
+    for _ in range(80):
+      current_url = await page.evaluate("window.location.href")
+      if "/result?id=" in current_url:
+        break
+      await asyncio.sleep(1.5)
 
-  async def _type_text_like_keyboard(self, url_input, text: str) -> None:
-    for char in text:
-      await url_input.type(char, delay=random.randint(50, 80))
+    if "/result?id=" not in current_url:
+      raise Exception("Timeout esperando que Google procese la URL en Playwright. El modal no finalizó a tiempo.")
+
+    return current_url
 
   async def _run_nodriver(self, input_type: InputType, content: str) -> ValidationResult:
     browser = None
@@ -270,20 +280,15 @@ class GoogleRichResultsEngine:
         url_input = await page.select("input[type='url']")
         await url_input.send_keys(content)
 
-        # Requisito explícito: Esperar mínimo 3 segundos antes de accionar
         logger.info("URL typed in nodriver. Waiting 3 seconds...")
         await asyncio.sleep(3)
 
-        # Usar el selector proporcionado jsname="LZQqje" en lugar de simular Enter
         submit_btn = await page.select("div[jsname='LZQqje']")
         await submit_btn.click()
         logger.info("Clicked 'probar URL' button in nodriver")
 
-      # Polling manual para captura de redirección
       logger.info("Polling for URL change indicating analysis completion...")
       current_url = ""
-      # Aumentamos los intentos de polling (80 iteraciones * 1.5s = 120 segundos máximo)
-      # para dar tiempo a que el modal de "Probando la URL" desaparezca.
       for _ in range(80):
         current_url = await page.evaluate("window.location.href")
         if "/result?id=" in current_url:

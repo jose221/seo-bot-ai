@@ -74,6 +74,7 @@ async def report_page_batch(
 ):
     auth_token = getattr(current_user, "_token", None)
     items: list[RichResultsReportTaskResponse] = []
+    queued_reports: list[tuple[UUID, RichResultsReportRequest]] = []
 
     for url in payload.urls:
         report_payload = RichResultsReportRequest(
@@ -86,12 +87,7 @@ async def report_page_batch(
             user_id=current_user.id,
             payload=report_payload,
         )
-        background_tasks.add_task(
-            get_rich_results_report_service().run_report_task,
-            report_id=report.id,
-            payload=report_payload,
-            token=auth_token or "",
-        )
+        queued_reports.append((report.id, report_payload))
         items.append(
             RichResultsReportTaskResponse(
                 task_id=report.id,
@@ -99,6 +95,13 @@ async def report_page_batch(
                 url=report.url,
                 message="Reporte de Google Rich Results encolado",
             )
+        )
+
+    if queued_reports:
+        background_tasks.add_task(
+            get_rich_results_report_service().run_batch_report_tasks,
+            reports=queued_reports,
+            token=auth_token or "",
         )
 
     return RichResultsBatchReportResponse(

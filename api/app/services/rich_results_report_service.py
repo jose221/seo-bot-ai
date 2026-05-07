@@ -34,6 +34,7 @@ log = logging.getLogger(__name__)
 class RichResultsReportService:
     RETENTION_DAYS = 7
     CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
+    BATCH_SCRAPING_CONCURRENCY = 7
 
     async def save_report(
         self,
@@ -342,6 +343,26 @@ class RichResultsReportService:
                 report.message = "No fue posible generar el reporte de Google Rich Results"
                 report.error_message = str(exc)
                 session.add(report)
+
+    async def run_batch_report_tasks(
+        self,
+        *,
+        reports: list[tuple[UUID, RichResultsReportRequest]],
+        token: str,
+    ) -> None:
+        semaphore = asyncio.Semaphore(self.BATCH_SCRAPING_CONCURRENCY)
+
+        async def run_single_report(report_id: UUID, payload: RichResultsReportRequest) -> None:
+            async with semaphore:
+                await self.run_report_task(
+                    report_id=report_id,
+                    payload=payload,
+                    token=token,
+                )
+
+        await asyncio.gather(
+            *(run_single_report(report_id, payload) for report_id, payload in reports)
+        )
 
     async def run_cleanup_loop(self) -> None:
         while True:

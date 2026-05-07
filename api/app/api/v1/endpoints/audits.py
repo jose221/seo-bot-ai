@@ -9,6 +9,7 @@ from sqlalchemy import String, cast as sql_cast, func, or_
 from typing import Optional, Dict, Any
 from uuid import UUID
 from datetime import datetime
+from pathlib import Path
 
 from app.core.database import get_session
 from app.api.deps import get_current_user
@@ -27,6 +28,7 @@ from app.services.cache import Cache
 from app.services.seo_analyzer import SEOAnalyzer
 from app.services.audit_comparator import get_audit_comparator
 from app.services.schema_audit_service import get_schema_audit_service
+from app.services.report_lifecycle import get_report_lifecycle_service
 from app.services.url_validation_service import get_url_validation_service
 from app.services.background_tasks import run_comparison_task, run_schema_audit_task, run_url_validation_task, run_url_validation_single_url_task
 
@@ -913,6 +915,56 @@ async def get_url_validation(
         )
 
     return audit_schemas.AuditUrlValidationDetailResponse.model_validate(validation)
+
+
+@router.delete(
+    "/audits/url-validations/{validation_id}",
+    response_model=audit_schemas.DeleteAuditUrlValidationResponse,
+)
+async def delete_url_validation(
+        validation_id: UUID,
+        current_user: User = Depends(get_current_user),
+        session=Depends(get_session),
+):
+    """Eliminar una validación de URLs."""
+    stmt = select(AuditUrlValidation).where(
+        AuditUrlValidation.id == validation_id,
+        AuditUrlValidation.user_id == current_user.id,
+    )
+    validation = (await session.execute(stmt)).scalars().first()
+
+    if not validation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Validación de URLs no encontrada",
+        )
+
+    report_lifecycle = get_report_lifecycle_service()
+    for attr_name in (
+        "report_pdf_path",
+        "report_word_path",
+        "global_report_pdf_path",
+        "global_report_word_path",
+    ):
+        raw_path = getattr(validation, attr_name, None)
+        if raw_path:
+            report_lifecycle._delete_file(Path(raw_path))
+
+    comments_stmt = select(UrlValidationComment).where(
+        UrlValidationComment.validation_id == validation.id
+    )
+    comments = (await session.execute(comments_stmt)).scalars().all()
+    for comment in comments:
+        await session.delete(comment)
+
+    await session.delete(validation)
+    await session.commit()
+
+    return audit_schemas.DeleteAuditUrlValidationResponse(
+        success=True,
+        message="Validación de URLs eliminada exitosamente",
+        validation_id=validation_id,
+    )
 
 
 @router.post(

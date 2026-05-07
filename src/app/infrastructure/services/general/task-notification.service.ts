@@ -6,6 +6,7 @@ import { AuditRepository } from '@/app/domain/repositories/audit/audit.repositor
 import { AuditSchemaRepository } from '@/app/domain/repositories/audit-schema/audit-schema.repository';
 import { AuditUrlValidationRepository } from '@/app/domain/repositories/audit-url-validation/audit-url-validation.repository';
 import { StatusType } from '@/app/domain/types/status.type';
+import { ToastService } from '@/app/helper/toast.service';
 
 type TrackableTaskKind = 'audit' | 'comparison' | 'schema' | 'url-validation';
 
@@ -45,6 +46,7 @@ export class TaskNotificationService {
   private readonly auditRepository = inject(AuditRepository);
   private readonly auditSchemaRepository = inject(AuditSchemaRepository);
   private readonly auditUrlValidationRepository = inject(AuditUrlValidationRepository);
+  private readonly toastService = inject(ToastService);
 
   private readonly pollIntervalMs = 15000;
   private readonly knownStatuses = new Map<string, string>();
@@ -60,12 +62,20 @@ export class TaskNotificationService {
     }
 
     this.started = true;
-    this.registerDesktopClickHandler();
-    void this.requestNotificationPermission();
+    this.prepareNotifications();
     void this.pollTasks();
     this.pollTimer = window.setInterval(() => {
       void this.pollTasks();
     }, this.pollIntervalMs);
+  }
+
+  prepareNotifications(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    this.registerDesktopClickHandler();
+    void this.requestNotificationPermission();
   }
 
   stop(): void {
@@ -176,8 +186,35 @@ export class TaskNotificationService {
   private notify(task: TrackableTask, status: string): void {
     const title = this.buildNotificationTitle(task.kind, status);
     const body = this.buildNotificationBody(task.label, status);
+    this.notifyTaskResult({
+      title,
+      body,
+      status,
+      route: task.route,
+      tag: this.buildTaskKey(task.kind, task.id),
+    });
+  }
 
-    if (this.sendDesktopNotification({ title, body, route: task.route })) {
+  notifyTaskResult({
+    title,
+    body,
+    status,
+    route,
+    tag,
+  }: {
+    title: string;
+    body: string;
+    status: 'completed' | 'failed' | string;
+    route?: string;
+    tag?: string;
+  }): void {
+    if (status === 'completed') {
+      this.toastService.success(body, title);
+    } else if (status === 'failed') {
+      this.toastService.error(body, title);
+    }
+
+    if (this.sendDesktopNotification({ title, body, route })) {
       return;
     }
 
@@ -187,14 +224,16 @@ export class TaskNotificationService {
 
     const notification = new Notification(title, {
       body,
-      tag: this.buildTaskKey(task.kind, task.id),
+      tag: tag ?? title,
       icon: '/favicon.ico',
     });
 
     notification.onclick = () => {
       window.focus();
       notification.close();
-      void this.router.navigateByUrl(task.route);
+      if (route) {
+        void this.router.navigateByUrl(route);
+      }
     };
   }
 

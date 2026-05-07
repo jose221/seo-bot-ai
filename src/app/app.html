@@ -1,6 +1,19 @@
 <router-outlet />
 <app-toast />
 
+@if (canReload) {
+  <button
+    type="button"
+    class="app-reload-button btn btn-primary"
+    (click)="reloadPage()"
+    title="Recargar pagina"
+    aria-label="Recargar pagina"
+  >
+    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+    <span>Recargar pagina</span>
+  </button>
+}
+
 <!-- Global Loading -->
 <div id="global-loading" style="display: none;">
   <div class="loading-overlay">

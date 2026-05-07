@@ -597,6 +597,13 @@ class AuditUrlValidationDetailResponse(BaseModel):
         from_attributes = True
 
 
+class DeleteAuditUrlValidationResponse(BaseModel):
+    """Respuesta para eliminación de una validación de URLs"""
+    success: bool
+    message: str
+    validation_id: UUID
+
+
 # ---------------------------------------------------------------------------
 # Schemas para comentarios públicos de validaciones de URL
 # ---------------------------------------------------------------------------
