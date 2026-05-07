@@ -30,7 +30,9 @@ class RichResultsAnalysisFinding(BaseModel):
     message: str
     document_url: Optional[str] = None
     document_label: Optional[str] = None
+    element_url: Optional[str] = None
     item_name: Optional[str] = None
+    color: Optional[str] = None
 
 
 class RichResultsAnalysisSummary(BaseModel):

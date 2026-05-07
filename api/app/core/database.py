@@ -102,10 +102,6 @@ class DatabaseManager:
         """Inicializa las tablas en la base de datos"""
         async with self.async_engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
-            await conn.execute(text("""
-                ALTER TABLE rich_results_reports
-                ADD COLUMN IF NOT EXISTS analysis_findings JSONB
-            """))
 
     @asynccontextmanager
     async def async_session_context(self) -> AsyncGenerator[AsyncSession, None]:

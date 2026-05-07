@@ -17,7 +17,7 @@ Hallazgos estructurados extraídos del HTML final:
 
 Detalle de hallazgos:
 {% for finding in findings %}
-- [{{ finding.severity|upper }}][{{ finding.category }}] {{ finding.message }}{% if finding.document_url %} | Documento: {{ finding.document_url }}{% endif %}{% if finding.selector %} | Selector: {{ finding.selector }}{% endif %}
+- [{{ finding.severity|upper }}][{{ finding.category }}] {{ finding.message }}{% if finding.item_name %} | Tipo: {{ finding.item_name }}{% endif %}{% if finding.color %} | Color: {{ finding.color }}{% endif %}{% if finding.element_url %} | Elemento: {{ finding.element_url }}{% endif %}{% if finding.document_url %} | Documento: {{ finding.document_url }}{% endif %}{% if finding.selector %} | Selector: {{ finding.selector }}{% endif %}
 {% endfor %}
 
 {% endif %}

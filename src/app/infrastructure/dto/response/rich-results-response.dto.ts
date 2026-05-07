@@ -95,7 +95,9 @@ export class RichResultsAnalysisFindingDto {
     public message: string,
     public document_url: string | null,
     public document_label: string | null,
+    public element_url: string | null,
     public item_name: string | null,
+    public color: string | null,
   ) {}
 }
 

@@ -2,19 +2,23 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from typing import Optional
+from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
+
+
+GOOGLE_RICH_RESULTS_BASE_URL = "https://search.google.com"
 
 
 @dataclass(frozen=True)
 class RichResultsHtmlAnalysisRule:
     key: str
     selectors: tuple[str, ...]
-    code: str
-    severity: str
     category: str
-    text_selectors: tuple[str, ...] = ()
-    text_mode: str = "text"
+    item_name_selectors: tuple[str, ...] = ()
+    message_selectors: tuple[str, ...] = ()
+    warning_selectors: tuple[str, ...] = ()
+    icon_selectors: tuple[str, ...] = ()
     document_selectors: tuple[str, ...] = ("a[href]",)
 
 
@@ -28,7 +32,9 @@ class RichResultsHtmlFinding:
     message: str
     document_url: Optional[str] = None
     document_label: Optional[str] = None
+    element_url: Optional[str] = None
     item_name: Optional[str] = None
+    color: Optional[str] = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -46,31 +52,22 @@ class RichResultsHtmlFindingSummary:
 
 HTML_ANALYSIS_RULES: tuple[RichResultsHtmlAnalysisRule, ...] = (
     RichResultsHtmlAnalysisRule(
-        key="missing-optional-field",
-        selectors=("div.gf803d", "div.O5XGUb"),
-        code="warning",
-        severity="warning",
-        category="issue",
-        text_selectors=(
-            ".cbZz9b.RSZNi.CY0Maf-bMElCd",
-            ".cbZz9b.RSZNi",
-            ".cbZz9b",
+        key="rich-result-card",
+        selectors=("span.YtFhsc",),
+        category="rich_result_card",
+        item_name_selectors=(
+            "div.MreLB.QrfJGb",
         ),
-    ),
-    RichResultsHtmlAnalysisRule(
-        key="non-critical-issues-detected",
-        selectors=("div.Nn9qof.GBCubb",),
-        code="info",
-        severity="info",
-        category="summary",
-        text_mode="title_or_text",
-    ),
-    RichResultsHtmlAnalysisRule(
-        key="detected-rich-result-type",
-        selectors=("div.MreLB.QrfJGb", "div.MreLB.jdejT"),
-        code="info",
-        severity="info",
-        category="detected_type",
+        message_selectors=(
+            "div.pmpmLd > div.MreLB.jdejT",
+            "div.pmpmLd div.MreLB.jdejT",
+        ),
+        warning_selectors=(
+            "div.Nn9qof.GBCubb",
+        ),
+        icon_selectors=(
+            "div.XrLUHe span.DPvwYc",
+        ),
     ),
 )
 
@@ -79,41 +76,40 @@ def _normalize_text(value: Optional[str]) -> str:
     return " ".join((value or "").split()).strip()
 
 
-def _find_item_name_for_element(element) -> Optional[str]:
-    """
-    Traverse ancestors of a warning element to find the rich result type name.
-    Looks for a sibling `div.MreLB` at each ancestor level.
-    """
-    current = element
-    for _ in range(15):
-        parent = getattr(current, "parent", None)
-        if parent is None:
-            break
-        # Look for MreLB as a direct child of this parent (sibling of current)
-        for sibling in parent.find_all(True, recursive=False):
-            classes = sibling.get("class") or []
-            if "MreLB" in classes:
-                text = _normalize_text(sibling.get_text(" ", strip=True))
-                if text:
-                    return text
-        current = parent
-    return None
+def _normalize_google_url(value: Optional[str]) -> Optional[str]:
+    href = _normalize_text(value)
+    if not href:
+        return None
+    return urljoin(f"{GOOGLE_RICH_RESULTS_BASE_URL}/", href)
 
 
-def _extract_rule_message(element, rule: RichResultsHtmlAnalysisRule) -> str:
-    for selector in rule.text_selectors:
+def _extract_first_text(element, selectors: tuple[str, ...]) -> str:
+    for selector in selectors:
         matched = element.select_one(selector)
         if matched:
-            message = _normalize_text(matched.get_text(" ", strip=True))
-            if message:
-                return message
+            text = _normalize_text(matched.get_text(" ", strip=True))
+            if text:
+                return text
+    return ""
 
-    if rule.text_mode == "title_or_text":
-        title = _normalize_text(element.get("title"))
-        if title:
-            return title
 
-    return _normalize_text(element.get_text(" ", strip=True))
+def _extract_status_text(element, selectors: tuple[str, ...]) -> str:
+    for selector in selectors:
+        matched = element.select_one(selector)
+        if not matched:
+            continue
+
+        direct_div = matched.find("div", recursive=False)
+        if direct_div:
+            text = _normalize_text(direct_div.get_text(" ", strip=True))
+            if text:
+                return text
+
+        text = _normalize_text(matched.get_text(" ", strip=True))
+        if text:
+            return text
+
+    return ""
 
 
 def _extract_rule_document(
@@ -125,7 +121,7 @@ def _extract_rule_document(
         if not matched:
             continue
 
-        href = _normalize_text(matched.get("href"))
+        href = _normalize_google_url(matched.get("href"))
         label = _normalize_text(
             matched.get("aria-label") or matched.get_text(" ", strip=True)
         )
@@ -135,48 +131,117 @@ def _extract_rule_document(
     return None, None
 
 
+def _extract_warning_text(element, selectors: tuple[str, ...]) -> str:
+    for selector in selectors:
+        matched = element.select_one(selector)
+        if matched:
+            title = _normalize_text(matched.get("title"))
+            text = _normalize_text(matched.get_text(" ", strip=True))
+            if title:
+                return title
+            if text:
+                return text
+    return ""
+
+
+def _resolve_icon_state(icon_text: str) -> tuple[str, str, str]:
+    normalized_icon = _normalize_text(icon_text).lower()
+    icon_map = {
+        "check_circle": ("valid", "info", "green"),
+        "warning": ("warning", "warning", "yellow"),
+        "error": ("error", "error", "red"),
+        "cancel": ("error", "error", "red"),
+        "dangerous": ("error", "error", "red"),
+    }
+    return icon_map.get(normalized_icon, ("info", "info", "gray"))
+
+
 def analyze_rich_results_html(html_content: str) -> list[RichResultsHtmlFinding]:
     if not html_content or not html_content.strip():
         return []
 
     soup = BeautifulSoup(html_content, "lxml")
     findings: list[RichResultsHtmlFinding] = []
-    seen: set[tuple[str, str, str, str, Optional[str]]] = set()
+    seen: set[tuple[str, str, str, str, Optional[str], Optional[str]]] = set()
 
     for rule in HTML_ANALYSIS_RULES:
         for selector in rule.selectors:
             for element in soup.select(selector):
-                message = _extract_rule_message(element, rule)
-                if not message:
-                    continue
-
+                item_name = _extract_first_text(element, rule.item_name_selectors)
+                status_message = _extract_status_text(element, rule.message_selectors)
+                warning_message = _extract_warning_text(element, rule.warning_selectors)
+                icon_text = _extract_first_text(element, rule.icon_selectors)
                 document_url, document_label = _extract_rule_document(element, rule)
-                item_name = _find_item_name_for_element(element)
-                fingerprint = (
-                    rule.key,
-                    rule.code,
-                    rule.severity,
-                    message,
-                    document_url,
-                    item_name,
-                )
-                if fingerprint in seen:
+                code, severity, color = _resolve_icon_state(icon_text)
+
+                if not item_name and not status_message and not warning_message:
                     continue
 
-                seen.add(fingerprint)
-                findings.append(
-                    RichResultsHtmlFinding(
-                        key=rule.key,
-                        code=rule.code,
-                        severity=rule.severity,
-                        category=rule.category,
-                        selector=selector,
-                        message=message,
-                        document_url=document_url,
-                        document_label=document_label,
-                        item_name=item_name,
+                extracted_findings: list[RichResultsHtmlFinding] = []
+                if item_name:
+                    extracted_findings.append(
+                        RichResultsHtmlFinding(
+                            key="rich-result-type",
+                            code=code,
+                            severity="info",
+                            category="detected_type",
+                            selector=selector,
+                            message=item_name,
+                            document_url=document_url,
+                            document_label=document_label,
+                            element_url=document_url,
+                            item_name=item_name,
+                            color=color,
+                        )
                     )
-                )
+
+                if status_message:
+                    extracted_findings.append(
+                        RichResultsHtmlFinding(
+                            key="rich-result-status",
+                            code=code,
+                            severity=severity,
+                            category="status",
+                            selector=selector,
+                            message=status_message,
+                            document_url=document_url,
+                            document_label=document_label,
+                            element_url=document_url,
+                            item_name=item_name or None,
+                            color=color,
+                        )
+                    )
+
+                if warning_message:
+                    extracted_findings.append(
+                        RichResultsHtmlFinding(
+                            key="rich-result-warning",
+                            code="warning",
+                            severity="warning",
+                            category="warning",
+                            selector=selector,
+                            message=warning_message,
+                            document_url=document_url,
+                            document_label=document_label,
+                            element_url=document_url,
+                            item_name=item_name or None,
+                            color="yellow",
+                        )
+                    )
+
+                for finding in extracted_findings:
+                    fingerprint = (
+                        finding.key,
+                        finding.code,
+                        finding.severity,
+                        finding.message,
+                        finding.document_url,
+                        finding.item_name,
+                    )
+                    if fingerprint in seen:
+                        continue
+                    seen.add(fingerprint)
+                    findings.append(finding)
 
     return findings
 

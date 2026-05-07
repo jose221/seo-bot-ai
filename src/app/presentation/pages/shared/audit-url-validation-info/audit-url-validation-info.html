@@ -748,6 +748,16 @@
                                               </span>
                                             </div>
                                             <div class="small fw-semibold">{{ finding.message }}</div>
+                                            @if (finding.element_url) {
+                                              <a
+                                                [href]="finding.element_url"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="small"
+                                              >
+                                                Abrir detalle del elemento
+                                              </a>
+                                            }
                                             @if (finding.document_url) {
                                               <a
                                                 [href]="finding.document_url"

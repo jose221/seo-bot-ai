@@ -201,6 +201,7 @@ class GoogleRichResultsEngine:
 
       # 5. Extracción de resultados
       logger.info("Analysis complete. Extracting final HTML...")
+      await asyncio.sleep(2)
       final_html = await page.get_content()
 
       screenshots: list[dict[str, str]] = []
