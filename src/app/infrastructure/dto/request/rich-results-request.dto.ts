@@ -4,6 +4,8 @@ export class CreateRichResultsReportRequestDto {
     public is_url: boolean,
     public get_ai_result: boolean,
     public auto_extract_html: boolean,
+    public validate_google: boolean,
+    public validate_schema_org: boolean,
   ) {}
 }
 
@@ -12,6 +14,8 @@ export class CreateRichResultsBatchReportRequestDto {
     public urls: string[],
     public get_ai_result: boolean,
     public auto_extract_html: boolean,
+    public validate_google: boolean,
+    public validate_schema_org: boolean,
   ) {}
 }
 

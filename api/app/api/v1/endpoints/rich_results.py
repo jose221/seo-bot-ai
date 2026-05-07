@@ -61,7 +61,7 @@ async def report_page(
         progress_percentage=report.progress_percentage,
         progress_message=report.progress_message,
         url=report.url,
-        message="Reporte de Google Rich Results encolado",
+        message="Reporte de validación estructurada encolado",
     )
 
 
@@ -86,6 +86,8 @@ async def report_page_batch(
             is_url=True,
             get_ai_result=payload.get_ai_result,
             auto_extract_html=payload.auto_extract_html,
+            validate_google=payload.validate_google,
+            validate_schema_org=payload.validate_schema_org,
         )
         report = await get_rich_results_report_service().create_pending_report(
             session,
@@ -100,7 +102,7 @@ async def report_page_batch(
                 progress_percentage=report.progress_percentage,
                 progress_message=report.progress_message,
                 url=report.url,
-                message="Reporte de Google Rich Results encolado",
+                message="Reporte de validación estructurada encolado",
             )
         )
 
@@ -115,7 +117,7 @@ async def report_page_batch(
         total=len(payload.urls),
         created_count=len(items),
         items=items,
-        message="Reportes de Google Rich Results encolados",
+        message="Reportes de validación estructurada encolados",
     )
 
 

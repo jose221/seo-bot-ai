@@ -1,4 +1,4 @@
-Analiza el siguiente resultado de Google Rich Results Test.
+Analiza el siguiente resultado consolidado de validadores de datos estructurados.
 
 {% if source_url %}
 URL de origen analizada: {{ source_url }}
@@ -6,6 +6,26 @@ URL de origen analizada: {{ source_url }}
 
 {% if rich_results_url %}
 URL final de Google Rich Results: {{ rich_results_url }}
+{% endif %}
+
+{% if schema_org_url %}
+URL final de Schema.org Validator: {{ schema_org_url }}
+{% endif %}
+
+{% if google_validation.enabled %}
+Segmento Google Rich Results:
+- Success: {{ google_validation.success }}
+- Message: {{ google_validation.message }}
+- Error: {{ google_validation.error_message }}
+- Hallazgos: {{ google_validation.findings_summary }}
+{% endif %}
+
+{% if schema_org_validation.enabled %}
+Segmento Schema.org Validator:
+- Success: {{ schema_org_validation.success }}
+- Message: {{ schema_org_validation.message }}
+- Error: {{ schema_org_validation.error_message }}
+- Hallazgos: {{ schema_org_validation.findings_summary }}
 {% endif %}
 
 {% if findings_summary and findings_summary.total %}

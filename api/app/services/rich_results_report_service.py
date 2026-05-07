@@ -27,6 +27,7 @@ from app.schemas.rich_results_schemas import (
     RichResultsReportStatusSummaryItem,
     RichResultsReportStatusSummaryResponse,
     RichResultsScreenshot,
+    RichResultsValidatorDetail,
 )
 from app.services.rich_results_service import get_rich_results_service
 from app.services.task_progress_service import get_task_progress_service
@@ -75,6 +76,8 @@ class RichResultsReportService:
             user_id=user_id,
             url=self._normalize_url(payload.content),
             input_type=response.input_type,
+            validate_google=response.validate_google,
+            validate_schema_org=response.validate_schema_org,
             success=response.success,
             method_used=response.method_used,
             result_url=response.result_url,
@@ -83,6 +86,8 @@ class RichResultsReportService:
             blocked_by_google=response.blocked_by_google,
             screenshots=[item.model_dump() for item in response.screenshots] or None,
             analysis_findings=[item.model_dump() for item in response.findings] or None,
+            google_validation_result=response.google_validation.model_dump(),
+            schema_org_validation_result=response.schema_org_validation.model_dump(),
             ai_result_content=ai_result.content if ai_result else None,
             ai_result_usage=ai_result.usage if ai_result else None,
             ai_result_model=ai_result.model if ai_result else None,
@@ -106,12 +111,14 @@ class RichResultsReportService:
             url=self._normalize_url(payload.content),
             status=RichResultsReportStatus.PENDING,
             progress_percentage=0,
-            progress_message="Reporte de Google Rich Results en cola",
+            progress_message="Reporte de validación estructurada en cola",
             input_type="url",
             requested_ai_result=payload.get_ai_result,
+            validate_google=payload.validate_google,
+            validate_schema_org=payload.validate_schema_org,
             success=False,
             method_used="queued",
-            message="Reporte de Google Rich Results en cola",
+            message="Reporte de validación estructurada en cola",
         )
         session.add(report)
         await session.commit()
@@ -142,6 +149,8 @@ class RichResultsReportService:
                 RichResultsReport.progress_message,
                 RichResultsReport.input_type,
                 RichResultsReport.requested_ai_result,
+                RichResultsReport.validate_google,
+                RichResultsReport.validate_schema_org,
                 RichResultsReport.success,
                 RichResultsReport.method_used,
                 RichResultsReport.result_url,
@@ -149,6 +158,8 @@ class RichResultsReportService:
                 RichResultsReport.error_message,
                 RichResultsReport.blocked_by_google,
                 RichResultsReport.analysis_findings,
+                RichResultsReport.google_validation_result,
+                RichResultsReport.schema_org_validation_result,
                 RichResultsReport.created_at,
             )
             .order_by(desc(RichResultsReport.created_at))
@@ -189,6 +200,8 @@ class RichResultsReportService:
                 progress_message=row.progress_message,
                 input_type=row.input_type,
                 requested_ai_result=row.requested_ai_result,
+                validate_google=row.validate_google,
+                validate_schema_org=row.validate_schema_org,
                 success=row.success,
                 method_used=row.method_used,
                 result_url=row.result_url,
@@ -196,6 +209,8 @@ class RichResultsReportService:
                 error_message=row.error_message,
                 blocked_by_google=row.blocked_by_google,
                 findings_summary=self._build_findings_summary(row.analysis_findings),
+                google_validation=self.build_validator_detail(row.google_validation_result, "google"),
+                schema_org_validation=self.build_validator_detail(row.schema_org_validation_result, "schema_org"),
                 created_at=row.created_at,
             )
             for row in rows
@@ -269,6 +284,8 @@ class RichResultsReportService:
                     progress_message=report.progress_message if report else None,
                     success=report.success if report else None,
                     blocked_by_google=report.blocked_by_google if report else None,
+                    validate_google=report.validate_google if report else True,
+                    validate_schema_org=report.validate_schema_org if report else True,
                     has_error=(
                         bool(report.error_message)
                         or findings_summary.by_severity.get("critical", 0) > 0
@@ -277,6 +294,14 @@ class RichResultsReportService:
                     message=report.message if report else None,
                     error_message=report.error_message if report else None,
                     findings_summary=findings_summary,
+                    google_validation=self.build_validator_detail(
+                        report.google_validation_result if report else None,
+                        "google",
+                    ),
+                    schema_org_validation=self.build_validator_detail(
+                        report.schema_org_validation_result if report else None,
+                        "schema_org",
+                    ),
                     created_at=report.created_at if report else None,
                 )
             )
@@ -353,11 +378,11 @@ class RichResultsReportService:
                 report.progress_percentage = 10
                 report.progress_message = f"Iniciando validación Rich Results para {report.url}"
                 report.method_used = "processing"
-                report.message = "Generando reporte de Google Rich Results"
+                report.message = "Generando reporte de validación estructurada"
                 session.add(report)
             self._log_progress(
                 report_id=report_id,
-                message=f"Iniciando validación Rich Results para {payload.content}",
+                message=f"Iniciando validación estructurada para {payload.content}",
                 progress_percentage=10,
             )
 
@@ -368,17 +393,17 @@ class RichResultsReportService:
                 if report:
                     report.progress_percentage = 90 if payload.get_ai_result else 80
                     report.progress_message = (
-                        "Google terminó la validación; guardando resultado y análisis con IA"
+                        "Los validadores terminaron; guardando resultado y análisis con IA"
                         if payload.get_ai_result
-                        else "Google terminó la validación; guardando resultado"
+                        else "Los validadores terminaron; guardando resultado"
                     )
                     session.add(report)
             self._log_progress(
                 report_id=report_id,
                 message=(
-                    "Google terminó la validación; guardando resultado y análisis con IA"
+                    "Los validadores terminaron; guardando resultado y análisis con IA"
                     if payload.get_ai_result
-                    else "Google terminó la validación; guardando resultado"
+                    else "Los validadores terminaron; guardando resultado"
                 ),
                 progress_percentage=90 if payload.get_ai_result else 80,
             )
@@ -394,6 +419,8 @@ class RichResultsReportService:
                 report.progress_message = response.message
                 report.input_type = response.input_type
                 report.requested_ai_result = payload.get_ai_result
+                report.validate_google = response.validate_google
+                report.validate_schema_org = response.validate_schema_org
                 report.success = response.success
                 report.method_used = response.method_used
                 report.result_url = response.result_url
@@ -402,6 +429,8 @@ class RichResultsReportService:
                 report.blocked_by_google = response.blocked_by_google
                 report.screenshots = [item.model_dump() for item in response.screenshots] or None
                 report.analysis_findings = [item.model_dump() for item in response.findings] or None
+                report.google_validation_result = response.google_validation.model_dump()
+                report.schema_org_validation_result = response.schema_org_validation.model_dump()
                 report.ai_result_content = ai_result.content if ai_result else None
                 report.ai_result_usage = ai_result.usage if ai_result else None
                 report.ai_result_model = ai_result.model if ai_result else None
@@ -424,12 +453,12 @@ class RichResultsReportService:
                 report.progress_percentage = self._clamp_progress(report.progress_percentage or 0)
                 report.progress_message = f"Error generando reporte: {exc}"
                 report.method_used = "failed"
-                report.message = "No fue posible generar el reporte de Google Rich Results"
+                report.message = "No fue posible generar el reporte de validación estructurada"
                 report.error_message = str(exc)
                 session.add(report)
             self._log_progress(
                 report_id=report_id,
-                message=f"Error generando reporte Rich Results: {exc}",
+                message=f"Error generando reporte estructurado: {exc}",
                 level="error",
             )
 
@@ -520,6 +549,29 @@ class RichResultsReportService:
                 continue
         return findings
 
+    @staticmethod
+    def build_validator_detail(
+        raw_validator_detail: Optional[dict],
+        validator: str,
+    ) -> RichResultsValidatorDetail:
+        default_label = "Google Rich Results" if validator == "google" else "Schema.org Validator"
+        if not raw_validator_detail:
+            return RichResultsValidatorDetail(
+                validator=validator,
+                label=default_label,
+                enabled=False,
+                executed=False,
+            )
+        try:
+            return RichResultsValidatorDetail.model_validate(raw_validator_detail)
+        except Exception:
+            return RichResultsValidatorDetail(
+                validator=validator,
+                label=default_label,
+                enabled=False,
+                executed=False,
+            )
+
     def _build_findings_summary(
         self,
         raw_findings: Optional[list[dict]],
@@ -543,6 +595,8 @@ class RichResultsReportService:
             progress_message=report.progress_message,
             input_type=report.input_type,
             requested_ai_result=report.requested_ai_result,
+            validate_google=report.validate_google,
+            validate_schema_org=report.validate_schema_org,
             success=report.success,
             method_used=report.method_used,
             result_url=report.result_url,
@@ -552,6 +606,8 @@ class RichResultsReportService:
             screenshots=screenshots,
             findings=findings,
             findings_summary=get_rich_results_service().build_findings_summary(findings),
+            google_validation=self.build_validator_detail(report.google_validation_result, "google"),
+            schema_org_validation=self.build_validator_detail(report.schema_org_validation_result, "schema_org"),
             get_ai_result=ai_result,
             ai_error_message=report.ai_error_message,
             created_at=report.created_at,

@@ -1,10 +1,9 @@
 """
-Servicio para generar reportes de Google Rich Results.
+Servicio orquestador para generar reportes de Google Rich Results y Schema.org.
 """
 from __future__ import annotations
 
 from typing import Optional
-from urllib.parse import urlparse
 
 import trafilatura
 from bs4 import BeautifulSoup
@@ -13,8 +12,7 @@ from sqlmodel import select
 
 from app.core.config import settings
 from app.core.database import db_manager
-from app.handlers.seo_scrapper.google_rich_results_engine import GoogleRichResultsEngine, InputType
-from app.handlers.seo_scrapper.schema_org_validator import SchemaOrgValidatorEngine
+from app.handlers.seo_scrapper.google_rich_results_engine import InputType
 from app.models.webpage import WebPage
 from app.schemas.rich_results_schemas import (
     RichResultsAnalysisFinding,
@@ -22,15 +20,12 @@ from app.schemas.rich_results_schemas import (
     RichResultsAIResult,
     RichResultsReportRequest,
     RichResultsReportResponse,
-)
-from app.services.schema_validators import SchemaOrgValidator
-from app.shared.rich_results_html_analyzer import (
-    RichResultsHtmlFinding,
-    analyze_rich_results_html,
-    build_rich_results_findings_summary,
+    RichResultsValidatorDetail,
 )
 from app.services.ai_client import get_ai_client
 from app.services.audit_engine import get_audit_engine
+from app.services.google_rich_results_validation_service import GoogleRichResultsValidationService
+from app.services.schema_org_validation_service import SchemaOrgValidationService
 
 
 class RichResultsService:
@@ -42,37 +37,42 @@ class RichResultsService:
             return settings.RICH_RESULTS_PROXY_URL.strip()
         return None
 
-    def _build_engine(self, proxy_url: Optional[str]) -> GoogleRichResultsEngine:
-        proxy_server = None
-
-        if proxy_url:
-            parsed = urlparse(proxy_url)
-            proxy_server = f"{parsed.scheme}://{parsed.hostname}"
-            if parsed.port:
-                proxy_server = f"{proxy_server}:{parsed.port}"
-
-        return GoogleRichResultsEngine(
-            proxy_server=proxy_server,
-            screenshots_dir=f"{settings.STORAGE_PATH}/images",
-            storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images"
+    @staticmethod
+    def _build_disabled_segment(validator: str, label: str) -> RichResultsValidatorDetail:
+        return RichResultsValidatorDetail(
+            validator=validator,
+            label=label,
+            enabled=False,
+            executed=False,
+            message=f"Validación {label} desactivada para esta ejecución",
         )
 
-    def _build_engine_schema_validator(self, proxy_url: Optional[str]) -> SchemaOrgValidatorEngine:
-      proxy_server = None
+    @staticmethod
+    def _combine_findings(
+        *segments: RichResultsValidatorDetail,
+    ) -> list[RichResultsAnalysisFinding]:
+        combined: list[RichResultsAnalysisFinding] = []
+        for segment in segments:
+            combined.extend(segment.findings)
+        return combined
 
-      if proxy_url:
-        parsed = urlparse(proxy_url)
-        proxy_server = f"{parsed.scheme}://{parsed.hostname}"
-        if parsed.port:
-          proxy_server = f"{proxy_server}:{parsed.port}"
+    def build_findings_summary(
+        self,
+        findings: list[RichResultsAnalysisFinding],
+    ) -> RichResultsAnalysisSummary:
+        by_severity: dict[str, int] = {}
+        by_category: dict[str, int] = {}
+        for finding in findings:
+            by_severity[finding.severity] = by_severity.get(finding.severity, 0) + 1
+            by_category[finding.category] = by_category.get(finding.category, 0) + 1
+        return RichResultsAnalysisSummary(
+            total=len(findings),
+            by_severity=by_severity,
+            by_category=by_category,
+        )
 
-      return SchemaOrgValidatorEngine(
-        proxy_server=proxy_server,
-        screenshots_dir=f"{settings.STORAGE_PATH}/images",
-        storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images"
-      )
-
-    def _html_to_markdown(self, html_content: str) -> str:
+    @staticmethod
+    def _html_to_markdown(html_content: str) -> str:
         markdown = trafilatura.extract(
             html_content,
             output_format="markdown",
@@ -86,23 +86,53 @@ class RichResultsService:
         soup = BeautifulSoup(html_content, "lxml")
         return soup.get_text("\n", strip=True)
 
-    def analyze_validation_html(self, html_content: str) -> list[RichResultsAnalysisFinding]:
-        return [
-            RichResultsAnalysisFinding.model_validate(item.to_dict())
-            for item in analyze_rich_results_html(html_content)
-        ]
+    @staticmethod
+    def _combine_screenshots(*segments: RichResultsValidatorDetail) -> list:
+        screenshots = []
+        for segment in segments:
+            screenshots.extend(segment.screenshots)
+        return screenshots
 
-    def build_findings_summary(
-        self,
-        findings: list[RichResultsAnalysisFinding],
-    ) -> RichResultsAnalysisSummary:
-        summary = build_rich_results_findings_summary(
-            [
-                RichResultsHtmlFinding(**finding.model_dump())
-                for finding in findings
-            ]
-        )
-        return RichResultsAnalysisSummary.model_validate(summary.to_dict())
+    @staticmethod
+    def _build_overall_success(*segments: RichResultsValidatorDetail) -> bool:
+        executed = [segment for segment in segments if segment.enabled]
+        return bool(executed) and all(segment.success for segment in executed)
+
+    @staticmethod
+    def _build_method_used(*segments: RichResultsValidatorDetail) -> str:
+        methods = [segment.method_used for segment in segments if segment.enabled and segment.method_used]
+        return ", ".join(dict.fromkeys(methods)) if methods else "none"
+
+    @staticmethod
+    def _build_result_url(
+        google_validation: RichResultsValidatorDetail,
+        schema_org_validation: RichResultsValidatorDetail,
+    ) -> Optional[str]:
+        return google_validation.result_url or schema_org_validation.result_url
+
+    @staticmethod
+    def _build_message(
+        google_validation: RichResultsValidatorDetail,
+        schema_org_validation: RichResultsValidatorDetail,
+    ) -> str:
+        messages = [
+            f"{segment.label}: {segment.message}"
+            for segment in (google_validation, schema_org_validation)
+            if segment.enabled and segment.message
+        ]
+        return " | ".join(messages) if messages else "No fue posible generar el reporte"
+
+    @staticmethod
+    def _build_error_message(
+        google_validation: RichResultsValidatorDetail,
+        schema_org_validation: RichResultsValidatorDetail,
+    ) -> Optional[str]:
+        errors = [
+            f"{segment.label}: {segment.error_message}"
+            for segment in (google_validation, schema_org_validation)
+            if segment.enabled and segment.error_message
+        ]
+        return " | ".join(errors) if errors else None
 
     async def _extract_html_from_url(self, url: str) -> str:
         target = None
@@ -155,32 +185,55 @@ class RichResultsService:
     ) -> RichResultsReportResponse:
         input_type, content, source_url = await self._build_effective_input(payload)
         proxy_url = self._resolve_proxy_url()
-        engine = self._build_engine(proxy_url)
-        engine_schema_validator = self._build_engine_schema_validator(proxy_url)
+        google_service = GoogleRichResultsValidationService(proxy_url)
+        schema_org_service = SchemaOrgValidationService(proxy_url)
 
-        validation = await engine.validate(input_type=input_type, content=content or "")
-        validation_schema = await engine_schema_validator.validate(input_type=input_type, content=content or "")
-        findings = self.analyze_validation_html(validation.html_content or "")
+        google_validation = (
+            await google_service.validate(input_type=input_type.value, content=content or "")
+            if payload.validate_google
+            else self._build_disabled_segment("google", "Google Rich Results")
+        )
+        schema_org_validation = (
+            await schema_org_service.validate(input_type=input_type.value, content=content or "")
+            if payload.validate_schema_org
+            else self._build_disabled_segment("schema_org", "Schema.org Validator")
+        )
+
+        google_markdown = self._html_to_markdown(google_validation.html_content or "") if google_validation.html_content else ""
+        schema_markdown = self._html_to_markdown(schema_org_validation.html_content or "") if schema_org_validation.html_content else ""
+        google_validation.markdown_content = google_markdown or None
+        schema_org_validation.markdown_content = schema_markdown or None
+
+        findings = self._combine_findings(google_validation, schema_org_validation)
         findings_summary = self.build_findings_summary(findings)
         ai_result: Optional[RichResultsAIResult] = None
         ai_error_message: Optional[str] = None
 
-        if payload.get_ai_result and validation.is_success and validation.html_content and not validation.blocked_by_google:
+        combined_markdown_parts = []
+        if google_markdown:
+            combined_markdown_parts.append(f"## Google Rich Results\n\n{google_markdown}")
+        if schema_markdown:
+            combined_markdown_parts.append(f"## Schema.org Validator\n\n{schema_markdown}")
+        combined_markdown = "\n\n".join(combined_markdown_parts).strip()
+
+        if payload.get_ai_result and (google_validation.enabled or schema_org_validation.enabled):
             if not token:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Se requiere un token válido para obtener get_ai_result"
                 )
 
-            markdown_content = self._html_to_markdown(validation.html_content)
-            if markdown_content or findings:
+            if combined_markdown or findings:
                 try:
                     ai_payload = await self.ai_client.analyze_rich_results_content(
-                        markdown_content=markdown_content,
-                        rich_results_url=validation.result_url,
+                        markdown_content=combined_markdown,
+                        rich_results_url=google_validation.result_url,
+                        schema_org_url=schema_org_validation.result_url,
                         source_url=source_url,
                         findings=[item.model_dump() for item in findings],
                         findings_summary=findings_summary.model_dump(),
+                        google_validation=google_validation.model_dump(),
+                        schema_org_validation=schema_org_validation.model_dump(),
                         token=token
                     )
                     ai_result = RichResultsAIResult(**ai_payload)
@@ -189,24 +242,21 @@ class RichResultsService:
             else:
                 ai_error_message = "No hubo contenido utilizable para analizar con IA"
 
-        if validation.is_success:
-            message = "Reporte de Google Rich Results generado correctamente"
-        elif validation.blocked_by_google:
-            message = "Google bloqueó la validación; se devuelven screenshots y el mensaje de error"
-        else:
-            message = validation.error_message or "No fue posible generar el reporte de Google Rich Results"
-
         return RichResultsReportResponse(
-            success=validation.is_success,
+            success=self._build_overall_success(google_validation, schema_org_validation),
             input_type=input_type.value,
-            method_used=validation.method_used,
-            result_url=validation.result_url,
-            message=message,
-            error_message=validation.error_message,
-            blocked_by_google=validation.blocked_by_google,
-            screenshots=validation.screenshots,
+            method_used=self._build_method_used(google_validation, schema_org_validation),
+            result_url=self._build_result_url(google_validation, schema_org_validation),
+            message=self._build_message(google_validation, schema_org_validation),
+            error_message=self._build_error_message(google_validation, schema_org_validation),
+            blocked_by_google=google_validation.blocked,
+            validate_google=payload.validate_google,
+            validate_schema_org=payload.validate_schema_org,
+            screenshots=self._combine_screenshots(google_validation, schema_org_validation),
             findings=findings,
             findings_summary=findings_summary,
+            google_validation=google_validation,
+            schema_org_validation=schema_org_validation,
             get_ai_result=ai_result,
             ai_error_message=ai_error_message
         )

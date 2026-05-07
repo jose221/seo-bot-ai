@@ -40,6 +40,8 @@ class RichResultsReport(SQLModel, table=True):
     progress_message: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     input_type: str = Field(sa_column=Column(String, nullable=False))
     requested_ai_result: bool = Field(default=False)
+    validate_google: bool = Field(default=True)
+    validate_schema_org: bool = Field(default=True)
     success: bool = Field(default=False)
     method_used: str = Field(sa_column=Column(String, nullable=False))
     result_url: Optional[str] = Field(default=None, sa_column=Column(String, nullable=True))
@@ -56,6 +58,16 @@ class RichResultsReport(SQLModel, table=True):
         default=None,
         sa_column=Column(JSON, nullable=True),
         description="Hallazgos estructurados extraídos del HTML final de Google Rich Results",
+    )
+    google_validation_result: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Detalle completo del validador Google Rich Results",
+    )
+    schema_org_validation_result: Optional[Dict[str, Any]] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Detalle completo del validador Schema.org",
     )
 
     ai_result_content: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))

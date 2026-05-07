@@ -261,9 +261,9 @@
           <div class="rich-results-batch-panel">
             <div class="rich-results-batch-panel__header">
               <div>
-                <h5 class="mb-1">Lote de Rich Results</h5>
+                <h5 class="mb-1">Lote de validación estructurada</h5>
                 <small class="text-muted">
-                  Selecciona varias URLs con checkbox para ejecutar Rich Results en lote.
+                  Selecciona varias URLs con checkbox para ejecutar Google, Schema.org o ambos en lote.
                 </small>
               </div>
               <span class="sv-badge sv-info">{{ richResultsBatchCount() }} URL(s)</span>
@@ -303,6 +303,24 @@
                 >
                 <span class="filter-switch-slider"></span>
                 <span class="filter-switch-label">Auto extraer HTML</span>
+              </label>
+              <label class="filter-switch">
+                <input
+                  type="checkbox"
+                  [ngModel]="richResultsBatchValidateGoogle()"
+                  (ngModelChange)="richResultsBatchValidateGoogle.set($event)"
+                >
+                <span class="filter-switch-slider"></span>
+                <span class="filter-switch-label">Google</span>
+              </label>
+              <label class="filter-switch">
+                <input
+                  type="checkbox"
+                  [ngModel]="richResultsBatchValidateSchemaOrg()"
+                  (ngModelChange)="richResultsBatchValidateSchemaOrg.set($event)"
+                >
+                <span class="filter-switch-slider"></span>
+                <span class="filter-switch-label">Schema.org</span>
               </label>
               <button class="btn-action" type="button" (click)="addFilteredUrlsToRichResultsBatch()">
                 Seleccionar visibles
@@ -387,7 +405,7 @@
                         Schema.org Validator (por URL)
                       </a></li>
                       <li><a class="dropdown-item" href="javascript:void(0)" (click)="openValidator(schema.url, 'google')">
-                        Google Rich Results (por URL)
+                        Validación estructurada (por URL)
                       </a></li>
                       @if (validationId()) {
                         <li><hr class="dropdown-divider"></li>
@@ -559,8 +577,8 @@
                 <div class="meta-section mt-3">
                   <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                     <div>
-                      <h6 class="meta-title mb-1">Historial Rich Results</h6>
-                      <small class="text-muted">Consulta los reportes generados para esta URL.</small>
+                      <h6 class="meta-title mb-1">Historial de validación estructurada</h6>
+                      <small class="text-muted">Consulta los reportes de Google y Schema.org generados para esta URL.</small>
                     </div>
                     <div class="d-flex flex-wrap gap-2">
                       <select
@@ -600,6 +618,24 @@
                           >
                           <span class="filter-switch-slider"></span>
                           <span class="filter-switch-label">Auto extraer HTML</span>
+                        </label>
+                        <label class="filter-switch">
+                          <input
+                            type="checkbox"
+                            [ngModel]="richResultsSingleValidateGoogle()"
+                            (ngModelChange)="richResultsSingleValidateGoogle.set($event)"
+                          >
+                          <span class="filter-switch-slider"></span>
+                          <span class="filter-switch-label">Google</span>
+                        </label>
+                        <label class="filter-switch">
+                          <input
+                            type="checkbox"
+                            [ngModel]="richResultsSingleValidateSchemaOrg()"
+                            (ngModelChange)="richResultsSingleValidateSchemaOrg.set($event)"
+                          >
+                          <span class="filter-switch-slider"></span>
+                          <span class="filter-switch-label">Schema.org</span>
                         </label>
                         <button class="btn-action btn-action--rerun" (click)="createRichResultsReport(schema.url)" [disabled]="isRichResultsCreating(schema.url)">
                           @if (isRichResultsCreating(schema.url)) {
@@ -658,6 +694,12 @@
                                 @if (report.requested_ai_result) {
                                   <span class="sv-badge sv-info">IA</span>
                                 }
+                                @if (report.validate_google) {
+                                  <span class="sv-badge sv-secondary">Google</span>
+                                }
+                                @if (report.validate_schema_org) {
+                                  <span class="sv-badge sv-secondary">Schema.org</span>
+                                }
                               </div>
                               <small class="text-muted">{{ formatDate(report.created_at) }}</small>
                               <div class="progress" style="height: 6px; max-width: 220px;">
@@ -705,10 +747,18 @@
                             @let detail = getRichResultDetail(report.id);
                             @if (detail) {
                               <div class="mt-3 pt-3 border-top">
+                                @if (detail.get_ai_result?.content) {
+                                  <div class="ai-report ai-report--overflow mb-3">
+                                    <markdown [data]="detail.get_ai_result!.content"></markdown>
+                                  </div>
+                                }
+                                @if (detail.ai_error_message) {
+                                  <div class="small text-danger mb-2">{{ detail.ai_error_message }}</div>
+                                }
                                 @if (detail.findings_summary.total > 0) {
                                   <div class="rich-results-findings-panel mb-3">
                                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                                      <strong>Hallazgos detectados</strong>
+                                      <strong>Resumen combinado</strong>
                                       @if (getRichResultsFindingCount(detail.findings_summary, 'critical') > 0) {
                                         <span class="sv-badge sv-danger">
                                           {{ getRichResultsFindingCount(detail.findings_summary, 'critical') }} críticos
@@ -730,85 +780,133 @@
                                         </span>
                                       }
                                     </div>
-                                    <div class="rich-results-findings-list">
-                                      @for (group of groupFindingsByItem(detail.findings); track group.item_name ?? '__no_item__') {
-                                        @if (group.item_name) {
-                                          <div class="rich-results-finding-group-header">
-                                            <span class="sv-badge sv-badge--sm sv-info me-2">{{ group.item_name }}</span>
-                                          </div>
-                                        }
-                                        @for (finding of group.findings; track trackRichResultsFinding(finding, $index)) {
-                                          <div class="rich-results-finding-card" [class.rich-results-finding-card--indented]="!!group.item_name">
-                                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                              <span class="sv-badge sv-badge--sm" [ngClass]="getRichResultsFindingBadgeClass(finding.severity)">
-                                                {{ finding.severity }}
+                                  </div>
+                                }
+                                <div class="rich-results-validator-sections">
+                                  @for (segment of getRichResultsValidatorSegments(detail); track trackRichResultsValidatorSegment(segment, $index)) {
+                                    @if (hasRichResultsValidatorDetail(segment)) {
+                                      <div class="rich-results-validator-card">
+                                        <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                                          <div class="d-flex flex-column gap-1">
+                                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                              <strong>{{ segment.label }}</strong>
+                                              <span class="sv-badge" [ngClass]="getRichResultsValidatorStateClass(segment)">
+                                                {{ segment.success ? 'success' : (segment.error_message ? 'error' : 'info') }}
                                               </span>
-                                              <span class="sv-badge sv-badge--sm sv-secondary">
-                                                {{ finding.category }}
-                                              </span>
+                                              @if (getRichResultsFindingCount(segment.findings_summary, 'warning') > 0) {
+                                                <span class="sv-badge sv-warning">
+                                                  {{ getRichResultsFindingCount(segment.findings_summary, 'warning') }} warnings
+                                                </span>
+                                              }
+                                              @if (getRichResultsFindingCount(segment.findings_summary, 'error') > 0) {
+                                                <span class="sv-badge sv-danger">
+                                                  {{ getRichResultsFindingCount(segment.findings_summary, 'error') }} errores
+                                                </span>
+                                              }
+                                              @if (getRichResultsFindingCount(segment.findings_summary, 'info') > 0) {
+                                                <span class="sv-badge sv-info">
+                                                  {{ getRichResultsFindingCount(segment.findings_summary, 'info') }} info
+                                                </span>
+                                              }
                                             </div>
-                                            <div class="small fw-semibold">{{ finding.message }}</div>
-                                            @if (finding.element_url) {
-                                              <a
-                                                [href]="finding.element_url"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="small"
-                                              >
-                                                Abrir detalle del elemento
+                                            @if (segment.message) {
+                                              <div class="small">{{ segment.message }}</div>
+                                            }
+                                            @if (segment.error_message) {
+                                              <div class="small text-danger">{{ segment.error_message }}</div>
+                                            }
+                                            @if (segment.result_url) {
+                                              <a [href]="segment.result_url" target="_blank" rel="noopener noreferrer" class="small">
+                                                {{ getRichResultsValidatorResultLabel(segment) }}
                                               </a>
                                             }
-                                            @if (finding.document_url) {
+                                          </div>
+                                        </div>
+
+                                        @if (segment.findings_summary.total > 0) {
+                                          <div class="rich-results-findings-panel mb-3">
+                                            <div class="rich-results-findings-list">
+                                              @for (group of groupFindingsByItem(segment.findings); track group.item_name ?? '__no_item__') {
+                                                @if (group.item_name) {
+                                                  <div class="rich-results-finding-group-header">
+                                                    <span class="sv-badge sv-badge--sm sv-info me-2">{{ group.item_name }}</span>
+                                                  </div>
+                                                }
+                                                @for (finding of group.findings; track trackRichResultsFinding(finding, $index)) {
+                                                  <div class="rich-results-finding-card" [class.rich-results-finding-card--indented]="!!group.item_name">
+                                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                                      <span class="sv-badge sv-badge--sm" [ngClass]="getRichResultsFindingBadgeClass(finding.severity)">
+                                                        {{ finding.severity }}
+                                                      </span>
+                                                      <span class="sv-badge sv-badge--sm sv-secondary">
+                                                        {{ finding.category }}
+                                                      </span>
+                                                    </div>
+                                                    <div class="small fw-semibold">{{ finding.message }}</div>
+                                                    @if (finding.element_url) {
+                                                      <a
+                                                        [href]="finding.element_url"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="small"
+                                                      >
+                                                        Abrir detalle del elemento
+                                                      </a>
+                                                    }
+                                                    @if (finding.document_url) {
+                                                      <a
+                                                        [href]="finding.document_url"
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        class="small"
+                                                      >
+                                                        {{ finding.document_label || 'Abrir documentación relacionada' }}
+                                                      </a>
+                                                    }
+                                                  </div>
+                                                }
+                                              }
+                                            </div>
+                                          </div>
+                                        }
+
+                                        @if (segment.screenshots.length > 0) {
+                                          <div class="rich-results-screenshot-grid mb-3">
+                                            @for (shot of segment.screenshots; track shot.url) {
                                               <a
-                                                [href]="finding.document_url"
+                                                [href]="getScreenshotPreviewUrl(shot.url)"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="small"
+                                                class="rich-results-screenshot-card"
                                               >
-                                                {{ finding.document_label || 'Abrir documentación relacionada' }}
+                                                <img
+                                                  [src]="getScreenshotPreviewUrl(shot.url)"
+                                                  alt="Screenshot de validación"
+                                                  class="rich-results-screenshot-card__image"
+                                                  loading="lazy"
+                                                />
+                                                <span class="rich-results-screenshot-card__label">
+                                                  Abrir imagen completa
+                                                </span>
+                                                <small class="rich-results-screenshot-card__breadcrumb">
+                                                  <span>{{ getScreenshotApiBase(shot.url) }}</span>
+                                                  <i class="bi bi-chevron-right"></i>
+                                                  <span>{{ getScreenshotApiPath(shot.url) }}</span>
+                                                </small>
                                               </a>
                                             }
                                           </div>
                                         }
-                                      }
-                                    </div>
-                                  </div>
-                                }
-                                @if (detail.ai_error_message) {
-                                  <div class="small text-danger mb-2">{{ detail.ai_error_message }}</div>
-                                }
-                                @if (detail.get_ai_result?.content) {
-                                  <div class="ai-report ai-report--overflow mb-3">
-                                    <markdown [data]="detail.get_ai_result!.content"></markdown>
-                                  </div>
-                                }
-                                @if (detail.screenshots.length > 0) {
-                                  <div class="rich-results-screenshot-grid">
-                                    @for (shot of detail.screenshots; track shot.url) {
-                                      <a
-                                        [href]="getScreenshotPreviewUrl(shot.url)"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="rich-results-screenshot-card"
-                                      >
-                                        <img
-                                          [src]="getScreenshotPreviewUrl(shot.url)"
-                                          alt="Screenshot de Rich Results"
-                                          class="rich-results-screenshot-card__image"
-                                          loading="lazy"
-                                        />
-                                        <span class="rich-results-screenshot-card__label">
-                                          Abrir imagen completa
-                                        </span>
-                                        <small class="rich-results-screenshot-card__breadcrumb">
-                                          <span>{{ getScreenshotApiBase(shot.url) }}</span>
-                                          <i class="bi bi-chevron-right"></i>
-                                          <span>{{ getScreenshotApiPath(shot.url) }}</span>
-                                        </small>
-                                      </a>
+
+                                        @if (segment.html_content) {
+                                          <div class="code-scroll-wrapper">
+                                            <pre class="code-block"><code>{{ segment.html_content }}</code></pre>
+                                          </div>
+                                        }
+                                      </div>
                                     }
-                                  </div>
-                                }
+                                  }
+                                </div>
                               </div>
                             }
                           }
@@ -817,7 +915,7 @@
                     </div>
                   } @else {
                     <div class="text-muted small">
-                      No hay reportes Rich Results para esta URL con el filtro actual.
+                      No hay reportes de validación estructurada para esta URL con el filtro actual.
                     </div>
                   }
                 </div>

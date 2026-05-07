@@ -28,10 +28,14 @@ export class RichResultsReportStatusSummaryItemDto {
     public progress_message: string | null,
     public success: boolean | null,
     public blocked_by_google: boolean | null,
+    public validate_google: boolean,
+    public validate_schema_org: boolean,
     public has_error: boolean,
     public message: string | null,
     public error_message: string | null,
     public findings_summary: RichResultsAnalysisSummaryDto,
+    public google_validation: RichResultsValidatorDetailDto,
+    public schema_org_validation: RichResultsValidatorDetailDto,
     public created_at: string | null,
   ) {}
 }
@@ -49,6 +53,8 @@ export class RichResultsReportListItemDto {
     public progress_message: string | null,
     public input_type: string,
     public requested_ai_result: boolean,
+    public validate_google: boolean,
+    public validate_schema_org: boolean,
     public success: boolean,
     public method_used: string,
     public result_url: string | null,
@@ -56,6 +62,8 @@ export class RichResultsReportListItemDto {
     public error_message: string | null,
     public blocked_by_google: boolean,
     public findings_summary: RichResultsAnalysisSummaryDto,
+    public google_validation: RichResultsValidatorDetailDto,
+    public schema_org_validation: RichResultsValidatorDetailDto,
     public created_at: string,
   ) {}
 }
@@ -109,6 +117,26 @@ export class RichResultsAnalysisSummaryDto {
   ) {}
 }
 
+export class RichResultsValidatorDetailDto {
+  constructor(
+    public validator: string,
+    public label: string,
+    public enabled: boolean,
+    public executed: boolean,
+    public success: boolean | null,
+    public method_used: string | null,
+    public result_url: string | null,
+    public message: string | null,
+    public error_message: string | null,
+    public blocked: boolean,
+    public screenshots: RichResultsScreenshotDto[],
+    public findings: RichResultsAnalysisFindingDto[],
+    public findings_summary: RichResultsAnalysisSummaryDto,
+    public html_content: string | null,
+    public markdown_content: string | null,
+  ) {}
+}
+
 export class RichResultsReportDetailResponseDto {
   constructor(
     public id: string,
@@ -118,6 +146,8 @@ export class RichResultsReportDetailResponseDto {
     public progress_message: string | null,
     public input_type: string,
     public requested_ai_result: boolean,
+    public validate_google: boolean,
+    public validate_schema_org: boolean,
     public success: boolean,
     public method_used: string,
     public result_url: string | null,
@@ -127,6 +157,8 @@ export class RichResultsReportDetailResponseDto {
     public screenshots: RichResultsScreenshotDto[],
     public findings: RichResultsAnalysisFindingDto[],
     public findings_summary: RichResultsAnalysisSummaryDto,
+    public google_validation: RichResultsValidatorDetailDto,
+    public schema_org_validation: RichResultsValidatorDetailDto,
     public get_ai_result: RichResultsAIResultDto | null,
     public ai_error_message: string | null,
     public created_at: string,

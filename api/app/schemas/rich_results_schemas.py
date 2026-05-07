@@ -41,6 +41,24 @@ class RichResultsAnalysisSummary(BaseModel):
     by_category: Dict[str, int] = Field(default_factory=dict)
 
 
+class RichResultsValidatorDetail(BaseModel):
+    validator: str
+    label: str
+    enabled: bool = False
+    executed: bool = False
+    success: Optional[bool] = None
+    method_used: Optional[str] = None
+    result_url: Optional[str] = None
+    message: Optional[str] = None
+    error_message: Optional[str] = None
+    blocked: bool = False
+    screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
+    findings: List[RichResultsAnalysisFinding] = Field(default_factory=list)
+    findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
+    html_content: Optional[str] = None
+    markdown_content: Optional[str] = None
+
+
 class RichResultsReportRequest(BaseModel):
     content: str = Field(
         ...,
@@ -58,6 +76,14 @@ class RichResultsReportRequest(BaseModel):
     auto_extract_html: bool = Field(
         default=False,
         description="Si es true y content es una URL, primero extrae el HTML con el scraper propio y valida ese HTML en lugar de enviar la URL directo a Google.",
+    )
+    validate_google: bool = Field(
+        default=True,
+        description="Si es true ejecuta la validación en Google Rich Results.",
+    )
+    validate_schema_org: bool = Field(
+        default=True,
+        description="Si es true ejecuta la validación en validator.schema.org.",
     )
 
     @field_validator("content")
@@ -77,6 +103,8 @@ class RichResultsReportRequest(BaseModel):
             raise ValueError("Cuando is_url es false, content debe parecer HTML válido")
         if self.auto_extract_html and not self.is_url:
             raise ValueError("auto_extract_html solo se puede usar cuando is_url es true")
+        if not self.validate_google and not self.validate_schema_org:
+            raise ValueError("Se debe activar al menos uno entre validate_google y validate_schema_org")
         return self
 
     class Config:
@@ -87,12 +115,16 @@ class RichResultsReportRequest(BaseModel):
                     "is_url": True,
                     "get_ai_result": True,
                     "auto_extract_html": False,
+                    "validate_google": True,
+                    "validate_schema_org": True,
                 },
                 {
                     "content": "<html><body><script type='application/ld+json'>{}</script></body></html>",
                     "is_url": False,
                     "get_ai_result": False,
                     "auto_extract_html": False,
+                    "validate_google": True,
+                    "validate_schema_org": True,
                 }
             ]
         }
@@ -111,6 +143,14 @@ class RichResultsBatchReportRequest(BaseModel):
     auto_extract_html: bool = Field(
         default=False,
         description="Si es true, cada URL del lote primero se convierte a HTML con el scraper propio y ese HTML se usa para la validación Rich Results.",
+    )
+    validate_google: bool = Field(
+        default=True,
+        description="Si es true ejecuta la validación en Google Rich Results para cada URL del lote.",
+    )
+    validate_schema_org: bool = Field(
+        default=True,
+        description="Si es true ejecuta la validación en validator.schema.org para cada URL del lote.",
     )
 
     @field_validator("urls")
@@ -135,6 +175,12 @@ class RichResultsBatchReportRequest(BaseModel):
 
         return normalized
 
+    @model_validator(mode="after")
+    def validate_requested_validators(self) -> "RichResultsBatchReportRequest":
+        if not self.validate_google and not self.validate_schema_org:
+            raise ValueError("Se debe activar al menos uno entre validate_google y validate_schema_org")
+        return self
+
 
 class RichResultsReportResponse(BaseModel):
     success: bool
@@ -144,9 +190,17 @@ class RichResultsReportResponse(BaseModel):
     message: str
     error_message: Optional[str] = None
     blocked_by_google: bool = False
+    validate_google: bool = True
+    validate_schema_org: bool = True
     screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
     findings: List[RichResultsAnalysisFinding] = Field(default_factory=list)
     findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
+    google_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="google", label="Google Rich Results")
+    )
+    schema_org_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="schema_org", label="Schema.org Validator")
+    )
     get_ai_result: Optional[RichResultsAIResult] = None
     ai_error_message: Optional[str] = None
     report_id: Optional[UUID] = None
@@ -177,6 +231,8 @@ class RichResultsReportListItem(BaseModel):
     progress_message: Optional[str] = None
     input_type: str
     requested_ai_result: bool = False
+    validate_google: bool = True
+    validate_schema_org: bool = True
     success: bool
     method_used: str
     result_url: Optional[str] = None
@@ -184,6 +240,12 @@ class RichResultsReportListItem(BaseModel):
     error_message: Optional[str] = None
     blocked_by_google: bool = False
     findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
+    google_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="google", label="Google Rich Results")
+    )
+    schema_org_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="schema_org", label="Schema.org Validator")
+    )
     created_at: datetime
 
 
@@ -202,6 +264,8 @@ class RichResultsReportDetailResponse(BaseModel):
     progress_message: Optional[str] = None
     input_type: str
     requested_ai_result: bool = False
+    validate_google: bool = True
+    validate_schema_org: bool = True
     success: bool
     method_used: str
     result_url: Optional[str] = None
@@ -211,6 +275,12 @@ class RichResultsReportDetailResponse(BaseModel):
     screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
     findings: List[RichResultsAnalysisFinding] = Field(default_factory=list)
     findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
+    google_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="google", label="Google Rich Results")
+    )
+    schema_org_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="schema_org", label="Schema.org Validator")
+    )
     get_ai_result: Optional[RichResultsAIResult] = None
     ai_error_message: Optional[str] = None
     created_at: datetime
@@ -233,10 +303,18 @@ class RichResultsReportStatusSummaryItem(BaseModel):
     progress_message: Optional[str] = None
     success: Optional[bool] = None
     blocked_by_google: Optional[bool] = None
+    validate_google: bool = True
+    validate_schema_org: bool = True
     has_error: bool = False
     message: Optional[str] = None
     error_message: Optional[str] = None
     findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
+    google_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="google", label="Google Rich Results")
+    )
+    schema_org_validation: RichResultsValidatorDetail = Field(
+        default_factory=lambda: RichResultsValidatorDetail(validator="schema_org", label="Schema.org Validator")
+    )
     created_at: Optional[datetime] = None
 
 

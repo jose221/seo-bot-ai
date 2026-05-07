@@ -102,6 +102,26 @@ class DatabaseManager:
         """Inicializa las tablas en la base de datos"""
         async with self.async_engine.begin() as conn:
             await conn.run_sync(SQLModel.metadata.create_all)
+            await conn.execute(text("""
+                ALTER TABLE rich_results_reports
+                ADD COLUMN IF NOT EXISTS analysis_findings JSONB
+            """))
+            await conn.execute(text("""
+                ALTER TABLE rich_results_reports
+                ADD COLUMN IF NOT EXISTS validate_google BOOLEAN NOT NULL DEFAULT TRUE
+            """))
+            await conn.execute(text("""
+                ALTER TABLE rich_results_reports
+                ADD COLUMN IF NOT EXISTS validate_schema_org BOOLEAN NOT NULL DEFAULT TRUE
+            """))
+            await conn.execute(text("""
+                ALTER TABLE rich_results_reports
+                ADD COLUMN IF NOT EXISTS google_validation_result JSONB
+            """))
+            await conn.execute(text("""
+                ALTER TABLE rich_results_reports
+                ADD COLUMN IF NOT EXISTS schema_org_validation_result JSONB
+            """))
 
     @asynccontextmanager
     async def async_session_context(self) -> AsyncGenerator[AsyncSession, None]:

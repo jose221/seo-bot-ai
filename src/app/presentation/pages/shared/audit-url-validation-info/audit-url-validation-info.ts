@@ -26,6 +26,7 @@ import {
   RichResultsReportListItemModel,
   RichResultsReportStatusSummaryItemModel,
   RichResultsReportTaskResponseModel,
+  RichResultsValidatorDetailModel,
 } from '@/app/domain/models/rich-results/response/rich-results-response.model';
 import { TranslateModule } from '@ngx-translate/core';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
@@ -120,8 +121,12 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   autoReload = signal<boolean>(true);
   richResultsBatchAnalyzeWithAi = signal<boolean>(true);
   richResultsBatchAutoExtractHtml = signal<boolean>(false);
+  richResultsBatchValidateGoogle = signal<boolean>(true);
+  richResultsBatchValidateSchemaOrg = signal<boolean>(true);
   richResultsSingleAnalyzeWithAi = signal<boolean>(true);
   richResultsSingleAutoExtractHtml = signal<boolean>(false);
+  richResultsSingleValidateGoogle = signal<boolean>(true);
+  richResultsSingleValidateSchemaOrg = signal<boolean>(true);
   private richResultsPollTimer: ReturnType<typeof setInterval> | null = null;
   private readonly richResultsApiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
   private readonly trackedRichResultsTasks = new Map<string, TrackedRichResultsTask>();
@@ -632,11 +637,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
   getRichResultsStateLabel(url: string): string {
     const state = this.getRichResultsState(url);
-    if (state === 'ok') return 'Rich Results OK';
-    if (state === 'warning') return 'Rich Results warning';
-    if (state === 'error') return 'Rich Results error';
-    if (state === 'pending') return 'Rich Results pendiente';
-    return 'Sin reporte Rich Results';
+    if (state === 'ok') return 'Validación OK';
+    if (state === 'warning') return 'Validación warning';
+    if (state === 'error') return 'Validación error';
+    if (state === 'pending') return 'Validación pendiente';
+    return 'Sin reporte de validación';
   }
 
   getRichResultsStateBadgeClass(url: string): string {
@@ -727,6 +732,38 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
   trackRichResultsFinding(finding: RichResultsAnalysisFindingModel, index: number): string {
     return `${finding.key}-${finding.selector}-${finding.message}-${finding.document_url || index}`;
+  }
+
+  getRichResultsValidatorSegments(
+    detail: RichResultsReportDetailResponseModel,
+  ): RichResultsValidatorDetailModel[] {
+    return [detail.google_validation, detail.schema_org_validation].filter((segment) => segment.enabled);
+  }
+
+  trackRichResultsValidatorSegment(segment: RichResultsValidatorDetailModel, index: number): string {
+    return `${segment.validator}-${index}`;
+  }
+
+  getRichResultsValidatorStateClass(segment: RichResultsValidatorDetailModel): string {
+    if (segment.error_message || this.getRichResultsFindingCount(segment.findings_summary, 'error') > 0) return 'sv-danger';
+    if (segment.blocked || this.getRichResultsFindingCount(segment.findings_summary, 'warning') > 0) return 'sv-warning';
+    if (segment.success) return 'sv-success';
+    return 'sv-secondary';
+  }
+
+  getRichResultsValidatorResultLabel(segment: RichResultsValidatorDetailModel): string {
+    if (segment.validator === 'google') return 'Abrir resultado en Google';
+    return 'Abrir resultado del validador';
+  }
+
+  hasRichResultsValidatorDetail(segment: RichResultsValidatorDetailModel): boolean {
+    return !!(
+      segment.message
+      || segment.error_message
+      || segment.findings_summary.total > 0
+      || segment.screenshots.length > 0
+      || segment.html_content
+    );
   }
 
   groupFindingsByItem(
@@ -875,6 +912,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
   async createRichResultsReport(url: string): Promise<void> {
     if (!this.isLoggedIn() || !url) return;
+    if (!this.richResultsSingleValidateGoogle() && !this.richResultsSingleValidateSchemaOrg()) {
+      await this._sweetAlertUtil.error('', 'Activa Google, Schema.org o ambos para ejecutar el reporte.');
+      return;
+    }
 
     this.updateUrlSet(this.richResultsCreatingSet, url, true);
     try {
@@ -884,6 +925,8 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
           true,
           this.richResultsSingleAnalyzeWithAi(),
           this.richResultsSingleAutoExtractHtml(),
+          this.richResultsSingleValidateGoogle(),
+          this.richResultsSingleValidateSchemaOrg(),
         ),
       );
       this.trackRichResultsTask(response);
@@ -895,11 +938,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
         timer: 4000,
         timerProgressBar: true,
         icon: 'success',
-        title: 'Reporte Rich Results iniciado en segundo plano'
+        title: 'Reporte de validación iniciado en segundo plano'
       });
     } catch (error) {
       console.error('Error creating rich results report:', error);
-      await this._sweetAlertUtil.error('', 'No se pudo iniciar el reporte de Rich Results.');
+      await this._sweetAlertUtil.error('', 'No se pudo iniciar el reporte de validación.');
     } finally {
       this.updateUrlSet(this.richResultsCreatingSet, url, false);
     }
@@ -907,6 +950,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
   async createRichResultsBatchReports(): Promise<void> {
     if (!this.isLoggedIn()) return;
+    if (!this.richResultsBatchValidateGoogle() && !this.richResultsBatchValidateSchemaOrg()) {
+      await this._sweetAlertUtil.error('', 'Activa Google, Schema.org o ambos para ejecutar el lote.');
+      return;
+    }
 
     const urls = Array.from(this.selectedRichResultsUrls());
     if (urls.length === 0) {
@@ -921,6 +968,8 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
           urls,
           this.richResultsBatchAnalyzeWithAi(),
           this.richResultsBatchAutoExtractHtml(),
+          this.richResultsBatchValidateGoogle(),
+          this.richResultsBatchValidateSchemaOrg(),
         ),
       );
       response.items.forEach((item) => this.trackRichResultsTask(item));
@@ -937,11 +986,11 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
         timer: 4500,
         timerProgressBar: true,
         icon: 'success',
-        title: `Se encolaron ${urls.length} reporte(s) Rich Results`,
+        title: `Se encolaron ${urls.length} reporte(s) de validación`,
       });
     } catch (error) {
       console.error('Error creating rich results batch:', error);
-      await this._sweetAlertUtil.error('', 'No se pudo iniciar el lote de reportes Rich Results.');
+      await this._sweetAlertUtil.error('', 'No se pudo iniciar el lote de reportes de validación.');
     } finally {
       this.richResultsBatchSubmitting.set(false);
     }
@@ -952,7 +1001,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
     const confirmed = await this._sweetAlertUtil.fire({
       title: 'Eliminar reporte',
-      text: 'Se eliminará este reporte de Rich Results.',
+      text: 'Se eliminará este reporte de validación estructurada.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Eliminar',
@@ -1013,11 +1062,47 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
         progress_message: null,
         success: null,
         blocked_by_google: null,
+        validate_google: true,
+        validate_schema_org: true,
         has_error: false,
         findings_summary: {
           total: 0,
           by_severity: {},
           by_category: {},
+        },
+        google_validation: {
+          validator: 'google',
+          label: 'Google Rich Results',
+          enabled: false,
+          executed: false,
+          success: null,
+          method_used: null,
+          result_url: null,
+          message: null,
+          error_message: null,
+          blocked: false,
+          screenshots: [],
+          findings: [],
+          findings_summary: { total: 0, by_severity: {}, by_category: {} },
+          html_content: null,
+          markdown_content: null,
+        },
+        schema_org_validation: {
+          validator: 'schema_org',
+          label: 'Schema.org Validator',
+          enabled: false,
+          executed: false,
+          success: null,
+          method_used: null,
+          result_url: null,
+          message: null,
+          error_message: null,
+          blocked: false,
+          screenshots: [],
+          findings: [],
+          findings_summary: { total: 0, by_severity: {}, by_category: {} },
+          html_content: null,
+          markdown_content: null,
         },
         message: null,
         error_message: null,
@@ -1089,7 +1174,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       if (!this.isRichResultsTerminal(tracked.status)) {
         const isCompleted = nextStatus === 'completed';
         this._taskNotificationService.notifyTaskResult({
-          title: isCompleted ? 'Reporte Rich Results listo' : 'Reporte Rich Results fallido',
+          title: isCompleted ? 'Reporte de validación listo' : 'Reporte de validación fallido',
           body: isCompleted
             ? `${item.url} ya terminó y está listo para revisarse.`
             : `${item.url} terminó con error.`,

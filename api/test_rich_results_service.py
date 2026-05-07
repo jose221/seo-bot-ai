@@ -2,6 +2,10 @@ from app.shared.rich_results_html_analyzer import (
     analyze_rich_results_html,
     build_rich_results_findings_summary,
 )
+from app.shared.schema_org_html_analyzer import (
+    analyze_schema_org_html,
+    build_schema_org_findings_summary,
+)
 
 
 def test_analyze_validation_html_extracts_findings_and_documents():
@@ -54,3 +58,54 @@ def test_analyze_validation_html_extracts_findings_and_documents():
     )
     assert summary.total == 3
     assert summary.by_severity == {"info": 2, "warning": 1}
+
+
+def test_analyze_schema_org_html_extracts_summary_and_items():
+    html = """
+    <div class="sKfxWe-BeDmAc sKfxWe-BeDmAc-AHe6Kc">
+      <div class="sKfxWe-BeDmAc-tJHJj">
+        <div class="sKfxWe-BeDmAc-r4nke ssJRIf-fmcmS r4nke"><span>Detectado</span></div>
+        <div class="sKfxWe-BeDmAc-ma6Yeb-qwU8Me-WiHQyb">
+          <span class="K4efff-fmcmS">0 ERRORES</span>
+          <span class="K4efff-fmcmS">0 ADVERTENCIAS</span>
+          <span class="K4efff-fmcmS">3 ELEMENTOS</span>
+        </div>
+      </div>
+      <div class="sKfxWe-BeDmAc-qJTHM-haAclf">
+        <ul class="mdl-list">
+          <li class="mdl-list__item aVTXAb-BeDmAc-JNdkSc-rTEl-x3Eknd">
+            <span class="mdl-list__item-primary-content">BreadcrumbList</span>
+            <span>
+              <span class="K4efff-fmcmS">0 ERRORES</span>
+              <span class="K4efff-fmcmS">0 ADVERTENCIAS</span>
+              <span class="K4efff-fmcmS">1 ELEMENTO</span>
+            </span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    """
+
+    findings = analyze_schema_org_html(html)
+    summary = build_schema_org_findings_summary(findings)
+
+    assert len(findings) == 3
+    assert any(
+        finding.category == "summary"
+        and finding.message == "0 ERRORES · 0 ADVERTENCIAS · 3 ELEMENTOS"
+        for finding in findings
+    )
+    assert any(
+        finding.category == "detected_type"
+        and finding.message == "BreadcrumbList"
+        and finding.color == "green"
+        for finding in findings
+    )
+    assert any(
+        finding.category == "status"
+        and finding.item_name == "BreadcrumbList"
+        and finding.message == "0 ERRORES · 0 ADVERTENCIAS · 1 ELEMENTO"
+        for finding in findings
+    )
+    assert summary.total == 3
+    assert summary.by_severity == {"info": 3}
