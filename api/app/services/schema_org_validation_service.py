@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -19,6 +20,9 @@ from app.shared.schema_org_html_analyzer import (
     analyze_schema_org_html,
     build_schema_org_findings_summary,
 )
+from app.shared.schema_org_local_validator import validate_locally
+
+logger = logging.getLogger(__name__)
 
 
 class SchemaOrgValidationService:
@@ -63,6 +67,35 @@ class SchemaOrgValidationService:
             input_type=self._to_input_type(input_type),
             content=content,
         )
+
+        # Fallback local cuando el validador remoto bloquea con CAPTCHA
+        if validation.blocked_by_schema:
+            logger.warning(
+                "validator.schema.org bloqueó con CAPTCHA — activando fallback local con extruct"
+            )
+            html_for_local = content if input_type == "html" else ""
+            local_findings = validate_locally(html_for_local, base_url=content if input_type == "url" else "")
+            findings = [
+                RichResultsAnalysisFinding.model_validate(item.to_dict())
+                for item in local_findings
+            ]
+            return RichResultsValidatorDetail(
+                validator="schema_org",
+                label="Schema.org Validator (local fallback)",
+                enabled=True,
+                executed=True,
+                success=True,
+                method_used="local_extruct",
+                result_url=None,
+                message="Validación local completada (validator.schema.org bloqueó con CAPTCHA)",
+                error_message=validation.error_message,
+                blocked=True,
+                screenshots=[RichResultsScreenshot(**item) for item in validation.screenshots],
+                findings=findings,
+                findings_summary=self._build_findings_summary(findings),
+                html_content=None,
+            )
+
         findings = [
             RichResultsAnalysisFinding.model_validate(item.to_dict())
             for item in analyze_schema_org_html(validation.html_content or "")
