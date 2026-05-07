@@ -13,15 +13,19 @@ from sqlmodel import select
 
 from app.core.config import settings
 from app.core.database import db_manager
-from app.handlers.seo_scrapper.google_rich_results_engine import (
-    GoogleRichResultsEngine,
-    InputType,
-)
+from app.handlers.seo_scrapper.google_rich_results_engine import GoogleRichResultsEngine, InputType
 from app.models.webpage import WebPage
 from app.schemas.rich_results_schemas import (
+    RichResultsAnalysisFinding,
+    RichResultsAnalysisSummary,
     RichResultsAIResult,
     RichResultsReportRequest,
     RichResultsReportResponse,
+)
+from app.shared.rich_results_html_analyzer import (
+    RichResultsHtmlFinding,
+    analyze_rich_results_html,
+    build_rich_results_findings_summary,
 )
 from app.services.ai_client import get_ai_client
 from app.services.audit_engine import get_audit_engine
@@ -64,6 +68,24 @@ class RichResultsService:
 
         soup = BeautifulSoup(html_content, "lxml")
         return soup.get_text("\n", strip=True)
+
+    def analyze_validation_html(self, html_content: str) -> list[RichResultsAnalysisFinding]:
+        return [
+            RichResultsAnalysisFinding.model_validate(item.to_dict())
+            for item in analyze_rich_results_html(html_content)
+        ]
+
+    def build_findings_summary(
+        self,
+        findings: list[RichResultsAnalysisFinding],
+    ) -> RichResultsAnalysisSummary:
+        summary = build_rich_results_findings_summary(
+            [
+                RichResultsHtmlFinding(**finding.model_dump())
+                for finding in findings
+            ]
+        )
+        return RichResultsAnalysisSummary.model_validate(summary.to_dict())
 
     async def _extract_html_from_url(self, url: str) -> str:
         target = None
@@ -119,6 +141,8 @@ class RichResultsService:
         engine = self._build_engine(proxy_url)
 
         validation = await engine.validate(input_type=input_type, content=content or "")
+        findings = self.analyze_validation_html(validation.html_content or "")
+        findings_summary = self.build_findings_summary(findings)
         ai_result: Optional[RichResultsAIResult] = None
         ai_error_message: Optional[str] = None
 
@@ -130,12 +154,14 @@ class RichResultsService:
                 )
 
             markdown_content = self._html_to_markdown(validation.html_content)
-            if markdown_content:
+            if markdown_content or findings:
                 try:
                     ai_payload = await self.ai_client.analyze_rich_results_content(
                         markdown_content=markdown_content,
                         rich_results_url=validation.result_url,
                         source_url=source_url,
+                        findings=[item.model_dump() for item in findings],
+                        findings_summary=findings_summary.model_dump(),
                         token=token
                     )
                     ai_result = RichResultsAIResult(**ai_payload)
@@ -160,6 +186,8 @@ class RichResultsService:
             error_message=validation.error_message,
             blocked_by_google=validation.blocked_by_google,
             screenshots=validation.screenshots,
+            findings=findings,
+            findings_summary=findings_summary,
             get_ai_result=ai_result,
             ai_error_message=ai_error_message
         )

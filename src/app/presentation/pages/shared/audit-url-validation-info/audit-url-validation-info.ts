@@ -20,6 +20,8 @@ import {
   CreateRichResultsReportRequestModel,
 } from '@/app/domain/models/rich-results/request/rich-results-request.model';
 import {
+  RichResultsAnalysisFindingModel,
+  RichResultsAnalysisSummaryModel,
   RichResultsReportDetailResponseModel,
   RichResultsReportListItemModel,
   RichResultsReportStatusSummaryItemModel,
@@ -660,10 +662,13 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
   getRichResultsHistoryState(report: RichResultsReportListItemModel): string {
     const status = (report.status || '').toLowerCase();
+    const criticalCount = this.getRichResultsFindingCount(report.findings_summary, 'critical');
+    const errorCount = this.getRichResultsFindingCount(report.findings_summary, 'error');
+    const warningCount = this.getRichResultsFindingCount(report.findings_summary, 'warning');
 
     if (status === 'pending' || status === 'in_progress') return 'pending';
-    if (status === 'failed' || report.error_message) return 'error';
-    if (report.blocked_by_google) return 'warning';
+    if (status === 'failed' || report.error_message || criticalCount > 0 || errorCount > 0) return 'error';
+    if (report.blocked_by_google || warningCount > 0) return 'warning';
     if (report.success) return 'ok';
     return 'warning';
   }
@@ -696,6 +701,32 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
 
   getRichResultsReportMessage(report: RichResultsReportListItemModel): string {
     return report.progress_message || report.message || report.error_message || 'Sin mensaje disponible.';
+  }
+
+  getRichResultsFindingCount(
+    summary: RichResultsAnalysisSummaryModel | null | undefined,
+    severity: string,
+  ): number {
+    return Math.max(0, summary?.by_severity?.[severity] ?? 0);
+  }
+
+  getRichResultsFindingBadgeClass(severity: string): string {
+    if (severity === 'critical' || severity === 'error') return 'sv-danger';
+    if (severity === 'warning') return 'sv-warning';
+    if (severity === 'info') return 'sv-info';
+    return 'sv-secondary';
+  }
+
+  getRichResultsFindingSeverityLabel(severity: string): string {
+    if (severity === 'critical') return 'Críticos';
+    if (severity === 'error') return 'Errores';
+    if (severity === 'warning') return 'Warnings';
+    if (severity === 'info') return 'Info';
+    return severity || 'Hallazgos';
+  }
+
+  trackRichResultsFinding(finding: RichResultsAnalysisFindingModel, index: number): string {
+    return `${finding.key}-${finding.selector}-${finding.message}-${finding.document_url || index}`;
   }
 
   private startRichResultsPolling(): void {
@@ -949,16 +980,21 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
       next.set(url, []);
       this.richResultsMap.set(next);
       const statusMap = new Map(this.richResultsStatusMap());
-        statusMap.set(url, {
-          url,
-          state: 'none',
-          report_id: null,
-          report_status: null,
-          progress_percentage: 0,
-          progress_message: null,
-          success: null,
-          blocked_by_google: null,
-          has_error: false,
+      statusMap.set(url, {
+        url,
+        state: 'none',
+        report_id: null,
+        report_status: null,
+        progress_percentage: 0,
+        progress_message: null,
+        success: null,
+        blocked_by_google: null,
+        has_error: false,
+        findings_summary: {
+          total: 0,
+          by_severity: {},
+          by_category: {},
+        },
         message: null,
         error_message: null,
         created_at: null,

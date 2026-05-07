@@ -31,6 +31,7 @@ export class RichResultsReportStatusSummaryItemModel {
     public has_error: boolean,
     public message: string | null,
     public error_message: string | null,
+    public findings_summary: RichResultsAnalysisSummaryModel,
     public created_at: string | null,
   ) {}
 }
@@ -54,6 +55,7 @@ export class RichResultsReportListItemModel {
     public message: string,
     public error_message: string | null,
     public blocked_by_google: boolean,
+    public findings_summary: RichResultsAnalysisSummaryModel,
     public created_at: string,
   ) {}
 }
@@ -83,6 +85,27 @@ export class RichResultsAIResultModel {
   ) {}
 }
 
+export class RichResultsAnalysisFindingModel {
+  constructor(
+    public key: string,
+    public code: string,
+    public severity: string,
+    public category: string,
+    public selector: string,
+    public message: string,
+    public document_url: string | null,
+    public document_label: string | null,
+  ) {}
+}
+
+export class RichResultsAnalysisSummaryModel {
+  constructor(
+    public total: number = 0,
+    public by_severity: Record<string, number> = {},
+    public by_category: Record<string, number> = {},
+  ) {}
+}
+
 export class RichResultsReportDetailResponseModel {
   constructor(
     public id: string,
@@ -99,6 +122,8 @@ export class RichResultsReportDetailResponseModel {
     public error_message: string | null,
     public blocked_by_google: boolean,
     public screenshots: RichResultsScreenshotModel[],
+    public findings: RichResultsAnalysisFindingModel[],
+    public findings_summary: RichResultsAnalysisSummaryModel,
     public get_ai_result: RichResultsAIResultModel | null,
     public ai_error_message: string | null,
     public created_at: string,

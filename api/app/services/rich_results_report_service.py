@@ -16,6 +16,8 @@ from app.core.database import db_manager
 from app.models.rich_results_report import RichResultsReport, RichResultsReportStatus
 from app.schemas.rich_results_schemas import (
     DeleteRichResultsReportResponse,
+    RichResultsAnalysisFinding,
+    RichResultsAnalysisSummary,
     RichResultsAIResult,
     RichResultsReportDetailResponse,
     RichResultsReportListItem,
@@ -80,6 +82,7 @@ class RichResultsReportService:
             error_message=response.error_message,
             blocked_by_google=response.blocked_by_google,
             screenshots=[item.model_dump() for item in response.screenshots] or None,
+            analysis_findings=[item.model_dump() for item in response.findings] or None,
             ai_result_content=ai_result.content if ai_result else None,
             ai_result_usage=ai_result.usage if ai_result else None,
             ai_result_model=ai_result.model if ai_result else None,
@@ -145,6 +148,7 @@ class RichResultsReportService:
                 RichResultsReport.message,
                 RichResultsReport.error_message,
                 RichResultsReport.blocked_by_google,
+                RichResultsReport.analysis_findings,
                 RichResultsReport.created_at,
             )
             .order_by(desc(RichResultsReport.created_at))
@@ -191,6 +195,7 @@ class RichResultsReportService:
                 message=row.message,
                 error_message=row.error_message,
                 blocked_by_google=row.blocked_by_google,
+                findings_summary=self._build_findings_summary(row.analysis_findings),
                 created_at=row.created_at,
             )
             for row in rows
@@ -251,6 +256,9 @@ class RichResultsReportService:
         for url in normalized_urls:
             report = latest_by_url.get(url)
             state = self._classify_state(report)
+            findings_summary = self._build_findings_summary(
+                report.analysis_findings if report else None
+            )
             items.append(
                 RichResultsReportStatusSummaryItem(
                     url=url,
@@ -261,9 +269,14 @@ class RichResultsReportService:
                     progress_message=report.progress_message if report else None,
                     success=report.success if report else None,
                     blocked_by_google=report.blocked_by_google if report else None,
-                    has_error=bool(report.error_message) if report else False,
+                    has_error=(
+                        bool(report.error_message)
+                        or findings_summary.by_severity.get("critical", 0) > 0
+                        or findings_summary.by_severity.get("error", 0) > 0
+                    ) if report else False,
                     message=report.message if report else None,
                     error_message=report.error_message if report else None,
+                    findings_summary=findings_summary,
                     created_at=report.created_at if report else None,
                 )
             )
@@ -388,6 +401,7 @@ class RichResultsReportService:
                 report.error_message = response.error_message
                 report.blocked_by_google = response.blocked_by_google
                 report.screenshots = [item.model_dump() for item in response.screenshots] or None
+                report.analysis_findings = [item.model_dump() for item in response.findings] or None
                 report.ai_result_content = ai_result.content if ai_result else None
                 report.ai_result_usage = ai_result.usage if ai_result else None
                 report.ai_result_model = ai_result.model if ai_result else None
@@ -491,8 +505,32 @@ class RichResultsReportService:
             generated_at=report.ai_generated_at,
         )
 
+    @staticmethod
+    def build_findings(
+        raw_findings: Optional[list[dict]],
+    ) -> list[RichResultsAnalysisFinding]:
+        if not raw_findings:
+            return []
+
+        findings: list[RichResultsAnalysisFinding] = []
+        for item in raw_findings:
+            try:
+                findings.append(RichResultsAnalysisFinding.model_validate(item))
+            except Exception:
+                continue
+        return findings
+
+    def _build_findings_summary(
+        self,
+        raw_findings: Optional[list[dict]],
+    ) -> RichResultsAnalysisSummary:
+        return get_rich_results_service().build_findings_summary(
+            self.build_findings(raw_findings)
+        )
+
     def build_report_detail(self, report: RichResultsReport) -> RichResultsReportDetailResponse:
         ai_result = self.build_ai_result(report)
+        findings = self.build_findings(report.analysis_findings)
         screenshots = [
             RichResultsScreenshot(**item)
             for item in (report.screenshots or [])
@@ -512,30 +550,36 @@ class RichResultsReportService:
             error_message=report.error_message,
             blocked_by_google=report.blocked_by_google,
             screenshots=screenshots,
+            findings=findings,
+            findings_summary=get_rich_results_service().build_findings_summary(findings),
             get_ai_result=ai_result,
             ai_error_message=report.ai_error_message,
             created_at=report.created_at,
         )
 
-    @staticmethod
-    def _classify_state(report: Optional[RichResultsReport]) -> str:
+    def _classify_state(self, report: Optional[RichResultsReport]) -> str:
         if report is None:
             return "none"
 
         if report.status in {RichResultsReportStatus.PENDING, RichResultsReportStatus.IN_PROGRESS}:
             return "pending"
 
-        if report.status == RichResultsReportStatus.FAILED:
+        findings_summary = self._build_findings_summary(report.analysis_findings)
+        severity_counts = findings_summary.by_severity
+
+        if (
+            report.status == RichResultsReportStatus.FAILED
+            or report.error_message
+            or severity_counts.get("critical", 0) > 0
+            or severity_counts.get("error", 0) > 0
+        ):
             return "error"
 
-        if report.blocked_by_google:
+        if report.blocked_by_google or severity_counts.get("warning", 0) > 0:
             return "warning"
 
         if report.success:
             return "ok"
-
-        if report.error_message:
-            return "error"
 
         return "warning"
 

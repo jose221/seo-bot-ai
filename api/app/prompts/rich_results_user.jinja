@@ -8,6 +8,20 @@ URL de origen analizada: {{ source_url }}
 URL final de Google Rich Results: {{ rich_results_url }}
 {% endif %}
 
+{% if findings_summary and findings_summary.total %}
+Hallazgos estructurados extraídos del HTML final:
+
+- Total: {{ findings_summary.total }}
+- Por severidad: {{ findings_summary.by_severity }}
+- Por categoría: {{ findings_summary.by_category }}
+
+Detalle de hallazgos:
+{% for finding in findings %}
+- [{{ finding.severity|upper }}][{{ finding.category }}] {{ finding.message }}{% if finding.document_url %} | Documento: {{ finding.document_url }}{% endif %}{% if finding.selector %} | Selector: {{ finding.selector }}{% endif %}
+{% endfor %}
+
+{% endif %}
+
 Contenido final convertido a Markdown:
 
 {{ markdown_content }}

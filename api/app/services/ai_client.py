@@ -273,6 +273,8 @@ class AIClient:
     markdown_content: str,
     rich_results_url: Optional[str],
     source_url: Optional[str],
+    findings: Optional[list[dict]],
+    findings_summary: Optional[dict],
     token: str
   ) -> dict:
     system_template = self.jinja_env.get_template("rich_results_analysis.jinja")
@@ -282,7 +284,9 @@ class AIClient:
     user_content = user_template.render(
       markdown_content=markdown_content,
       rich_results_url=rich_results_url,
-      source_url=source_url
+      source_url=source_url,
+      findings=findings or [],
+      findings_summary=findings_summary or {}
     )
 
     request = ChatCompletionRequest(

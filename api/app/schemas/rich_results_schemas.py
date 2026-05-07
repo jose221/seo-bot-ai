@@ -2,7 +2,7 @@
 Schemas para generación de reportes de Google Rich Results.
 """
 from datetime import datetime
-from typing import List, Optional
+from typing import Dict, List, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -19,6 +19,23 @@ class RichResultsAIResult(BaseModel):
     usage: Optional[dict] = None
     model: Optional[str] = None
     generated_at: Optional[str] = None
+
+
+class RichResultsAnalysisFinding(BaseModel):
+    key: str
+    code: str
+    severity: str
+    category: str
+    selector: str
+    message: str
+    document_url: Optional[str] = None
+    document_label: Optional[str] = None
+
+
+class RichResultsAnalysisSummary(BaseModel):
+    total: int = 0
+    by_severity: Dict[str, int] = Field(default_factory=dict)
+    by_category: Dict[str, int] = Field(default_factory=dict)
 
 
 class RichResultsReportRequest(BaseModel):
@@ -125,6 +142,8 @@ class RichResultsReportResponse(BaseModel):
     error_message: Optional[str] = None
     blocked_by_google: bool = False
     screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
+    findings: List[RichResultsAnalysisFinding] = Field(default_factory=list)
+    findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
     get_ai_result: Optional[RichResultsAIResult] = None
     ai_error_message: Optional[str] = None
     report_id: Optional[UUID] = None
@@ -161,6 +180,7 @@ class RichResultsReportListItem(BaseModel):
     message: str
     error_message: Optional[str] = None
     blocked_by_google: bool = False
+    findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
     created_at: datetime
 
 
@@ -186,6 +206,8 @@ class RichResultsReportDetailResponse(BaseModel):
     error_message: Optional[str] = None
     blocked_by_google: bool = False
     screenshots: List[RichResultsScreenshot] = Field(default_factory=list)
+    findings: List[RichResultsAnalysisFinding] = Field(default_factory=list)
+    findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
     get_ai_result: Optional[RichResultsAIResult] = None
     ai_error_message: Optional[str] = None
     created_at: datetime
@@ -211,6 +233,7 @@ class RichResultsReportStatusSummaryItem(BaseModel):
     has_error: bool = False
     message: Optional[str] = None
     error_message: Optional[str] = None
+    findings_summary: RichResultsAnalysisSummary = Field(default_factory=RichResultsAnalysisSummary)
     created_at: Optional[datetime] = None
 
 

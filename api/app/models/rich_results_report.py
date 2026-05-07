@@ -52,6 +52,11 @@ class RichResultsReport(SQLModel, table=True):
         sa_column=Column(JSON, nullable=True),
         description="Screenshots generados durante la validación",
     )
+    analysis_findings: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Hallazgos estructurados extraídos del HTML final de Google Rich Results",
+    )
 
     ai_result_content: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     ai_result_usage: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON, nullable=True))

@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS rich_results_reports (
     error_message TEXT,
     blocked_by_google BOOLEAN NOT NULL DEFAULT FALSE,
     screenshots JSONB,
+    analysis_findings JSONB,
     ai_result_content TEXT,
     ai_result_usage JSONB,
     ai_result_model VARCHAR,

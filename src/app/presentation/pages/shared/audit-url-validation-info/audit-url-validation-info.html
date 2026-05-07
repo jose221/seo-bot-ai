@@ -635,6 +635,26 @@
                                 <span class="sv-badge" [ngClass]="report.success ? 'sv-success' : 'sv-secondary'">
                                   {{ report.success ? 'success' : 'sin resultado' }}
                                 </span>
+                                @if (getRichResultsFindingCount(report.findings_summary, 'critical') > 0) {
+                                  <span class="sv-badge" [ngClass]="getRichResultsFindingBadgeClass('critical')">
+                                    {{ getRichResultsFindingCount(report.findings_summary, 'critical') }} críticos
+                                  </span>
+                                }
+                                @if (getRichResultsFindingCount(report.findings_summary, 'error') > 0) {
+                                  <span class="sv-badge" [ngClass]="getRichResultsFindingBadgeClass('error')">
+                                    {{ getRichResultsFindingCount(report.findings_summary, 'error') }} errores
+                                  </span>
+                                }
+                                @if (getRichResultsFindingCount(report.findings_summary, 'warning') > 0) {
+                                  <span class="sv-badge" [ngClass]="getRichResultsFindingBadgeClass('warning')">
+                                    {{ getRichResultsFindingCount(report.findings_summary, 'warning') }} warnings
+                                  </span>
+                                }
+                                @if (getRichResultsFindingCount(report.findings_summary, 'info') > 0) {
+                                  <span class="sv-badge" [ngClass]="getRichResultsFindingBadgeClass('info')">
+                                    {{ getRichResultsFindingCount(report.findings_summary, 'info') }} info
+                                  </span>
+                                }
                                 @if (report.requested_ai_result) {
                                   <span class="sv-badge sv-info">IA</span>
                                 }
@@ -685,6 +705,58 @@
                             @let detail = getRichResultDetail(report.id);
                             @if (detail) {
                               <div class="mt-3 pt-3 border-top">
+                                @if (detail.findings_summary.total > 0) {
+                                  <div class="rich-results-findings-panel mb-3">
+                                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                                      <strong>Hallazgos detectados</strong>
+                                      @if (getRichResultsFindingCount(detail.findings_summary, 'critical') > 0) {
+                                        <span class="sv-badge sv-danger">
+                                          {{ getRichResultsFindingCount(detail.findings_summary, 'critical') }} críticos
+                                        </span>
+                                      }
+                                      @if (getRichResultsFindingCount(detail.findings_summary, 'error') > 0) {
+                                        <span class="sv-badge sv-danger">
+                                          {{ getRichResultsFindingCount(detail.findings_summary, 'error') }} errores
+                                        </span>
+                                      }
+                                      @if (getRichResultsFindingCount(detail.findings_summary, 'warning') > 0) {
+                                        <span class="sv-badge sv-warning">
+                                          {{ getRichResultsFindingCount(detail.findings_summary, 'warning') }} warnings
+                                        </span>
+                                      }
+                                      @if (getRichResultsFindingCount(detail.findings_summary, 'info') > 0) {
+                                        <span class="sv-badge sv-info">
+                                          {{ getRichResultsFindingCount(detail.findings_summary, 'info') }} info
+                                        </span>
+                                      }
+                                    </div>
+                                    <div class="rich-results-findings-list">
+                                      @for (finding of detail.findings; track trackRichResultsFinding(finding, $index)) {
+                                        <div class="rich-results-finding-card">
+                                          <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <span class="sv-badge sv-badge--sm" [ngClass]="getRichResultsFindingBadgeClass(finding.severity)">
+                                              {{ finding.severity }}
+                                            </span>
+                                            <span class="sv-badge sv-badge--sm sv-secondary">
+                                              {{ finding.category }}
+                                            </span>
+                                          </div>
+                                          <div class="small fw-semibold">{{ finding.message }}</div>
+                                          @if (finding.document_url) {
+                                            <a
+                                              [href]="finding.document_url"
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              class="small"
+                                            >
+                                              {{ finding.document_label || 'Abrir documentación relacionada' }}
+                                            </a>
+                                          }
+                                        </div>
+                                      }
+                                    </div>
+                                  </div>
+                                }
                                 @if (detail.ai_error_message) {
                                   <div class="small text-danger mb-2">{{ detail.ai_error_message }}</div>
                                 }

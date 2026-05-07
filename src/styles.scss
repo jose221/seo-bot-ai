@@ -1189,6 +1189,26 @@ $pv-tr: all 0.2s ease;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.85rem;
 }
+.rich-results-findings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.rich-results-findings-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.75rem;
+}
+.rich-results-finding-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.75rem;
+  background: #fff;
+  border: 1px solid $pv-b;
+  border-radius: $pv-rs;
+  box-shadow: $pv-sh;
+}
 .rich-results-screenshot-card {
   display: flex;
   flex-direction: column;
