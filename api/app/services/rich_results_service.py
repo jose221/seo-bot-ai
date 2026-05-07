@@ -4,7 +4,7 @@ Servicio para generar reportes de Google Rich Results.
 from __future__ import annotations
 
 from typing import Optional
-from urllib.parse import unquote, urlparse
+from urllib.parse import urlparse
 
 import trafilatura
 from bs4 import BeautifulSoup
@@ -37,7 +37,6 @@ class RichResultsService:
         return None
 
     def _build_engine(self, proxy_url: Optional[str]) -> GoogleRichResultsEngine:
-        parsed_proxy_config = None
         proxy_server = None
 
         if proxy_url:
@@ -46,14 +45,7 @@ class RichResultsService:
             if parsed.port:
                 proxy_server = f"{proxy_server}:{parsed.port}"
 
-            parsed_proxy_config = {"server": proxy_server}
-            if parsed.username:
-                parsed_proxy_config["username"] = unquote(parsed.username)
-            if parsed.password:
-                parsed_proxy_config["password"] = unquote(parsed.password)
-
         return GoogleRichResultsEngine(
-            proxy_config=parsed_proxy_config,
             proxy_server=proxy_server,
             screenshots_dir=f"{settings.STORAGE_PATH}/images",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images"
