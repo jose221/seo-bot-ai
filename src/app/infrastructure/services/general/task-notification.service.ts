@@ -95,6 +95,7 @@ export class TaskNotificationService {
 
   registerPendingTask(kind: TrackableTaskKind, id: string): void {
     this.knownStatuses.set(this.buildTaskKey(kind, id), 'pending');
+    this.start();
   }
 
   private async pollTasks(): Promise<void> {
@@ -105,62 +106,28 @@ export class TaskNotificationService {
     this.isPolling = true;
 
     try {
-      const taskGroups = await Promise.allSettled([
-        this.auditRepository.get(),
-        this.auditRepository.getComparisons(),
-        this.auditSchemaRepository.getAll(),
-        this.auditUrlValidationRepository.getAll(),
-      ]);
+      const trackedTasks = Array.from(this.knownStatuses.entries())
+        .filter(([, status]) => !this.isTerminalStatus(status))
+        .map(([key]) => this.parseTaskKey(key))
+        .filter((task): task is { kind: TrackableTaskKind; id: string } => !!task);
 
-      const tasks: TrackableTask[] = [];
-
-      if (taskGroups[0].status === 'fulfilled') {
-        tasks.push(
-          ...taskGroups[0].value.map((audit) => ({
-            id: audit.id,
-            kind: 'audit' as const,
-            status: audit.status,
-            route: `/admin/audit/${audit.id}`,
-            label: audit.web_page?.name || audit.web_page?.url || `Auditoría ${audit.id}`,
-          })),
-        );
+      if (trackedTasks.length === 0) {
+        this.stop();
+        this.prepareNotifications();
+        return;
       }
 
-      if (taskGroups[1].status === 'fulfilled') {
-        tasks.push(
-          ...taskGroups[1].value.map((comparison) => ({
-            id: comparison.id,
-            kind: 'comparison' as const,
-            status: comparison.status,
-            route: `/admin/audit/comparisons/${comparison.id}`,
-            label: comparison.base_url || `Comparación ${comparison.id}`,
-          })),
-        );
-      }
+      const taskResults = await Promise.allSettled(
+        trackedTasks.map((task) => this.fetchTrackedTask(task.kind, task.id)),
+      );
 
-      if (taskGroups[2].status === 'fulfilled') {
-        tasks.push(
-          ...taskGroups[2].value.items.map((schema) => ({
-            id: schema.id,
-            kind: 'schema' as const,
-            status: schema.status,
-            route: `/admin/audit/schemas/${schema.id}`,
-            label: schema.programming_language || `Schema ${schema.id}`,
-          })),
-        );
-      }
-
-      if (taskGroups[3].status === 'fulfilled') {
-        tasks.push(
-          ...taskGroups[3].value.items.map((validation) => ({
-            id: validation.id,
-            kind: 'url-validation' as const,
-            status: validation.status,
-            route: `/admin/audit/url-validations/${validation.id}`,
-            label: validation.name_validation || `Validación ${validation.id}`,
-          })),
-        );
-      }
+      const tasks: TrackableTask[] = taskResults
+        .filter(
+          (result): result is PromiseFulfilledResult<TrackableTask | null> =>
+            result.status === 'fulfilled',
+        )
+        .map((result) => result.value)
+        .filter((task): task is TrackableTask => !!task);
 
       for (const task of tasks) {
         const key = this.buildTaskKey(task.kind, task.id);
@@ -193,6 +160,57 @@ export class TaskNotificationService {
       route: task.route,
       tag: this.buildTaskKey(task.kind, task.id),
     });
+  }
+
+  private async fetchTrackedTask(
+    kind: TrackableTaskKind,
+    id: string,
+  ): Promise<TrackableTask | null> {
+    try {
+      if (kind === 'audit') {
+        const audit = await this.auditRepository.find(id);
+        return {
+          id: audit.id,
+          kind,
+          status: audit.status,
+          route: `/admin/audit/${audit.id}`,
+          label: audit.web_page?.name || audit.web_page?.url || `Auditoría ${audit.id}`,
+        };
+      }
+
+      if (kind === 'comparison') {
+        const comparison = await this.auditRepository.findComparisons(id);
+        return {
+          id: comparison.id,
+          kind,
+          status: comparison.status,
+          route: `/admin/audit/comparisons/${comparison.id}`,
+          label: `Comparación ${comparison.id}`,
+        };
+      }
+
+      if (kind === 'schema') {
+        const schema = await this.auditSchemaRepository.find(id);
+        return {
+          id: schema.id,
+          kind,
+          status: schema.status,
+          route: `/admin/audit/schemas/${schema.id}`,
+          label: schema.programming_language || `Schema ${schema.id}`,
+        };
+      }
+
+      const validation = await this.auditUrlValidationRepository.find(id);
+      return {
+        id: validation.id,
+        kind,
+        status: validation.status,
+        route: `/admin/audit/url-validations/${validation.id}`,
+        label: validation.name_validation || `Validación ${validation.id}`,
+      };
+    } catch {
+      return null;
+    }
   }
 
   notifyTaskResult({
@@ -293,6 +311,21 @@ export class TaskNotificationService {
 
   private buildTaskKey(kind: TrackableTaskKind, id: string): string {
     return `${kind}:${id}`;
+  }
+
+  private parseTaskKey(key: string): { kind: TrackableTaskKind; id: string } | null {
+    const separatorIndex = key.indexOf(':');
+    if (separatorIndex <= 0) {
+      return null;
+    }
+
+    const kind = key.slice(0, separatorIndex) as TrackableTaskKind;
+    const id = key.slice(separatorIndex + 1);
+    if (!id) {
+      return null;
+    }
+
+    return { kind, id };
   }
 
   private normalizeStatus(status: string): StatusType | string {

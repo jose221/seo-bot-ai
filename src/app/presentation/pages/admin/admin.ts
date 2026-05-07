@@ -16,7 +16,7 @@ export class Admin implements OnInit, OnDestroy {
   notificationService = inject(TaskNotificationService);
 
   ngOnInit(): void {
-    this.notificationService.start();
+    this.notificationService.prepareNotifications();
   }
 
   ngOnDestroy(): void {
