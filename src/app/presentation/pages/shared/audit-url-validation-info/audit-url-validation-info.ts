@@ -163,6 +163,17 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
   });
 
   richResultsBatchCount = computed(() => this.selectedRichResultsUrls().size);
+  richResultsBatchProgress = computed(() => {
+    const selectedUrls = Array.from(this.selectedRichResultsUrls());
+    if (!selectedUrls.length) return 0;
+
+    const statusMap = this.richResultsStatusMap();
+    const totalProgress = selectedUrls.reduce(
+      (sum, url) => sum + (statusMap.get(url)?.progress_percentage ?? 0),
+      0,
+    );
+    return Math.round(totalProgress / selectedUrls.length);
+  });
 
   commentSummary = computed(() => {
     const schemas = this.data()?.schemas ?? [];
@@ -630,6 +641,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     return 'sv-secondary';
   }
 
+  getRichResultsStateProgress(url: string): number {
+    return Math.max(0, Math.min(100, this.richResultsStatusMap().get(url)?.progress_percentage ?? 0));
+  }
+
   getFilteredRichResults(url: string): RichResultsReportListItemModel[] {
     const selectedFilter = this.richResultsHistoryFilter();
     const reports = this.getRichResults(url);
@@ -664,6 +679,10 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
     if (state === 'error') return 'sv-danger';
     if (state === 'pending') return 'sv-info';
     return 'sv-secondary';
+  }
+
+  getRichResultsReportProgress(report: RichResultsReportListItemModel): number {
+    return Math.max(0, Math.min(100, report.progress_percentage ?? 0));
   }
 
   private startRichResultsPolling(): void {
@@ -912,6 +931,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
         state: 'none',
         report_id: null,
         report_status: null,
+        progress_percentage: 0,
         success: null,
         blocked_by_google: null,
         has_error: false,

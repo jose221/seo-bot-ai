@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS audit_url_validations (
 
     -- Estado
     status VARCHAR NOT NULL DEFAULT 'pending',
+    progress_percentage INTEGER NOT NULL DEFAULT 0,
 
     -- Severidad global (peor caso entre todas las URLs)
     global_severity VARCHAR,
@@ -41,4 +42,3 @@ CREATE INDEX IF NOT EXISTS idx_audit_url_validations_user_id ON audit_url_valida
 CREATE INDEX IF NOT EXISTS idx_audit_url_validations_source_type ON audit_url_validations(source_type);
 CREATE INDEX IF NOT EXISTS idx_audit_url_validations_source_id ON audit_url_validations(source_id);
 CREATE INDEX IF NOT EXISTS idx_audit_url_validations_status ON audit_url_validations(status);
-

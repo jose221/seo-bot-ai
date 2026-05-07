@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, String, Text
+from sqlalchemy import JSON, String, Text, Integer
 from sqlmodel import Column, Field, SQLModel
 from enum import Enum
 
@@ -31,6 +31,11 @@ class RichResultsReport(SQLModel, table=True):
     status: RichResultsReportStatus = Field(
         default=RichResultsReportStatus.PENDING,
         sa_column=Column(String, nullable=False, default=RichResultsReportStatus.PENDING.value, index=True),
+    )
+    progress_percentage: int = Field(
+        default=0,
+        sa_column=Column(Integer, nullable=False, default=0),
+        description="Porcentaje de avance del reporte Rich Results (0-100)",
     )
     input_type: str = Field(sa_column=Column(String, nullable=False))
     requested_ai_result: bool = Field(default=False)

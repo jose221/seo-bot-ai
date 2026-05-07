@@ -24,6 +24,22 @@ from sqlalchemy.orm import joinedload
 from sqlmodel import select
 
 
+def _clamp_progress(progress: int) -> int:
+    return max(0, min(100, int(progress)))
+
+
+def _calculate_in_progress_percentage(
+    completed_units: int,
+    total_units: int,
+    *,
+    max_percentage: int = 95,
+) -> int:
+    if total_units <= 0:
+        return 0
+    completed = max(0, min(completed_units, total_units))
+    return _clamp_progress(int((completed / total_units) * max_percentage))
+
+
 async def run_audit_task(
     audit_id: UUID,
     webpage: WebPage,
@@ -200,6 +216,7 @@ async def run_comparison_task(
 
             documentation_context = comparison.documentation_context
             comparison.status = ComparisonStatus.IN_PROGRESS
+            comparison.progress_percentage = 0
             session.add(comparison)
 
         print(f"🚀 Iniciando comparación {comparison_id}")
@@ -229,8 +246,11 @@ async def run_comparison_task(
         total_input_tokens = 0
         total_output_tokens = 0
 
+        total_steps = len(competitor_ids) + (1 if include_ai and token else 0)
+        completed_steps = 0
+
         with db_manager.sync_session_context() as session:
-            for competitor_id in competitor_ids:
+            for competitor_index, competitor_id in enumerate(competitor_ids, start=1):
                 try:
                     competitor_webpage = session.get(WebPage, competitor_id)
                     if not competitor_webpage:
@@ -296,7 +316,16 @@ async def run_comparison_task(
 
                 except Exception as e:
                     print(f"❌ Error procesando competidor {competitor_id}: {e}")
-                    continue
+                finally:
+                    completed_steps = competitor_index
+                    with db_manager.sync_session_context() as progress_session:
+                        progress_comparison = progress_session.get(AuditComparison, comparison_id)
+                        if progress_comparison:
+                            progress_comparison.progress_percentage = _calculate_in_progress_percentage(
+                                completed_steps,
+                                total_steps or len(competitor_ids) or 1,
+                            )
+                            progress_session.add(progress_comparison)
 
         if not comparisons:
             raise Exception("No se pudieron generar comparaciones")
@@ -322,6 +351,15 @@ async def run_comparison_task(
                 total_output_tokens += schema_usage.get('completion_tokens', 0)
             else:
                 ai_schema_comparison_text = str(ai_schema_comparison)
+            completed_steps += 1
+            with db_manager.sync_session_context() as progress_session:
+                progress_comparison = progress_session.get(AuditComparison, comparison_id)
+                if progress_comparison:
+                    progress_comparison.progress_percentage = _calculate_in_progress_percentage(
+                        completed_steps,
+                        total_steps or 1,
+                    )
+                    progress_session.add(progress_comparison)
         except Exception as e:
              print(f"⚠️ Error generando comparación de schemas con IA: {e}")
              ai_schema_comparison_text = f"No se pudo generar el análisis de IA para schemas debido a un error en el servicio. {e}"
@@ -345,6 +383,7 @@ async def run_comparison_task(
             comparison = session.get(AuditComparison, comparison_id)
             if comparison:
                 comparison.status = ComparisonStatus.COMPLETED
+                comparison.progress_percentage = 100
                 comparison.comparison_result = comparison_result
                 comparison.completed_at = datetime.utcnow()
 
@@ -375,6 +414,7 @@ async def run_comparison_task(
 
                 if comparison:
                     comparison.status = ComparisonStatus.FAILED
+                    comparison.progress_percentage = _clamp_progress(comparison.progress_percentage or 0)
                     comparison.error_message = str(e)
                     comparison.completed_at = datetime.utcnow()
                     session.add(comparison)
@@ -539,6 +579,10 @@ async def run_url_validation_task(
                 print(f"❌ No se encontró url_validation {validation_id}")
                 return
             validation.status = UrlValidationStatus.IN_PROGRESS
+            validation.progress_percentage = 0
+            validation.results_json = []
+            validation.global_severity = None
+            validation.error_message = None
             session.add(validation)
 
         service = get_url_validation_service()
@@ -648,6 +692,17 @@ async def run_url_validation_task(
                 total_input_tokens += in_tok
                 total_output_tokens += out_tok
             processed += len(chunk)
+            with db_manager.sync_session_context() as progress_session:
+                progress_validation = progress_session.get(AuditUrlValidation, validation_id)
+                if progress_validation:
+                    progress_validation.progress_percentage = _calculate_in_progress_percentage(
+                        processed,
+                        total_urls + 1,
+                    )
+                    progress_validation.results_json = list(results)
+                    progress_validation.input_tokens = total_input_tokens
+                    progress_validation.output_tokens = total_output_tokens
+                    progress_session.add(progress_validation)
 
             # Delay entre grupos (no dentro del grupo)
             if batch_num < len(chunks):
@@ -684,6 +739,7 @@ async def run_url_validation_task(
             validation = session.get(AuditUrlValidation, validation_id)
             if validation:
                 validation.status = UrlValidationStatus.COMPLETED
+                validation.progress_percentage = 100
                 validation.results_json = results
                 validation.global_severity = global_severity
                 validation.input_tokens = total_input_tokens
@@ -708,6 +764,7 @@ async def run_url_validation_task(
                     validation = session.get(AuditUrlValidation, validation_id)
                 if validation:
                     validation.status = UrlValidationStatus.FAILED
+                    validation.progress_percentage = _clamp_progress(validation.progress_percentage or 0)
                     validation.error_message = str(e)
                     validation.completed_at = datetime.utcnow()
                     session.add(validation)
@@ -796,6 +853,8 @@ async def run_url_validation_single_url_task(
                 print(f"❌ run_url_validation_single_url_task: validación {validation_id} no encontrada")
                 return
             validation.status = UrlValidationStatus.IN_PROGRESS
+            validation.progress_percentage = 0
+            validation.error_message = None
             session.add(validation)
 
         service = get_url_validation_service()
@@ -896,6 +955,7 @@ async def run_url_validation_single_url_task(
             validation.global_report_pdf_path = None
             validation.global_report_word_path = None
             validation.status = UrlValidationStatus.COMPLETED
+            validation.progress_percentage = 100
             validation.completed_at = datetime.utcnow()
             session.add(validation)
 
@@ -909,6 +969,7 @@ async def run_url_validation_single_url_task(
                 validation = session.get(AuditUrlValidation, validation_id)
                 if validation:
                     validation.status = UrlValidationStatus.FAILED
+                    validation.progress_percentage = _clamp_progress(validation.progress_percentage or 0)
                     validation.error_message = str(e)
                     session.add(validation)
         except Exception as inner:

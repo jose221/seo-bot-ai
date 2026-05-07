@@ -317,6 +317,7 @@ class ComparisonTaskResponse(BaseModel):
     """Respuesta inmediata al iniciar comparación"""
     task_id: UUID
     status: ComparisonStatus
+    progress_percentage: int = 0
     message: str = "Comparación iniciada en segundo plano"
 
     class Config:
@@ -334,6 +335,7 @@ class ComparisonListItem(BaseModel):
     id: UUID
     base_web_page_id: UUID
     status: ComparisonStatus
+    progress_percentage: int = 0
     created_at: datetime
     completed_at: Optional[datetime]
     # Datos del resultado si está completado
@@ -366,6 +368,7 @@ class ComparisonDetailResponse(BaseModel):
     id: UUID
     base_web_page_id: UUID
     status: ComparisonStatus
+    progress_percentage: int = 0
     created_at: datetime
     completed_at: Optional[datetime]
     comparison_result: Optional[AuditComparisonResponse] = None
@@ -515,6 +518,7 @@ class AuditUrlValidationTaskResponse(BaseModel):
     """Respuesta inmediata al iniciar validación de URLs"""
     task_id: UUID
     status: UrlValidationStatus
+    progress_percentage: int = 0
     total_urls: int
     message: str = "Validación de URLs iniciada en segundo plano"
 
@@ -527,6 +531,7 @@ class AuditUrlValidationListItem(BaseModel):
     name_validation: str
     description_validation: Optional[str] = None
     status: UrlValidationStatus
+    progress_percentage: int = 0
     global_severity: Optional[str] = None
     input_tokens: Optional[int] = 0
     output_tokens: Optional[int] = 0
@@ -565,6 +570,7 @@ class AuditUrlValidationSchemasResponse(BaseModel):
     validation_id: UUID
     name_validation: str
     status: UrlValidationStatus
+    progress_percentage: int = 0
     global_severity: Optional[str] = None
     total: int
     schemas: List[AuditUrlValidationSchemaItem]
@@ -580,6 +586,7 @@ class AuditUrlValidationDetailResponse(BaseModel):
     description_validation: Optional[str] = None
     ai_instruction: Optional[str] = None
     status: UrlValidationStatus
+    progress_percentage: int = 0
     global_severity: Optional[str] = None
     results_json: Optional[Any] = None
     input_tokens: Optional[int] = 0

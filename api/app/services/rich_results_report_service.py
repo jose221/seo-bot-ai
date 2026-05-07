@@ -36,6 +36,10 @@ class RichResultsReportService:
     CLEANUP_INTERVAL_SECONDS = 24 * 60 * 60
     BATCH_SCRAPING_CONCURRENCY = 7
 
+    @staticmethod
+    def _clamp_progress(progress: int) -> int:
+        return max(0, min(100, int(progress)))
+
     async def save_report(
         self,
         session,
@@ -81,6 +85,7 @@ class RichResultsReportService:
             user_id=user_id,
             url=self._normalize_url(payload.content),
             status=RichResultsReportStatus.PENDING,
+            progress_percentage=0,
             input_type="url",
             requested_ai_result=payload.get_ai_result,
             success=False,
@@ -107,6 +112,7 @@ class RichResultsReportService:
                 RichResultsReport.id,
                 RichResultsReport.url,
                 RichResultsReport.status,
+                RichResultsReport.progress_percentage,
                 RichResultsReport.input_type,
                 RichResultsReport.requested_ai_result,
                 RichResultsReport.success,
@@ -151,6 +157,7 @@ class RichResultsReportService:
                 id=row.id,
                 url=row.url,
                 status=row.status,
+                progress_percentage=row.progress_percentage,
                 input_type=row.input_type,
                 requested_ai_result=row.requested_ai_result,
                 success=row.success,
@@ -225,6 +232,7 @@ class RichResultsReportService:
                     state=state,
                     report_id=report.id if report else None,
                     report_status=report.status if report else None,
+                    progress_percentage=report.progress_percentage if report else 0,
                     success=report.success if report else None,
                     blocked_by_google=report.blocked_by_google if report else None,
                     has_error=bool(report.error_message) if report else False,
@@ -303,6 +311,7 @@ class RichResultsReportService:
                 if not report:
                     return
                 report.status = RichResultsReportStatus.IN_PROGRESS
+                report.progress_percentage = 10
                 report.method_used = "processing"
                 report.message = "Generando reporte de Google Rich Results"
                 session.add(report)
@@ -311,11 +320,18 @@ class RichResultsReportService:
 
             with db_manager.sync_session_context() as session:
                 report = session.get(RichResultsReport, report_id)
+                if report:
+                    report.progress_percentage = 90 if payload.get_ai_result else 80
+                    session.add(report)
+
+            with db_manager.sync_session_context() as session:
+                report = session.get(RichResultsReport, report_id)
                 if not report:
                     return
 
                 ai_result = response.get_ai_result
                 report.status = RichResultsReportStatus.COMPLETED
+                report.progress_percentage = 100
                 report.input_type = response.input_type
                 report.requested_ai_result = payload.get_ai_result
                 report.success = response.success
@@ -339,6 +355,7 @@ class RichResultsReportService:
                     return
                 report.status = RichResultsReportStatus.FAILED
                 report.success = False
+                report.progress_percentage = self._clamp_progress(report.progress_percentage or 0)
                 report.method_used = "failed"
                 report.message = "No fue posible generar el reporte de Google Rich Results"
                 report.error_message = str(exc)
@@ -426,6 +443,7 @@ class RichResultsReportService:
             id=report.id,
             url=report.url,
             status=report.status,
+            progress_percentage=report.progress_percentage,
             input_type=report.input_type,
             requested_ai_result=report.requested_ai_result,
             success=report.success,

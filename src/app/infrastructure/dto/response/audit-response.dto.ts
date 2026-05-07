@@ -34,6 +34,7 @@ export interface CreateCompareAuditResponseDto {
   message: string
   status: string
   task_id: string
+  progress_percentage: number
 
 }
 
@@ -41,6 +42,7 @@ export interface CompareAuditResponseDto{
   id: string
   base_web_page_id: string
   status: string
+  progress_percentage: number
   created_at: string
   completed_at: string
   base_url: string
@@ -67,6 +69,7 @@ export interface FindCompareAuditResponseDto {
   id: string
   base_web_page_id: string
   status: string
+  progress_percentage: number
   created_at: string
   completed_at: string
   comparison_result: ComparisonResultDto

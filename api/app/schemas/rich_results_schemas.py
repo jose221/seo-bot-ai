@@ -122,6 +122,7 @@ class RichResultsReportResponse(BaseModel):
 class RichResultsReportTaskResponse(BaseModel):
     task_id: UUID
     status: RichResultsReportStatus
+    progress_percentage: int = 0
     url: str
     message: str = "Reporte de Google Rich Results iniciado en segundo plano"
 
@@ -137,6 +138,7 @@ class RichResultsReportListItem(BaseModel):
     id: UUID
     url: str
     status: RichResultsReportStatus
+    progress_percentage: int = 0
     input_type: str
     requested_ai_result: bool = False
     success: bool
@@ -159,6 +161,7 @@ class RichResultsReportDetailResponse(BaseModel):
     id: UUID
     url: str
     status: RichResultsReportStatus
+    progress_percentage: int = 0
     input_type: str
     requested_ai_result: bool = False
     success: bool
@@ -186,6 +189,7 @@ class RichResultsReportStatusSummaryItem(BaseModel):
     state: str
     report_id: Optional[UUID] = None
     report_status: Optional[RichResultsReportStatus] = None
+    progress_percentage: int = 0
     success: Optional[bool] = None
     blocked_by_google: Optional[bool] = None
     has_error: bool = False

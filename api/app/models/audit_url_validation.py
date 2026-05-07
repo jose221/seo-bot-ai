@@ -3,7 +3,7 @@ Modelo de Validación de Schemas por URL.
 Almacena los resultados de validación batch de N URLs contra un source.
 """
 from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import JSON, String
+from sqlalchemy import JSON, String, Integer
 from typing import Optional, Any
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -66,6 +66,11 @@ class AuditUrlValidation(SQLModel, table=True):
         default=UrlValidationStatus.PENDING,
         sa_column=Column(String, nullable=False, default=UrlValidationStatus.PENDING.value)
     )
+    progress_percentage: int = Field(
+        default=0,
+        sa_column=Column(Integer, nullable=False, default=0),
+        description="Porcentaje de avance del proceso batch (0-100)",
+    )
 
     # Severidad global (peor caso entre todas las URLs)
     global_severity: Optional[str] = Field(
@@ -102,4 +107,3 @@ class AuditUrlValidation(SQLModel, table=True):
     error_message: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     completed_at: Optional[datetime] = None
-

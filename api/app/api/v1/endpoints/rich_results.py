@@ -56,6 +56,7 @@ async def report_page(
     return RichResultsReportTaskResponse(
         task_id=report.id,
         status=report.status,
+        progress_percentage=report.progress_percentage,
         url=report.url,
         message="Reporte de Google Rich Results encolado",
     )
@@ -92,6 +93,7 @@ async def report_page_batch(
             RichResultsReportTaskResponse(
                 task_id=report.id,
                 status=report.status,
+                progress_percentage=report.progress_percentage,
                 url=report.url,
                 message="Reporte de Google Rich Results encolado",
             )

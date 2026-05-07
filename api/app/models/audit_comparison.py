@@ -3,7 +3,7 @@ Modelo de Comparación de Auditorías.
 Almacena resultados de comparaciones entre auditorías.
 """
 from sqlmodel import SQLModel, Field, Column
-from sqlalchemy import JSON, String
+from sqlalchemy import JSON, String, Integer
 from typing import Optional, Dict, Any
 from uuid import UUID, uuid4
 from datetime import datetime
@@ -42,6 +42,11 @@ class AuditComparison(SQLModel, table=True):
     status: ComparisonStatus = Field(
         default=ComparisonStatus.PENDING,
         sa_column=Column(String, nullable=False, default=ComparisonStatus.PENDING.value)
+    )
+    progress_percentage: int = Field(
+        default=0,
+        sa_column=Column(Integer, nullable=False, default=0),
+        description="Porcentaje de avance del proceso de comparación (0-100)",
     )
 
     # Resultado de la comparación (JSONB)

@@ -428,6 +428,7 @@ async def list_comparisons(
         AuditComparison.id,
         AuditComparison.base_web_page_id,
         AuditComparison.status,
+        AuditComparison.progress_percentage,
         AuditComparison.created_at,
         AuditComparison.completed_at,
         AuditComparison.error_message,
@@ -455,6 +456,7 @@ async def list_comparisons(
             id=comp.id,
             base_web_page_id=comp.base_web_page_id,
             status=comp.status,
+            progress_percentage=comp.progress_percentage,
             created_at=comp.created_at,
             completed_at=comp.completed_at,
             base_url=comp.base_url,
@@ -511,6 +513,7 @@ async def get_comparison(
         id=comparison.id,
         base_web_page_id=comparison.base_web_page_id,
         status=comparison.status,
+        progress_percentage=comparison.progress_percentage,
         created_at=comparison.created_at,
         completed_at=comparison.completed_at,
         comparison_result=comparison_result,
@@ -806,6 +809,7 @@ async def create_url_validation(
     return audit_schemas.AuditUrlValidationTaskResponse(
         task_id=validation.id,
         status=validation.status,
+        progress_percentage=validation.progress_percentage,
         total_urls=len(urls),
         message=f"Validación iniciada para {len(urls)} URLs — {request_body.name_validation}",
     )
@@ -844,6 +848,7 @@ async def list_url_validations(
             name_validation,
             description_validation,
             status,
+            progress_percentage,
             global_severity,
             input_tokens,
             output_tokens,
@@ -873,6 +878,7 @@ async def list_url_validations(
                 name_validation=row["name_validation"],
                 description_validation=row["description_validation"],
                 status=row["status"],
+                progress_percentage=row["progress_percentage"],
                 global_severity=row["global_severity"],
                 input_tokens=row["input_tokens"],
                 output_tokens=row["output_tokens"],
@@ -1148,6 +1154,7 @@ async def rerun_url_validation_single(
     return audit_schemas.AuditUrlValidationTaskResponse(
         task_id=validation.id,
         status=UrlValidationStatus.IN_PROGRESS,
+        progress_percentage=validation.progress_percentage,
         total_urls=1,
         message=f"Re-análisis iniciado para: {url}",
     )
@@ -1195,6 +1202,7 @@ async def list_url_validation_schemas(
         validation_id=validation.id,
         name_validation=validation.name_validation,
         status=validation.status,
+        progress_percentage=validation.progress_percentage,
         global_severity=validation.global_severity,
         total=len(schemas),
         schemas=schemas,
@@ -1242,6 +1250,7 @@ async def list_url_validation_schemas_public(
         validation_id=validation.id,
         name_validation=validation.name_validation,
         status=validation.status,
+        progress_percentage=validation.progress_percentage,
         global_severity=validation.global_severity,
         total=len(schemas),
         schemas=schemas,
@@ -1641,7 +1650,8 @@ async def audits_compare(
         competitor_web_page_ids=[str(id) for id in audit_request.web_page_id_to_compare],
         include_ai_analysis=audit_request.include_ai_analysis,
         documentation_context=audit_request.documentation_context,
-        status=ComparisonStatus.PENDING
+        status=ComparisonStatus.PENDING,
+        progress_percentage=0,
     )
 
     session.add(comparison)
@@ -1665,5 +1675,6 @@ async def audits_compare(
     return audit_schemas.ComparisonTaskResponse(
         task_id=comparison.id,
         status=comparison.status,
+        progress_percentage=comparison.progress_percentage,
         message=f"Comparación iniciada para {base_webpage.url} vs {len(audit_request.web_page_id_to_compare)} competidores"
     )

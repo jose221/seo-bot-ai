@@ -7,6 +7,7 @@ export class AuditUrlValidationItemResponseModel {
     public name_validation: string,
     public description_validation: string,
     public status: string,
+    public progress_percentage: number,
     public global_severity: string | null,
     public input_tokens: number | null,
     public output_tokens: number | null,
@@ -37,6 +38,7 @@ export class CreateAuditUrlValidationResponseModel {
     public name_validation: string,
     public description_validation: string,
     public status: string,
+    public progress_percentage: number,
     public created_at: string,
     public completed_at: string | null,
     public error_message: string | null
@@ -54,6 +56,7 @@ export class FindAuditUrlValidationResponseModel {
     public description_validation: string,
     public ai_instruction: string,
     public status: string,
+    public progress_percentage: number,
     public global_severity: string | null,
     public results_json: any | null,
     public input_tokens: number | null,
@@ -113,6 +116,7 @@ export class RerunValidationResponseModel {
   constructor(
     public task_id: string,
     public status: string,
+    public progress_percentage: number,
     public total_urls: number,
     public message: string
   ) {}
@@ -137,10 +141,10 @@ export class AuditUrlValidationSchemasResponseModel {
     public validation_id: string,
     public name_validation: string,
     public status: string,
+    public progress_percentage: number,
     public global_severity: string | null,
     public total: number,
     public schemas: AuditUrlValidationSchemaItemModel[],
     public source_id?: string
   ) {}
 }
-

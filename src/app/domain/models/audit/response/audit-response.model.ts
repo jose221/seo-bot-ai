@@ -39,7 +39,8 @@ export class CreateCompareAuditResponseModel {
   constructor(
     public message: string,
     public status: string,
-    public task_id: string
+    public task_id: string,
+    public progress_percentage: number = 0,
   ) {
   }
 
@@ -50,6 +51,7 @@ export class CompareAuditResponseModel{
     public id: string,
     public base_web_page_id: string,
     public status: string,
+    public progress_percentage: number,
     public created_at: string,
     public completed_at: string,
     public base_url: string,
@@ -84,6 +86,7 @@ export class FindCompareAuditResponseModel {
     public id: string,
     public base_web_page_id: string,
     public status: string,
+    public progress_percentage: number,
     public created_at: string,
     public completed_at: string,
     public comparison_result: ComparisonResultModel,

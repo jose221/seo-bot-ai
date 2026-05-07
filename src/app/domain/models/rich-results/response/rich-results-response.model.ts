@@ -2,6 +2,7 @@ export class RichResultsReportTaskResponseModel {
   constructor(
     public task_id: string,
     public status: string,
+    public progress_percentage: number,
     public url: string,
     public message: string,
   ) {}
@@ -22,6 +23,7 @@ export class RichResultsReportStatusSummaryItemModel {
     public state: string,
     public report_id: string | null,
     public report_status: string | null,
+    public progress_percentage: number,
     public success: boolean | null,
     public blocked_by_google: boolean | null,
     public has_error: boolean,
@@ -40,6 +42,7 @@ export class RichResultsReportListItemModel {
     public id: string,
     public url: string,
     public status: string,
+    public progress_percentage: number,
     public input_type: string,
     public requested_ai_result: boolean,
     public success: boolean,
@@ -82,6 +85,7 @@ export class RichResultsReportDetailResponseModel {
     public id: string,
     public url: string,
     public status: string,
+    public progress_percentage: number,
     public input_type: string,
     public requested_ai_result: boolean,
     public success: boolean,

@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS rich_results_reports (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     url TEXT NOT NULL,
     status VARCHAR NOT NULL DEFAULT 'pending',
+    progress_percentage INTEGER NOT NULL DEFAULT 0,
     input_type VARCHAR NOT NULL,
     requested_ai_result BOOLEAN NOT NULL DEFAULT FALSE,
     success BOOLEAN NOT NULL DEFAULT FALSE,

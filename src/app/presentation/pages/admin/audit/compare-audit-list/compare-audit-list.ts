@@ -64,6 +64,13 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
         },
       },
       {
+        key: 'progress_percentage',
+        name: 'Progreso',
+        type: 'text',
+        innerHtml: (element: CompareAuditResponseModel) =>
+          this.renderProgress(element.progress_percentage, element.status),
+      },
+      {
         key: 'total_competitors',
         name: 'Total Competidores',
         type: 'number'
@@ -128,6 +135,25 @@ export class CompareAuditList  extends ListDefaultBase<CompareAuditResponseModel
   _auditRepository = inject(AuditRepository)
   constructor() {
     super();
+  }
+
+  private renderProgress(progress: number | null | undefined, status: string): string {
+    const value = Math.max(0, Math.min(100, Number(progress ?? 0)));
+    const barClass =
+      status === 'completed'
+        ? 'bg-success'
+        : status === 'failed'
+          ? 'bg-danger'
+          : 'bg-info';
+
+    return `
+      <div class="d-flex flex-column gap-1 align-items-center">
+        <span class="small fw-semibold">${value}%</span>
+        <div class="progress w-100" style="min-width: 120px; height: 8px;">
+          <div class="progress-bar ${barClass}" role="progressbar" style="width: ${value}%"></div>
+        </div>
+      </div>
+    `;
   }
 
   override async ngOnInit() {
