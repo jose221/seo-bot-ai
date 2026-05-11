@@ -17,8 +17,10 @@ class StructuredValidationInputMode(str, Enum):
 class StructuredValidationTaskStatus(str, Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
+    PAUSED = "paused"
     COMPLETED = "completed"
     FAILED = "failed"
+    CANCELLED = "cancelled"
 
 
 class StructuredValidationTask(SQLModel, table=True):

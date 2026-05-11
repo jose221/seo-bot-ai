@@ -10,12 +10,14 @@ from sqlmodel import select
 from app.api.deps import get_current_user
 from app.core.database import get_session
 from app.models.structured_validation_comment import StructuredValidationComment
-from app.models.structured_validation_task import StructuredValidationTask
+from app.models.structured_validation_task import StructuredValidationTask, StructuredValidationTaskStatus
 from app.models.url_validation_comment import CommentStatus
 from app.models.user import User
 from app.schemas.rich_results_schemas import RichResultsReportRequest
 from app.schemas.audit_schemas import CommentListResponse, CommentResponse
 from app.schemas.structured_validation_schemas import (
+    StructuredValidationTaskAction,
+    StructuredValidationTaskActionRequest,
     StructuredValidationCommentAnswerRequest,
     StructuredValidationCreateRequest,
     StructuredValidationDeleteResponse,
@@ -146,6 +148,45 @@ async def get_structured_validation_task_public(
     return get_structured_validation_task_service().build_legacy_response(report)
 
 
+@router.post("/{task_id}/actions", response_model=StructuredValidationTaskResponse)
+async def control_structured_validation_task(
+    task_id: UUID,
+    body: StructuredValidationTaskActionRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user),
+    session=Depends(get_session),
+):
+    task_service = get_structured_validation_task_service()
+    task = await task_service.get_task(session, task_id=task_id, user_id=current_user.id)
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada o no controlable")
+
+    try:
+        if body.action == StructuredValidationTaskAction.PAUSE:
+            task = await task_service.pause_task(session, task=task)
+        elif body.action == StructuredValidationTaskAction.RESUME:
+            task = await task_service.resume_task(session, task=task)
+        elif body.action == StructuredValidationTaskAction.CANCEL:
+            task = await task_service.cancel_task(session, task=task)
+        else:
+            if task.status in {
+                StructuredValidationTaskStatus.PENDING,
+                StructuredValidationTaskStatus.IN_PROGRESS,
+                StructuredValidationTaskStatus.PAUSED,
+            }:
+                raise ValueError("No puedes reiniciar una tarea activa; primero pausala o cancelala")
+            task = await task_service.rerun_task(session, task=task)
+            background_tasks.add_task(
+                task_service.run_task,
+                task_id=task.id,
+                token=getattr(current_user, "_token", None) or "",
+            )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+    return task_service.build_task_response(task)
+
+
 @router.post("/{task_id}/rerun", response_model=StructuredValidationRerunResponse, status_code=status.HTTP_202_ACCEPTED)
 async def rerun_structured_validation_task(
     task_id: UUID,
@@ -153,11 +194,21 @@ async def rerun_structured_validation_task(
     current_user: User = Depends(get_current_user),
     session=Depends(get_session),
 ):
-    task = await get_structured_validation_task_service().get_task(session, task_id=task_id, user_id=current_user.id)
+    task_service = get_structured_validation_task_service()
+    task = await task_service.get_task(session, task_id=task_id, user_id=current_user.id)
     if task:
-        task = await get_structured_validation_task_service().rerun_task(session, task=task)
+        if task.status in {
+            StructuredValidationTaskStatus.PENDING,
+            StructuredValidationTaskStatus.IN_PROGRESS,
+            StructuredValidationTaskStatus.PAUSED,
+        }:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="No puedes reiniciar una tarea activa; primero pausala o cancelala",
+            )
+        task = await task_service.rerun_task(session, task=task)
         background_tasks.add_task(
-            get_structured_validation_task_service().run_task,
+            task_service.run_task,
             task_id=task.id,
             token=getattr(current_user, "_token", None) or "",
         )

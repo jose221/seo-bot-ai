@@ -28,9 +28,28 @@
         <button type="button" class="btn btn-outline-secondary" (click)="cloneTask()">
           <i class="bi bi-files me-1"></i>Clonar
         </button>
-        <button type="button" class="btn btn-primary" (click)="rerunSameTask()">
-          <i class="bi bi-arrow-repeat me-1"></i>Re-ejecutar
-        </button>
+        @if (task()?.supports_runtime_control) {
+          @if (canPauseTask()) {
+            <button type="button" class="btn btn-outline-warning" [disabled]="isTaskActionLoading('pause')" (click)="pauseTask()">
+              <i class="bi bi-pause-circle me-1"></i>Pausar
+            </button>
+          }
+          @if (canResumeTask()) {
+            <button type="button" class="btn btn-outline-info" [disabled]="isTaskActionLoading('resume')" (click)="resumeTask()">
+              <i class="bi bi-play-circle me-1"></i>Reanudar
+            </button>
+          }
+          @if (canCancelTask()) {
+            <button type="button" class="btn btn-outline-danger" [disabled]="isTaskActionLoading('cancel')" (click)="cancelTask()">
+              <i class="bi bi-stop-circle me-1"></i>Cancelar
+            </button>
+          }
+        }
+        @if (canRestartTask()) {
+          <button type="button" class="btn btn-primary" [disabled]="isTaskActionLoading('rerun')" (click)="rerunSameTask()">
+            <i class="bi bi-arrow-repeat me-1"></i>{{ task()?.supports_runtime_control ? 'Reiniciar' : 'Re-ejecutar' }}
+          </button>
+        }
       }
     </div>
   </div>

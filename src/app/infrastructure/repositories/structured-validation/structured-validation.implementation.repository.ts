@@ -14,6 +14,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationTaskControlAction,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
   StructuredValidationTaskListResponseModel,
@@ -43,6 +44,10 @@ export class StructuredValidationImplementationRepository implements StructuredV
 
   getLogs(id: string): Promise<TaskLogListResponseModel> {
     return this.primaryService.getLogs(id);
+  }
+
+  controlTask(id: string, action: StructuredValidationTaskControlAction): Promise<StructuredValidationTaskResponseModel> {
+    return this.primaryService.controlTask(id, action);
   }
 
   rerun(id: string): Promise<StructuredValidationRerunResponseModel> {

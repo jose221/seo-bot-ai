@@ -53,7 +53,12 @@
                   }
                 </td>
                 <td><span class="badge text-bg-light text-uppercase">{{ item.input_mode }}</span></td>
-                <td><span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span></td>
+                <td>
+                  <div class="d-flex flex-column gap-1 align-items-start">
+                    <span class="badge" [ngClass]="getStatusClass(item.status)">{{ item.status }}</span>
+                    <span class="badge text-bg-light">{{ item.task_kind === 'structured_validation_task' ? 'Controlable' : 'Legacy' }}</span>
+                  </div>
+                </td>
                 <td style="min-width: 180px;">
                   <div class="small fw-semibold mb-1">{{ item.progress_percentage }}%</div>
                   <div class="progress" style="height: 8px;">
@@ -79,7 +84,20 @@
                     <a [routerLink]="['/admin/audit/structured-validations', item.id, 'info']" class="btn btn-sm btn-outline-primary">Ver detalle</a>
                     <button type="button" class="btn btn-sm btn-outline-dark" (click)="showTaskMessage(item)">Ver mensaje</button>
                     <button type="button" class="btn btn-sm btn-outline-secondary" (click)="openClone(item)">Clonar</button>
-                    <button type="button" class="btn btn-sm btn-outline-success" (click)="rerun(item)">Re-ejecutar</button>
+                    @if (canPause(item)) {
+                      <button type="button" class="btn btn-sm btn-outline-warning" [disabled]="isActionLoading(item, 'pause')" (click)="pause(item)">Pausar</button>
+                    }
+                    @if (canResume(item)) {
+                      <button type="button" class="btn btn-sm btn-outline-info" [disabled]="isActionLoading(item, 'resume')" (click)="resume(item)">Reanudar</button>
+                    }
+                    @if (canCancel(item)) {
+                      <button type="button" class="btn btn-sm btn-outline-danger" [disabled]="isActionLoading(item, 'cancel')" (click)="cancel(item)">Cancelar</button>
+                    }
+                    @if (canRestart(item)) {
+                      <button type="button" class="btn btn-sm btn-outline-success" [disabled]="isActionLoading(item, 'rerun')" (click)="rerun(item)">
+                        {{ item.supports_runtime_control ? 'Reiniciar' : 'Re-ejecutar' }}
+                      </button>
+                    }
                     <button type="button" class="btn btn-sm btn-outline-danger" (click)="remove(item)">Eliminar</button>
                   </div>
                 </td>

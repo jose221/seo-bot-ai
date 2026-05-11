@@ -45,6 +45,8 @@ export class StructuredValidationTaskItemModel {
 export class StructuredValidationTaskResponseModel {
   constructor(
     public id: string,
+    public task_kind: string,
+    public supports_runtime_control: boolean,
     public input_mode: 'url' | 'html',
     public name: string,
     public description: string | null,
@@ -73,6 +75,8 @@ export class StructuredValidationTaskResponseModel {
 export class StructuredValidationTaskListItemModel {
   constructor(
     public id: string,
+    public task_kind: string,
+    public supports_runtime_control: boolean,
     public input_mode: 'url' | 'html',
     public name: string,
     public description: string | null,
@@ -120,3 +124,5 @@ export class StructuredValidationRerunResponseModel {
     public message: string,
   ) {}
 }
+
+export type StructuredValidationTaskControlAction = 'pause' | 'resume' | 'cancel' | 'restart';

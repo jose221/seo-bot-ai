@@ -16,6 +16,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationTaskControlAction,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
   StructuredValidationTaskListResponseModel,
@@ -109,6 +110,19 @@ export class StructuredValidationService extends BaseService {
         ),
       ),
     );
+  }
+
+  async controlTask(
+    id: string,
+    action: StructuredValidationTaskControlAction,
+  ): Promise<StructuredValidationTaskResponseModel> {
+    const response = await this.httpService.post<StructuredValidationTaskResponseDto>(
+      `${this.endpoint}/${id}/actions`,
+      { action },
+      {},
+      this.getToken,
+    );
+    return this.mapper.mapResponseTask(response);
   }
 
   async rerun(id: string): Promise<StructuredValidationRerunResponseModel> {

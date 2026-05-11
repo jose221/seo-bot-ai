@@ -5,7 +5,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MarkdownModule } from 'ngx-markdown';
 import { environment } from '@/environments/environment';
 import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
-import { StructuredValidationTaskItemModel, StructuredValidationTaskResponseModel } from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
+import {
+  StructuredValidationTaskControlAction,
+  StructuredValidationTaskItemModel,
+  StructuredValidationTaskResponseModel,
+} from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
 import { AnswerCommentRequestModel, CreatePublicCommentRequestModel } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import { PublicCommentItemModel } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import { RichResultsScreenshotModel, RichResultsValidatorDetailModel } from '@/app/domain/models/rich-results/response/rich-results-response.model';
@@ -38,6 +42,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   readonly commentDrafts = signal<Record<string, string>>({});
   readonly answerDrafts = signal<Record<string, string>>({});
   readonly answerStatuses = signal<Record<string, string>>({});
+  readonly activeTaskAction = signal<StructuredValidationTaskControlAction | 'rerun' | null>(null);
   private readonly apiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -64,7 +69,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
     };
 
     for (const item of items) {
-      if (['pending', 'in_progress'].includes(this.task()?.status ?? '') && !item.report.google_validation.executed && !item.report.schema_org_validation.executed && !item.success) {
+      if (['pending', 'in_progress', 'paused'].includes(this.task()?.status ?? '') && !item.report.google_validation.executed && !item.report.schema_org_validation.executed && !item.success) {
         counts.pending += 1;
         continue;
       }
@@ -98,7 +103,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.pollTimer = setInterval(async () => {
       const task = this.task();
-      if (!task || !['pending', 'in_progress'].includes(task.status)) return;
+      if (!task || !['pending', 'in_progress', 'paused'].includes(task.status)) return;
       await this.load(id, true);
     }, 10000);
   }
@@ -141,8 +146,10 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   getStatusClass(status: string): string {
     const map: Record<string, string> = {
       completed: 'sv-badge sv-badge--success',
+      cancelled: 'sv-badge sv-badge--neutral',
       failed: 'sv-badge sv-badge--danger',
       in_progress: 'sv-badge sv-badge--info',
+      paused: 'sv-badge sv-badge--warning',
       pending: 'sv-badge sv-badge--warning',
     };
     return map[status] ?? 'sv-badge sv-badge--neutral';
@@ -186,11 +193,39 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   }
 
   getReadableStatus(status: string): string {
+    if (status === 'cancelled') return 'Cancelada';
     if (status === 'completed') return 'Completada';
     if (status === 'failed') return 'Fallida';
     if (status === 'in_progress') return 'En progreso';
+    if (status === 'paused') return 'Pausada';
     if (status === 'pending') return 'Pendiente';
     return status;
+  }
+
+  isTaskActionLoading(action: StructuredValidationTaskControlAction | 'rerun'): boolean {
+    return this.activeTaskAction() === action;
+  }
+
+  canPauseTask(): boolean {
+    const task = this.task();
+    return !!task?.supports_runtime_control && ['pending', 'in_progress'].includes(task.status);
+  }
+
+  canResumeTask(): boolean {
+    const task = this.task();
+    return !!task?.supports_runtime_control && task.status === 'paused';
+  }
+
+  canCancelTask(): boolean {
+    const task = this.task();
+    return !!task?.supports_runtime_control && ['pending', 'in_progress', 'paused'].includes(task.status);
+  }
+
+  canRestartTask(): boolean {
+    const task = this.task();
+    if (!task) return false;
+    if (task.supports_runtime_control) return ['completed', 'failed', 'cancelled'].includes(task.status);
+    return ['completed', 'failed'].includes(task.status);
   }
 
   getScreenshotPreviewUrl(assetUrl: string): string {
@@ -301,11 +336,87 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
     this.commentsMap.set(map);
   }
 
-  async rerunSameTask(): Promise<void> {
+  async triggerTaskAction(
+    action: StructuredValidationTaskControlAction,
+    options: {
+      title: string;
+      text: string;
+      confirmButtonText: string;
+    },
+  ): Promise<void> {
     const taskId = this.task()?.id;
     if (!taskId) return;
-    await this.repository.rerun(taskId);
-    await this.load(taskId, true);
+    const confirmation = await this.sweetAlert.fire({
+      title: options.title,
+      text: options.text,
+      icon: action === 'cancel' ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonText: options.confirmButtonText,
+      cancelButtonText: 'Cerrar',
+    });
+    if (!confirmation.isConfirmed) return;
+
+    this.activeTaskAction.set(action);
+    try {
+      const updatedTask = await this.repository.controlTask(taskId, action);
+      this.task.set(updatedTask);
+    } catch (error: any) {
+      await this.sweetAlert.error('', error?.response?.data?.detail || 'No se pudo actualizar la tarea.');
+    } finally {
+      this.activeTaskAction.set(null);
+    }
+  }
+
+  async rerunSameTask(): Promise<void> {
+    const task = this.task();
+    if (!task) return;
+    const confirmation = await this.sweetAlert.fire({
+      title: task.supports_runtime_control ? 'Reiniciar tarea' : 'Re-ejecutar tarea',
+      text: 'La tarea se volverá a ejecutar con los mismos parámetros.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: task.supports_runtime_control ? 'Reiniciar' : 'Re-ejecutar',
+      cancelButtonText: 'Cancelar',
+    });
+    if (!confirmation.isConfirmed) return;
+
+    this.activeTaskAction.set('rerun');
+    try {
+      if (task.supports_runtime_control) {
+        this.task.set(await this.repository.controlTask(task.id, 'restart'));
+      } else {
+        await this.repository.rerun(task.id);
+        await this.load(task.id, true);
+      }
+    } catch (error: any) {
+      await this.sweetAlert.error('', error?.response?.data?.detail || 'No se pudo reiniciar la tarea.');
+    } finally {
+      this.activeTaskAction.set(null);
+    }
+  }
+
+  async pauseTask(): Promise<void> {
+    await this.triggerTaskAction('pause', {
+      title: 'Pausar tarea',
+      text: 'La tarea dejará de tomar nuevos elementos hasta que la reanudes.',
+      confirmButtonText: 'Pausar',
+    });
+  }
+
+  async resumeTask(): Promise<void> {
+    await this.triggerTaskAction('resume', {
+      title: 'Reanudar tarea',
+      text: 'La tarea continuará procesando los elementos pendientes.',
+      confirmButtonText: 'Reanudar',
+    });
+  }
+
+  async cancelTask(): Promise<void> {
+    await this.triggerTaskAction('cancel', {
+      title: 'Cancelar tarea',
+      text: 'Se conservará el avance actual, pero no se procesarán más elementos.',
+      confirmButtonText: 'Cancelar tarea',
+    });
   }
 
   async cloneTask(): Promise<void> {

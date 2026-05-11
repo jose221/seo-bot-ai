@@ -166,6 +166,8 @@ export class StructuredValidationMapper extends AppMapper {
   mapResponseTask(dto: StructuredValidationTaskResponseDto): StructuredValidationTaskResponseModel {
     return new StructuredValidationTaskResponseModel(
       dto.id,
+      dto.task_kind,
+      dto.supports_runtime_control,
       dto.input_mode,
       dto.name,
       dto.description,
@@ -197,6 +199,8 @@ export class StructuredValidationMapper extends AppMapper {
         (item: StructuredValidationTaskListItemDto) =>
           new StructuredValidationTaskListItemModel(
             item.id,
+            item.task_kind,
+            item.supports_runtime_control,
             item.input_mode,
             item.name,
             item.description,

@@ -11,6 +11,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationTaskControlAction,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
   StructuredValidationTaskListResponseModel,
@@ -28,6 +29,7 @@ export abstract class StructuredValidationRepository {
   abstract find(id: string): Promise<StructuredValidationTaskResponseModel>;
   abstract findPublic(id: string): Promise<StructuredValidationTaskResponseModel>;
   abstract getLogs(id: string): Promise<TaskLogListResponseModel>;
+  abstract controlTask(id: string, action: StructuredValidationTaskControlAction): Promise<StructuredValidationTaskResponseModel>;
   abstract rerun(id: string): Promise<StructuredValidationRerunResponseModel>;
   abstract delete(id: string): Promise<any>;
   abstract getPublicComments(taskId: string, page?: number): Promise<PublicCommentsResponseModel>;

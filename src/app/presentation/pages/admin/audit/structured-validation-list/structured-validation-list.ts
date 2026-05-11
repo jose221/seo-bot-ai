@@ -2,7 +2,10 @@ import { DatePipe, NgClass } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
-import { StructuredValidationTaskListItemModel } from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
+import {
+  StructuredValidationTaskControlAction,
+  StructuredValidationTaskListItemModel,
+} from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 
 @Component({
@@ -20,6 +23,7 @@ export class StructuredValidationList implements OnInit, OnDestroy {
   readonly isLoading = signal(true);
   readonly items = signal<StructuredValidationTaskListItemModel[]>([]);
   readonly autoReload = signal(true);
+  readonly activeActions = signal<Record<string, string>>({});
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -46,12 +50,42 @@ export class StructuredValidationList implements OnInit, OnDestroy {
 
   getStatusClass(status: string): string {
     const map: Record<string, string> = {
+      cancelled: 'bg-secondary',
       completed: 'bg-success',
       failed: 'bg-danger',
       in_progress: 'bg-info text-dark',
+      paused: 'bg-warning text-dark',
       pending: 'bg-warning text-dark',
     };
     return map[status] ?? 'bg-secondary';
+  }
+
+  isActionLoading(item: StructuredValidationTaskListItemModel, action: string): boolean {
+    return this.activeActions()[item.id] === action;
+  }
+
+  private setActionLoading(itemId: string, action: string | null): void {
+    const current = { ...this.activeActions() };
+    if (action) current[itemId] = action;
+    else delete current[itemId];
+    this.activeActions.set(current);
+  }
+
+  canPause(item: StructuredValidationTaskListItemModel): boolean {
+    return item.supports_runtime_control && ['pending', 'in_progress'].includes(item.status);
+  }
+
+  canResume(item: StructuredValidationTaskListItemModel): boolean {
+    return item.supports_runtime_control && item.status === 'paused';
+  }
+
+  canCancel(item: StructuredValidationTaskListItemModel): boolean {
+    return item.supports_runtime_control && ['pending', 'in_progress', 'paused'].includes(item.status);
+  }
+
+  canRestart(item: StructuredValidationTaskListItemModel): boolean {
+    if (item.supports_runtime_control) return ['completed', 'failed', 'cancelled'].includes(item.status);
+    return ['completed', 'failed'].includes(item.status);
   }
 
   async openClone(item: StructuredValidationTaskListItemModel): Promise<void> {
@@ -79,17 +113,79 @@ export class StructuredValidationList implements OnInit, OnDestroy {
   }
 
   async rerun(item: StructuredValidationTaskListItemModel): Promise<void> {
+    if (!this.canRestart(item)) return;
     const confirmation = await this.sweetAlert.fire({
-      title: 'Reejecutar tarea',
+      title: item.supports_runtime_control ? 'Reiniciar tarea' : 'Re-ejecutar tarea',
       text: 'La tarea se volverá a ejecutar con los mismos parámetros.',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Reejecutar',
+      confirmButtonText: item.supports_runtime_control ? 'Reiniciar' : 'Re-ejecutar',
       cancelButtonText: 'Cancelar',
     });
     if (!confirmation.isConfirmed) return;
-    await this.repository.rerun(item.id);
-    await this.load(true);
+    this.setActionLoading(item.id, 'rerun');
+    try {
+      if (item.supports_runtime_control) await this.repository.controlTask(item.id, 'restart');
+      else await this.repository.rerun(item.id);
+      await this.load(true);
+    } catch (error: any) {
+      await this.sweetAlert.error('', error?.response?.data?.detail || 'No se pudo reiniciar la tarea.');
+    } finally {
+      this.setActionLoading(item.id, null);
+    }
+  }
+
+  async controlTask(
+    item: StructuredValidationTaskListItemModel,
+    action: StructuredValidationTaskControlAction,
+    options: {
+      title: string;
+      text: string;
+      confirmButtonText: string;
+    },
+  ): Promise<void> {
+    const confirmation = await this.sweetAlert.fire({
+      title: options.title,
+      text: options.text,
+      icon: action === 'cancel' ? 'warning' : 'question',
+      showCancelButton: true,
+      confirmButtonText: options.confirmButtonText,
+      cancelButtonText: 'Cerrar',
+    });
+    if (!confirmation.isConfirmed) return;
+    this.setActionLoading(item.id, action);
+    try {
+      await this.repository.controlTask(item.id, action);
+      await this.load(true);
+    } catch (error: any) {
+      await this.sweetAlert.error('', error?.response?.data?.detail || 'No se pudo actualizar la tarea.');
+    } finally {
+      this.setActionLoading(item.id, null);
+    }
+  }
+
+  async pause(item: StructuredValidationTaskListItemModel): Promise<void> {
+    await this.controlTask(item, 'pause', {
+      title: 'Pausar tarea',
+      text: 'La tarea dejará de tomar nuevos elementos hasta que la reanudes.',
+      confirmButtonText: 'Pausar',
+    });
+  }
+
+  async resume(item: StructuredValidationTaskListItemModel): Promise<void> {
+    await this.controlTask(item, 'resume', {
+      title: 'Reanudar tarea',
+      text: 'La tarea continuará con los elementos pendientes.',
+      confirmButtonText: 'Reanudar',
+    });
+  }
+
+  async cancel(item: StructuredValidationTaskListItemModel): Promise<void> {
+    await this.controlTask(item, 'cancel', {
+      title: 'Cancelar tarea',
+      text: 'Se conservará el avance actual, pero no se procesarán más elementos.',
+      confirmButtonText: 'Cancelar tarea',
+    });
   }
 
   async remove(item: StructuredValidationTaskListItemModel): Promise<void> {
@@ -102,8 +198,12 @@ export class StructuredValidationList implements OnInit, OnDestroy {
       cancelButtonText: 'Cancelar',
     });
     if (!confirmation.isConfirmed) return;
-    await this.repository.delete(item.id);
-    await this.load(true);
+    try {
+      await this.repository.delete(item.id);
+      await this.load(true);
+    } catch (error: any) {
+      await this.sweetAlert.error('', error?.response?.data?.detail || 'No se pudo eliminar la tarea.');
+    }
   }
 
   formatDate(dateStr: string): string {

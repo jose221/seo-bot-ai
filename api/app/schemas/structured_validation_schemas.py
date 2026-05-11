@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from enum import Enum
 from typing import Dict, List, Optional
 from uuid import UUID
 
@@ -74,6 +75,17 @@ class StructuredValidationRerunResponse(BaseModel):
     message: str
 
 
+class StructuredValidationTaskAction(str, Enum):
+    PAUSE = "pause"
+    RESUME = "resume"
+    CANCEL = "cancel"
+    RESTART = "restart"
+
+
+class StructuredValidationTaskActionRequest(BaseModel):
+    action: StructuredValidationTaskAction
+
+
 class StructuredValidationTaskItem(BaseModel):
     item_key: str
     input_type: StructuredValidationInputMode
@@ -89,6 +101,8 @@ class StructuredValidationTaskItem(BaseModel):
 
 class StructuredValidationTaskResponse(BaseModel):
     id: UUID
+    task_kind: str = "structured_validation_task"
+    supports_runtime_control: bool = True
     input_mode: StructuredValidationInputMode
     name: str
     description: Optional[str] = None
@@ -115,6 +129,8 @@ class StructuredValidationTaskResponse(BaseModel):
 
 class StructuredValidationTaskListItem(BaseModel):
     id: UUID
+    task_kind: str = "structured_validation_task"
+    supports_runtime_control: bool = True
     input_mode: StructuredValidationInputMode
     name: str
     description: Optional[str] = None

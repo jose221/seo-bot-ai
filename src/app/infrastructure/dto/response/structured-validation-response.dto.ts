@@ -39,6 +39,8 @@ export class StructuredValidationTaskItemDto {
 export class StructuredValidationTaskResponseDto {
   constructor(
     public id: string,
+    public task_kind: string,
+    public supports_runtime_control: boolean,
     public input_mode: 'url' | 'html',
     public name: string,
     public description: string | null,
@@ -67,6 +69,8 @@ export class StructuredValidationTaskResponseDto {
 export class StructuredValidationTaskListItemDto {
   constructor(
     public id: string,
+    public task_kind: string,
+    public supports_runtime_control: boolean,
     public input_mode: 'url' | 'html',
     public name: string,
     public description: string | null,
