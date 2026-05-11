@@ -89,7 +89,10 @@ export class StructuredValidationList implements OnInit, OnDestroy {
   }
 
   async openClone(item: StructuredValidationTaskListItemModel): Promise<void> {
-    const detail = await this.repository.find(item.id);
+    const detail = await this.repository.find(item.id, {
+      page: 1,
+      page_size: Math.max(item.total_items, 1),
+    });
     await this.router.navigate(['/admin/audit/structured-validations/create'], {
       state: {
         rerunData: {

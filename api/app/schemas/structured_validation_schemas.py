@@ -99,6 +99,15 @@ class StructuredValidationTaskItem(BaseModel):
     report: RichResultsReportResponse
 
 
+class StructuredValidationTaskItemsSummary(BaseModel):
+    total: int = 0
+    ok: int = 0
+    warning: int = 0
+    critical: int = 0
+    error: int = 0
+    pending: int = 0
+
+
 class StructuredValidationTaskResponse(BaseModel):
     id: UUID
     task_kind: str = "structured_validation_task"
@@ -124,6 +133,9 @@ class StructuredValidationTaskResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     completed_at: Optional[datetime] = None
+    page: int = 1
+    page_size: int = 10
+    summary: StructuredValidationTaskItemsSummary = Field(default_factory=StructuredValidationTaskItemsSummary)
     items: List[StructuredValidationTaskItem] = Field(default_factory=list)
 
 

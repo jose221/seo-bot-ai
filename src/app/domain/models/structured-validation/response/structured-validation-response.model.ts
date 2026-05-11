@@ -42,6 +42,17 @@ export class StructuredValidationTaskItemModel {
   ) {}
 }
 
+export class StructuredValidationTaskSummaryModel {
+  constructor(
+    public total: number,
+    public ok: number,
+    public warning: number,
+    public critical: number,
+    public error: number,
+    public pending: number,
+  ) {}
+}
+
 export class StructuredValidationTaskResponseModel {
   constructor(
     public id: string,
@@ -68,6 +79,9 @@ export class StructuredValidationTaskResponseModel {
     public created_at: string,
     public updated_at: string,
     public completed_at: string | null,
+    public page: number,
+    public page_size: number,
+    public summary: StructuredValidationTaskSummaryModel,
     public items: StructuredValidationTaskItemModel[],
   ) {}
 }

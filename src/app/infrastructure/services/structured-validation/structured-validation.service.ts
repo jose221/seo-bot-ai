@@ -13,6 +13,7 @@ import {
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   FilterStructuredValidationTasksRequestModel,
+  StructuredValidationTaskDetailRequestModel,
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
@@ -25,6 +26,7 @@ import {
 import { TaskLogListResponseModel, TaskLogEntryResponseModel } from '@/app/domain/models/task-log/response/task-log-response.model';
 import {
   FilterStructuredValidationTasksRequestDto,
+  StructuredValidationTaskDetailRequestDto,
   StructuredValidationCreateRequestDto,
 } from '@/app/infrastructure/dto/request/structured-validation-request.dto';
 import {
@@ -71,20 +73,20 @@ export class StructuredValidationService extends BaseService {
     return this.mapper.mapResponseList(response);
   }
 
-  async find(id: string): Promise<StructuredValidationTaskResponseModel> {
+  async find(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel> {
     const response = await this.httpService.get<StructuredValidationTaskResponseDto>(
       `${this.endpoint}/${id}`,
-      {},
+      params ? this.mapper.mapDetailFilter(params as StructuredValidationTaskDetailRequestDto) : {},
       {},
       this.getToken,
     );
     return this.mapper.mapResponseTask(response);
   }
 
-  async findPublic(id: string): Promise<StructuredValidationTaskResponseModel> {
+  async findPublic(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel> {
     const response = await this.httpService.get<StructuredValidationTaskResponseDto>(
       `${this.endpoint}/${id}/public`,
-      {},
+      params ? this.mapper.mapDetailFilter(params as StructuredValidationTaskDetailRequestDto) : {},
       {},
     );
     return this.mapper.mapResponseTask(response);

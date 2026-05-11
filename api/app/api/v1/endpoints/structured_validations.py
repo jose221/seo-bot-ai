@@ -80,12 +80,14 @@ async def list_structured_validation_tasks(
 @router.get("/{task_id}", response_model=StructuredValidationTaskResponse)
 async def get_structured_validation_task(
     task_id: UUID,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=1000),
     current_user: User = Depends(get_current_user),
     session=Depends(get_session),
 ):
     task = await get_structured_validation_task_service().get_task(session, task_id=task_id, user_id=current_user.id)
     if task:
-        return get_structured_validation_task_service().build_task_response(task)
+        return get_structured_validation_task_service().build_task_response(task, page=page, page_size=page_size)
     report = await get_structured_validation_task_service().get_legacy_report(
         session,
         task_id=task_id,
@@ -93,7 +95,7 @@ async def get_structured_validation_task(
     )
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
-    return get_structured_validation_task_service().build_legacy_response(report)
+    return get_structured_validation_task_service().build_legacy_response(report, page=page, page_size=page_size)
 
 
 @router.get("/{task_id}/logs", response_model=TaskLogListResponse)
@@ -137,15 +139,17 @@ async def get_structured_validation_task_logs(
 @router.get("/{task_id}/public", response_model=StructuredValidationTaskResponse, tags=["Público"])
 async def get_structured_validation_task_public(
     task_id: UUID,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=1000),
     session=Depends(get_session),
 ):
     task = await get_structured_validation_task_service().get_task(session, task_id=task_id)
     if task:
-        return get_structured_validation_task_service().build_task_response(task)
+        return get_structured_validation_task_service().build_task_response(task, page=page, page_size=page_size)
     report = await get_structured_validation_task_service().get_legacy_report(session, task_id=task_id)
     if not report:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tarea no encontrada")
-    return get_structured_validation_task_service().build_legacy_response(report)
+    return get_structured_validation_task_service().build_legacy_response(report, page=page, page_size=page_size)
 
 
 @router.post("/{task_id}/actions", response_model=StructuredValidationTaskResponse)

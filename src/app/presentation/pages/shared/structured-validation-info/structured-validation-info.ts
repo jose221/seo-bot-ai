@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MarkdownModule } from 'ngx-markdown';
 import { environment } from '@/environments/environment';
 import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
+import { StructuredValidationTaskDetailRequestModel } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
   StructuredValidationTaskControlAction,
   StructuredValidationTaskItemModel,
@@ -37,6 +38,8 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   readonly search = signal('');
   readonly severity = signal('all');
   readonly onlyIssues = signal(false);
+  readonly currentPage = signal(1);
+  readonly currentPageSize = signal(10);
   readonly openComments = signal<string | null>(null);
   readonly commentUsername = signal('');
   readonly commentDrafts = signal<Record<string, string>>({});
@@ -59,33 +62,36 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   });
 
   readonly summary = computed(() => {
-    const items = this.task()?.items ?? [];
-    const counts = {
-      total: items.length,
+    return this.task()?.summary ?? {
+      total: 0,
       ok: 0,
       warning: 0,
       critical: 0,
+      error: 0,
       pending: 0,
     };
+  });
 
-    for (const item of items) {
-      if (['pending', 'in_progress', 'paused'].includes(this.task()?.status ?? '') && !item.report.google_validation.executed && !item.report.schema_org_validation.executed && !item.success) {
-        counts.pending += 1;
-        continue;
-      }
-      if (item.severity === 'critical' || item.severity === 'error') counts.critical += 1;
-      else if (item.severity === 'warning') counts.warning += 1;
-      else if (item.severity === 'ok') counts.ok += 1;
-      else counts.pending += 1;
-    }
+  readonly totalPages = computed(() => {
+    const task = this.task();
+    if (!task) return 1;
+    return Math.max(1, Math.ceil(task.total_items / Math.max(task.page_size, 1)));
+  });
 
-    return counts;
+  readonly paginationLabel = computed(() => {
+    const task = this.task();
+    if (!task || task.total_items === 0) return 'Sin elementos';
+    const start = ((task.page - 1) * task.page_size) + 1;
+    const end = Math.min(task.page * task.page_size, task.total_items);
+    return `Mostrando ${start}-${end} de ${task.total_items}`;
   });
 
   async ngOnInit(): Promise<void> {
     this.layout.set(this.route.snapshot.data['layout'] === 'admin' ? 'admin' : 'shared');
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) return;
+    this.currentPage.set(this.readQueryNumber('page', 1));
+    this.currentPageSize.set(this.readQueryNumber('page_size', 10));
     if (isPlatformBrowser(this.platformId)) {
       this.commentUsername.set(localStorage.getItem(LS_USERNAME_KEY) ?? '');
     }
@@ -111,13 +117,57 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   async load(id: string, silent = false): Promise<void> {
     if (!silent) this.isLoading.set(true);
     try {
+      const params = new StructuredValidationTaskDetailRequestModel(this.currentPage(), this.currentPageSize());
       const task = this.layout() === 'admin'
-        ? await this.repository.find(id)
-        : await this.repository.findPublic(id);
+        ? await this.repository.find(id, params)
+        : await this.repository.findPublic(id, params);
+      this.currentPage.set(task.page);
+      this.currentPageSize.set(task.page_size);
       this.task.set(task);
     } finally {
       if (!silent) this.isLoading.set(false);
     }
+  }
+
+  private readQueryNumber(key: string, fallback: number): number {
+    const rawValue = this.route.snapshot.queryParamMap.get(key);
+    const parsed = Number(rawValue);
+    if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+    return Math.trunc(parsed);
+  }
+
+  private async updatePaginationQueryParams(): Promise<void> {
+    await this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: {
+        page: this.currentPage(),
+        page_size: this.currentPageSize(),
+      },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+  }
+
+  async goToPage(page: number): Promise<void> {
+    const taskId = this.task()?.id ?? this.route.snapshot.paramMap.get('id');
+    if (!taskId) return;
+    const normalizedPage = Math.max(1, Math.min(page, this.totalPages()));
+    if (normalizedPage === this.currentPage()) return;
+    this.currentPage.set(normalizedPage);
+    await this.updatePaginationQueryParams();
+    await this.load(taskId);
+  }
+
+  async updatePageSize(rawValue: number | string): Promise<void> {
+    const taskId = this.task()?.id ?? this.route.snapshot.paramMap.get('id');
+    if (!taskId) return;
+    const parsedValue = Number(rawValue);
+    const normalizedPageSize = Number.isFinite(parsedValue) && parsedValue > 0 ? Math.trunc(parsedValue) : 10;
+    if (normalizedPageSize === this.currentPageSize() && this.currentPage() === 1) return;
+    this.currentPageSize.set(normalizedPageSize);
+    this.currentPage.set(1);
+    await this.updatePaginationQueryParams();
+    await this.load(taskId);
   }
 
   async loadComments(id: string): Promise<void> {
@@ -422,23 +472,27 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   async cloneTask(): Promise<void> {
     const task = this.task();
     if (!task) return;
+    const fullTask = await this.repository.find(task.id, {
+      page: 1,
+      page_size: Math.max(task.total_items, 1),
+    });
     await this.router.navigate(['/admin/audit/structured-validations/create'], {
       state: {
         rerunData: {
-          input_mode: task.input_mode,
-          name: task.name,
-          description: task.description,
-          ai_instruction: task.ai_instruction,
-          raw_urls: task.input_mode === 'url'
-            ? task.items.map((entry) => entry.source_value).filter(Boolean).join('\n')
+          input_mode: fullTask.input_mode,
+          name: fullTask.name,
+          description: fullTask.description,
+          ai_instruction: fullTask.ai_instruction,
+          raw_urls: fullTask.input_mode === 'url'
+            ? fullTask.items.map((entry) => entry.source_value).filter(Boolean).join('\n')
             : null,
-          html_items: task.input_mode === 'html'
-            ? task.items.map((entry) => entry.source_value).filter((value): value is string => Boolean(value))
+          html_items: fullTask.input_mode === 'html'
+            ? fullTask.items.map((entry) => entry.source_value).filter((value): value is string => Boolean(value))
             : [],
-          get_ai_result: task.requested_ai_result,
-          auto_extract_html: task.auto_extract_html,
-          validate_google: task.validate_google,
-          validate_schema_org: task.validate_schema_org,
+          get_ai_result: fullTask.requested_ai_result,
+          auto_extract_html: fullTask.auto_extract_html,
+          validate_google: fullTask.validate_google,
+          validate_schema_org: fullTask.validate_schema_org,
         },
       },
     });

@@ -36,6 +36,17 @@ export class StructuredValidationTaskItemDto {
   ) {}
 }
 
+export class StructuredValidationTaskSummaryDto {
+  constructor(
+    public total: number,
+    public ok: number,
+    public warning: number,
+    public critical: number,
+    public error: number,
+    public pending: number,
+  ) {}
+}
+
 export class StructuredValidationTaskResponseDto {
   constructor(
     public id: string,
@@ -62,6 +73,9 @@ export class StructuredValidationTaskResponseDto {
     public created_at: string,
     public updated_at: string,
     public completed_at: string | null,
+    public page: number,
+    public page_size: number,
+    public summary: StructuredValidationTaskSummaryDto,
     public items: StructuredValidationTaskItemDto[],
   ) {}
 }

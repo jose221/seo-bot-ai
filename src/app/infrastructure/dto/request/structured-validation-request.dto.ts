@@ -19,3 +19,10 @@ export class FilterStructuredValidationTasksRequestDto {
     public page_size: number = 20,
   ) {}
 }
+
+export class StructuredValidationTaskDetailRequestDto {
+  constructor(
+    public page: number = 1,
+    public page_size: number = 10,
+  ) {}
+}

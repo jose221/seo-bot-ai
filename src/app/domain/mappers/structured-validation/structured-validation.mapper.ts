@@ -10,6 +10,7 @@ import {
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   FilterStructuredValidationTasksRequestModel,
+  StructuredValidationTaskDetailRequestModel,
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
@@ -20,9 +21,11 @@ import {
   StructuredValidationTaskListItemModel,
   StructuredValidationTaskListResponseModel,
   StructuredValidationTaskResponseModel,
+  StructuredValidationTaskSummaryModel,
 } from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
 import {
   FilterStructuredValidationTasksRequestDto,
+  StructuredValidationTaskDetailRequestDto,
   StructuredValidationCreateRequestDto,
 } from '@/app/infrastructure/dto/request/structured-validation-request.dto';
 import {
@@ -33,6 +36,7 @@ import {
   StructuredValidationTaskListItemDto,
   StructuredValidationTaskListResponseDto,
   StructuredValidationTaskResponseDto,
+  StructuredValidationTaskSummaryDto,
 } from '@/app/infrastructure/dto/response/structured-validation-response.dto';
 import {
   CreatePublicCommentRequestDto,
@@ -63,6 +67,10 @@ export class StructuredValidationMapper extends AppMapper {
   }
 
   mapFilter(model: FilterStructuredValidationTasksRequestModel): FilterStructuredValidationTasksRequestDto {
+    return this.autoMap<any, any>(model, { except: [] });
+  }
+
+  mapDetailFilter(model: StructuredValidationTaskDetailRequestModel): StructuredValidationTaskDetailRequestDto {
     return this.autoMap<any, any>(model, { except: [] });
   }
 
@@ -159,6 +167,17 @@ export class StructuredValidationMapper extends AppMapper {
     );
   }
 
+  private mapTaskSummary(dto: StructuredValidationTaskSummaryDto): StructuredValidationTaskSummaryModel {
+    return new StructuredValidationTaskSummaryModel(
+      dto.total ?? 0,
+      dto.ok ?? 0,
+      dto.warning ?? 0,
+      dto.critical ?? 0,
+      dto.error ?? 0,
+      dto.pending ?? 0,
+    );
+  }
+
   mapResponseTaskCreate(dto: StructuredValidationTaskCreateResponseDto): StructuredValidationTaskCreateResponseModel {
     return this.autoMap<any, any>(dto, { except: [] });
   }
@@ -189,6 +208,9 @@ export class StructuredValidationMapper extends AppMapper {
       dto.created_at,
       dto.updated_at,
       dto.completed_at,
+      dto.page,
+      dto.page_size,
+      this.mapTaskSummary(dto.summary),
       (dto.items ?? []).map((item) => this.mapItem(item)),
     );
   }

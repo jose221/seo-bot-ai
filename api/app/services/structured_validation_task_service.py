@@ -27,6 +27,7 @@ from app.schemas.rich_results_schemas import (
 from app.schemas.structured_validation_schemas import (
     StructuredValidationCreateRequest,
     StructuredValidationTaskItem,
+    StructuredValidationTaskItemsSummary,
     StructuredValidationTaskListItem,
     StructuredValidationTaskListResponse,
     StructuredValidationTaskResponse,
@@ -42,6 +43,8 @@ class StructuredValidationTaskService:
     TASK_TYPE = "structured_validation_task"
     BATCH_CONCURRENCY = 7
     CONTROL_POLL_SECONDS = 1.0
+    DEFAULT_DETAIL_PAGE_SIZE = 10
+    MAX_DETAIL_PAGE_SIZE = 1000
     ACTIVE_STATUSES = {
         StructuredValidationTaskStatus.PENDING,
         StructuredValidationTaskStatus.IN_PROGRESS,
@@ -127,6 +130,109 @@ class StructuredValidationTaskService:
         return compact[:220] + ("..." if len(compact) > 220 else "")
 
     @classmethod
+    def _compact_validator_payload(cls, raw_validator: Any) -> Dict[str, Any]:
+        if isinstance(raw_validator, RichResultsValidatorDetail):
+            payload = raw_validator.model_dump(mode="json")
+        elif isinstance(raw_validator, dict):
+            payload = dict(raw_validator)
+        else:
+            return {}
+
+        payload.pop("html_content", None)
+        payload.pop("markdown_content", None)
+        return payload
+
+    @classmethod
+    def _compact_report_payload(cls, raw_report: Any) -> Dict[str, Any]:
+        if isinstance(raw_report, RichResultsReportResponse):
+            payload = raw_report.model_dump(mode="json")
+        elif isinstance(raw_report, dict):
+            payload = dict(raw_report)
+        else:
+            return {}
+
+        compact_payload: Dict[str, Any] = {
+            "success": bool(payload.get("success")),
+            "input_type": payload.get("input_type", StructuredValidationInputMode.URL.value),
+            "method_used": payload.get("method_used", "unknown"),
+            "message": payload.get("message") or "",
+            "blocked_by_google": bool(payload.get("blocked_by_google", False)),
+            "validate_google": bool(payload.get("validate_google", True)),
+            "validate_schema_org": bool(payload.get("validate_schema_org", True)),
+            "saved": bool(payload.get("saved", False)),
+        }
+
+        for field_name in ("result_url", "error_message", "get_ai_result", "ai_error_message", "report_id"):
+            if field_name in payload:
+                compact_payload[field_name] = payload.get(field_name)
+
+        google_validation = cls._compact_validator_payload(payload.get("google_validation"))
+        if google_validation:
+            compact_payload["google_validation"] = google_validation
+
+        schema_org_validation = cls._compact_validator_payload(payload.get("schema_org_validation"))
+        if schema_org_validation:
+            compact_payload["schema_org_validation"] = schema_org_validation
+
+        return compact_payload
+
+    @classmethod
+    def _compact_serialized_item(cls, raw_item: Dict[str, Any]) -> Dict[str, Any]:
+        compact_item = dict(raw_item)
+        report_payload = raw_item.get("report")
+        if isinstance(report_payload, dict) or isinstance(report_payload, RichResultsReportResponse):
+            compact_item["report"] = cls._compact_report_payload(report_payload)
+        return compact_item
+
+    @classmethod
+    def _normalize_detail_pagination(cls, *, page: int, page_size: int) -> tuple[int, int]:
+        normalized_page = max(1, int(page))
+        normalized_page_size = max(1, min(cls.MAX_DETAIL_PAGE_SIZE, int(page_size)))
+        return normalized_page, normalized_page_size
+
+    @staticmethod
+    def _slice_items(items: List[Any], *, page: int, page_size: int) -> List[Any]:
+        start = (page - 1) * page_size
+        end = start + page_size
+        return items[start:end]
+
+    @classmethod
+    def _build_task_items_summary(
+        cls,
+        *,
+        total_items: int,
+        completed_items: int,
+        raw_results: List[Dict[str, Any]],
+    ) -> StructuredValidationTaskItemsSummary:
+        counts = {
+            "ok": 0,
+            "warning": 0,
+            "critical": 0,
+            "error": 0,
+        }
+        processed_items = 0
+
+        for raw_item in raw_results:
+            if not isinstance(raw_item, dict):
+                continue
+            processed_items += 1
+            severity = raw_item.get("severity")
+            if severity in counts:
+                counts[severity] += 1
+            elif raw_item.get("success"):
+                counts["ok"] += 1
+
+        pending_items = max(total_items - max(completed_items, processed_items), 0)
+        return StructuredValidationTaskItemsSummary(
+            total=total_items,
+            ok=counts["ok"],
+            warning=counts["warning"],
+            critical=counts["critical"],
+            error=counts["error"],
+            pending=pending_items,
+        )
+
+    @classmethod
     def _serialize_result(
         cls,
         *,
@@ -146,22 +252,25 @@ class StructuredValidationTaskService:
             "severity": cls._derive_item_severity(report),
             "message": report.message,
             "error_message": report.error_message,
-            "report": report.model_dump(mode="json"),
+            "report": cls._compact_report_payload(report),
         }
 
     @classmethod
     def _deserialize_item(cls, raw: Dict[str, Any]) -> StructuredValidationTaskItem:
-        report_payload = raw.get("report") or {}
+        compact_raw = cls._compact_serialized_item(raw)
+        report_payload = compact_raw.get("report") or {}
         return StructuredValidationTaskItem(
-            item_key=raw.get("item_key", ""),
-            input_type=StructuredValidationInputMode(raw.get("input_type", StructuredValidationInputMode.URL.value)),
-            label=raw.get("label", ""),
-            source_preview=raw.get("source_preview"),
-            source_value=raw.get("source_value"),
-            success=bool(raw.get("success")),
-            severity=raw.get("severity"),
-            message=raw.get("message"),
-            error_message=raw.get("error_message"),
+            item_key=compact_raw.get("item_key", ""),
+            input_type=StructuredValidationInputMode(
+                compact_raw.get("input_type", StructuredValidationInputMode.URL.value)
+            ),
+            label=compact_raw.get("label", ""),
+            source_preview=compact_raw.get("source_preview"),
+            source_value=compact_raw.get("source_value"),
+            success=bool(compact_raw.get("success")),
+            severity=compact_raw.get("severity"),
+            message=compact_raw.get("message"),
+            error_message=compact_raw.get("error_message"),
             report=RichResultsReportResponse.model_validate(report_payload),
         )
 
@@ -286,7 +395,7 @@ class StructuredValidationTaskService:
         findings = report_service.build_findings(report.analysis_findings)
         screenshots = list(report.screenshots or [])
         ai_result = report_service.build_ai_result(report)
-        return RichResultsReportResponse(
+        full_report = RichResultsReportResponse(
             success=report.success,
             input_type=report.input_type,
             method_used=report.method_used,
@@ -306,6 +415,7 @@ class StructuredValidationTaskService:
             report_id=report.id,
             saved=True,
         )
+        return RichResultsReportResponse.model_validate(self._compact_report_payload(full_report))
 
     def _build_legacy_list_item(self, report: RichResultsReport) -> StructuredValidationTaskListItem:
         report_status = str(report.status)
@@ -332,11 +442,31 @@ class StructuredValidationTaskService:
             completed_at=report.created_at if is_finished else None,
         )
 
-    def _build_legacy_task_response(self, report: RichResultsReport) -> StructuredValidationTaskResponse:
+    def _build_legacy_task_response(
+        self,
+        report: RichResultsReport,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_DETAIL_PAGE_SIZE,
+    ) -> StructuredValidationTaskResponse:
+        page, page_size = self._normalize_detail_pagination(page=page, page_size=page_size)
         embedded_report = self._build_embedded_legacy_report(report)
         report_status = str(report.status)
         is_pending = report_status in {"pending", "in_progress"}
         is_finished = report_status in {"completed", "failed"}
+        item = StructuredValidationTaskItem(
+            item_key=report.url,
+            input_type=StructuredValidationInputMode.URL,
+            label=report.url,
+            source_preview=report.url,
+            source_value=report.url,
+            success=report.success,
+            severity=self._derive_item_severity(embedded_report),
+            message=report.message,
+            error_message=report.error_message,
+            report=embedded_report,
+        )
+        paged_items = self._slice_items([item], page=page, page_size=page_size)
         return StructuredValidationTaskResponse(
             id=report.id,
             task_kind=self._legacy_task_kind(),
@@ -362,20 +492,17 @@ class StructuredValidationTaskService:
             created_at=report.created_at,
             updated_at=report.created_at,
             completed_at=report.created_at if is_finished else None,
-            items=[
-                StructuredValidationTaskItem(
-                    item_key=report.url,
-                    input_type=StructuredValidationInputMode.URL,
-                    label=report.url,
-                    source_preview=report.url,
-                    source_value=report.url,
-                    success=report.success,
-                    severity=self._derive_item_severity(embedded_report),
-                    message=report.message,
-                    error_message=report.error_message,
-                    report=embedded_report,
-                )
-            ],
+            page=page,
+            page_size=page_size,
+            summary=StructuredValidationTaskItemsSummary(
+                total=1,
+                ok=1 if report.success else 0,
+                warning=0,
+                critical=0 if report.success else 1,
+                error=0,
+                pending=1 if is_pending else 0,
+            ),
+            items=paged_items,
         )
 
     @staticmethod
@@ -656,14 +783,29 @@ class StructuredValidationTaskService:
             stmt = stmt.where(RichResultsReport.user_id == user_id)
         return (await session.execute(stmt)).scalars().first()
 
-    def build_task_response(self, task: StructuredValidationTask) -> StructuredValidationTaskResponse:
+    def build_task_response(
+        self,
+        task: StructuredValidationTask,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_DETAIL_PAGE_SIZE,
+    ) -> StructuredValidationTaskResponse:
+        page, page_size = self._normalize_detail_pagination(page=page, page_size=page_size)
+        all_inputs = list(task.inputs_json or [])
+        total_items = task.total_items or len(all_inputs)
+        page_inputs = self._slice_items(all_inputs, page=page, page_size=page_size)
+        page_item_keys = {
+            (item.get("item_key") or item.get("label") or "")
+            for item in page_inputs
+            if item.get("item_key") or item.get("label")
+        }
         completed_items_by_key = {
             item.get("item_key", ""): self._deserialize_item(item)
             for item in (task.results_json or [])
-            if item.get("item_key")
+            if item.get("item_key") and item.get("item_key") in page_item_keys
         }
         ordered_items: List[StructuredValidationTaskItem] = []
-        for raw_input in (task.inputs_json or []):
+        for raw_input in page_inputs:
             item_key = raw_input.get("item_key", "")
             ordered_items.append(
                 completed_items_by_key.get(item_key)
@@ -694,11 +836,24 @@ class StructuredValidationTaskService:
             created_at=task.created_at,
             updated_at=task.updated_at,
             completed_at=task.completed_at,
+            page=page,
+            page_size=page_size,
+            summary=self._build_task_items_summary(
+                total_items=total_items,
+                completed_items=task.completed_items,
+                raw_results=list(task.results_json or []),
+            ),
             items=ordered_items,
         )
 
-    def build_legacy_response(self, report: RichResultsReport) -> StructuredValidationTaskResponse:
-        return self._build_legacy_task_response(report)
+    def build_legacy_response(
+        self,
+        report: RichResultsReport,
+        *,
+        page: int = 1,
+        page_size: int = DEFAULT_DETAIL_PAGE_SIZE,
+    ) -> StructuredValidationTaskResponse:
+        return self._build_legacy_task_response(report, page=page, page_size=page_size)
 
     async def delete_task(self, session, *, task: StructuredValidationTask) -> None:
         await session.delete(task)
@@ -725,7 +880,7 @@ class StructuredValidationTaskService:
 
                 total = max(1, len(task.inputs_json or []))
                 results_by_key: Dict[str, Dict[str, Any]] = {
-                    item.get("item_key", ""): item
+                    item.get("item_key", ""): self._compact_serialized_item(item)
                     for item in (task.results_json or [])
                     if item.get("item_key")
                 }

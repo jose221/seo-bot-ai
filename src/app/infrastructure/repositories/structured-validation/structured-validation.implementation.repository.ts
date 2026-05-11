@@ -11,6 +11,7 @@ import {
 } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import {
   FilterStructuredValidationTasksRequestModel,
+  StructuredValidationTaskDetailRequestModel,
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
@@ -34,12 +35,12 @@ export class StructuredValidationImplementationRepository implements StructuredV
     return this.primaryService.getAll(params);
   }
 
-  find(id: string): Promise<StructuredValidationTaskResponseModel> {
-    return this.primaryService.find(id);
+  find(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel> {
+    return this.primaryService.find(id, params);
   }
 
-  findPublic(id: string): Promise<StructuredValidationTaskResponseModel> {
-    return this.primaryService.findPublic(id);
+  findPublic(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel> {
+    return this.primaryService.findPublic(id, params);
   }
 
   getLogs(id: string): Promise<TaskLogListResponseModel> {
