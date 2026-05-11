@@ -16,6 +16,12 @@ import nodriver as uc
 
 logger = logging.getLogger(__name__)
 
+# Clase CSS presente en el resultado exitoso de Google Rich Results.
+# Si no aparece tras el submit, Google bloqueó la solicitud.
+# Actualiza esta constante si Google cambia su markup.
+GOOGLE_BLOCK_DETECTOR_CLASS: str = "d1pwUc"
+
+
 class InputType(str, Enum):
   URL = "url"
   HTML = "html"
@@ -208,6 +214,23 @@ class GoogleRichResultsEngine:
       screenshot = await self._capture_screenshot(page, "success")
       if screenshot:
         screenshots.append(screenshot)
+
+      # Detección de bloqueo post-submit: si la clase de resultados no aparece
+      # en el HTML final, Google bloqueó la solicitud con bot-detection.
+      if GOOGLE_BLOCK_DETECTOR_CLASS not in (final_html or ""):
+        logger.warning(
+          "Bloqueo detectado: clase '%s' ausente en el resultado. Google bloqueó la solicitud.",
+          GOOGLE_BLOCK_DETECTOR_CLASS,
+        )
+        return ValidationResult(
+          is_success=False,
+          result_url=current_url,
+          html_content=final_html,
+          error_message="Google bloqueó la solicitud: página de resultados no contiene los elementos esperados",
+          method_used="nodriver",
+          blocked_by_google=True,
+          screenshots=screenshots,
+        )
 
       return ValidationResult(
         is_success=True,

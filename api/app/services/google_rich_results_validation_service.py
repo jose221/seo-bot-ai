@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -20,15 +21,18 @@ from app.shared.rich_results_html_analyzer import (
     build_rich_results_findings_summary,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class GoogleRichResultsValidationService:
     def __init__(self, proxy_url: Optional[str]) -> None:
         self.proxy_url = proxy_url
 
-    def _build_engine(self) -> GoogleRichResultsEngine:
+    def _build_engine(self, proxy_url: Optional[str] = None) -> GoogleRichResultsEngine:
+        effective_proxy = proxy_url if proxy_url is not None else self.proxy_url
         proxy_server = None
-        if self.proxy_url:
-            parsed = urlparse(self.proxy_url)
+        if effective_proxy:
+            parsed = urlparse(effective_proxy)
             proxy_server = f"{parsed.scheme}://{parsed.hostname}"
             if parsed.port:
                 proxy_server = f"{proxy_server}:{parsed.port}"
@@ -61,10 +65,24 @@ class GoogleRichResultsValidationService:
         return error_message or "No fue posible generar el reporte de Google Rich Results"
 
     async def validate(self, *, input_type: str, content: str) -> RichResultsValidatorDetail:
-        validation = await self._build_engine().validate(
+        # Primer intento: sin proxy
+        validation = await self._build_engine(proxy_url=None).validate(
             input_type=self._to_input_type(input_type),
             content=content,
         )
+
+        # Si Google bloqueó, reintentar con el proxy configurado en .env
+        if validation.blocked_by_google:
+            fallback_proxy = settings.RICH_RESULTS_PROXY_URL.strip() if settings.RICH_RESULTS_PROXY_URL else None
+            if fallback_proxy:
+                logger.warning(
+                    "Google bloqueó la solicitud sin proxy — reintentando con proxy de .env"
+                )
+                validation = await self._build_engine(proxy_url=fallback_proxy).validate(
+                    input_type=self._to_input_type(input_type),
+                    content=content,
+                )
+
         findings = [
             RichResultsAnalysisFinding.model_validate(item.to_dict())
             for item in analyze_rich_results_html(validation.html_content or "")

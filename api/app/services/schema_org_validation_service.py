@@ -29,10 +29,11 @@ class SchemaOrgValidationService:
     def __init__(self, proxy_url: Optional[str]) -> None:
         self.proxy_url = proxy_url
 
-    def _build_engine(self) -> SchemaOrgValidatorEngine:
+    def _build_engine(self, proxy_url: Optional[str] = None) -> SchemaOrgValidatorEngine:
+        effective_proxy = proxy_url if proxy_url is not None else self.proxy_url
         proxy_server = None
-        if self.proxy_url:
-            parsed = urlparse(self.proxy_url)
+        if effective_proxy:
+            parsed = urlparse(effective_proxy)
             proxy_server = f"{parsed.scheme}://{parsed.hostname}"
             if parsed.port:
                 proxy_server = f"{proxy_server}:{parsed.port}"
@@ -63,10 +64,23 @@ class SchemaOrgValidationService:
         return error_message or "No fue posible generar el reporte de Schema.org Validator"
 
     async def validate(self, *, input_type: str, content: str) -> RichResultsValidatorDetail:
-        validation = await self._build_engine().validate(
+        # Primer intento: sin proxy
+        validation = await self._build_engine(proxy_url=None).validate(
             input_type=self._to_input_type(input_type),
             content=content,
         )
+
+        # Si bloqueó, reintentar con el proxy configurado en .env antes del fallback local
+        if validation.blocked_by_schema:
+            fallback_proxy = settings.RICH_RESULTS_PROXY_URL.strip() if settings.RICH_RESULTS_PROXY_URL else None
+            if fallback_proxy:
+                logger.warning(
+                    "validator.schema.org bloqueó sin proxy — reintentando con proxy de .env"
+                )
+                validation = await self._build_engine(proxy_url=fallback_proxy).validate(
+                    input_type=self._to_input_type(input_type),
+                    content=content,
+                )
 
         # Fallback local cuando el validador remoto bloquea con CAPTCHA
         if validation.blocked_by_schema:

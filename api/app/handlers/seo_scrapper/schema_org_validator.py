@@ -16,6 +16,12 @@ import nodriver.cdp.input_ as cdp_input
 
 logger = logging.getLogger(__name__)
 
+# Clase CSS presente en el dashboard exitoso de validator.schema.org.
+# Si no aparece en el HTML tras el submit, el validador bloqueó la solicitud.
+# Actualiza esta constante si validator.schema.org cambia su markup.
+SCHEMA_BLOCK_DETECTOR_CLASS: str = "sKfxWe-BeDmAc-qJTHM-haAclf"
+
+
 class InputType(str, Enum):
   URL = "url"
   HTML = "html"
@@ -398,6 +404,23 @@ class SchemaOrgValidatorEngine:
       # page.url es la propiedad nativa de nodriver (sin evaluate)
       current_url = page.url if hasattr(page, "url") else self.target_url
       final_html = await page.get_content()
+
+      # Detección de bloqueo post-submit: si la clase del dashboard no aparece
+      # en el HTML final, validator.schema.org bloqueó la solicitud.
+      if SCHEMA_BLOCK_DETECTOR_CLASS not in (final_html or ""):
+        logger.warning(
+          "Bloqueo detectado: clase '%s' ausente tras el submit. validator.schema.org bloqueó la solicitud.",
+          SCHEMA_BLOCK_DETECTOR_CLASS,
+        )
+        return ValidationResult(
+          is_success=False,
+          result_url=current_url,
+          html_content=final_html,
+          error_message="validator.schema.org bloqueó la solicitud: dashboard de resultados no encontrado",
+          method_used="nodriver",
+          blocked_by_schema=True,
+          screenshots=screenshots,
+        )
 
       return ValidationResult(
         is_success=True,
