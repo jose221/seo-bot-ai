@@ -51,6 +51,13 @@ class DatabaseManager:
                 pool_pre_ping=True,
                 pool_size=10,
                 max_overflow=20,
+                # Termina automáticamente sesiones idle-in-transaction tras 60s
+                # para evitar que conexiones huérfanas bloqueen migraciones futuras.
+                connect_args={
+                    "server_settings": {
+                        "idle_in_transaction_session_timeout": "60000",  # ms
+                    }
+                },
             )
         return self._async_engine
 
@@ -100,9 +107,38 @@ class DatabaseManager:
             )
         return self._sync_session_maker
 
+    async def _terminate_blocking_connections(self) -> None:
+        """
+        Elimina conexiones idle-in-transaction y bloqueadas antes de ejecutar
+        migraciones DDL, para evitar que transacciones huérfanas (de reinicios
+        abruptos del servidor) impidan adquirir los locks necesarios.
+        """
+        async with self.async_engine.connect() as conn:
+            result = await conn.execute(text("""
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = current_database()
+                  AND pid != pg_backend_pid()
+                  AND (
+                      state = 'idle in transaction'
+                      OR (state = 'active' AND wait_event_type = 'Lock')
+                  )
+                  AND query_start < NOW() - INTERVAL '10 seconds'
+            """))
+            await conn.commit()
+            terminated = result.rowcount
+            if terminated:
+                print(f"🧹 Terminadas {terminated} conexiones bloqueadas antes de migraciones")
+
     async def init_db(self):
         """Inicializa las tablas en la base de datos"""
+        # Limpiar conexiones huérfanas antes de ejecutar DDL
+        await self._terminate_blocking_connections()
+
         async with self.async_engine.begin() as conn:
+            # lock_timeout: si no consigue el lock en 15s, lanza error en lugar
+            # de quedarse bloqueado indefinidamente.
+            await conn.execute(text("SET LOCAL lock_timeout = '15s'"))
             await conn.run_sync(SQLModel.metadata.create_all)
             await conn.execute(text("""
                 ALTER TABLE rich_results_reports

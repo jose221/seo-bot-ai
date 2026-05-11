@@ -15,7 +15,7 @@ from prometheus_fastapi_instrumentator import Instrumentator, metrics
 from starlette.middleware.base import RequestResponseEndpoint
 
 from app.core.config import settings
-from app.core.database import init_db
+from app.core.database import init_db, db_manager
 from app.core.security import clear_request_auth_context
 from app.api.v1.api import api_router
 from app.services.report_lifecycle import get_report_lifecycle_service
@@ -67,6 +67,7 @@ async def lifespan(app: FastAPI):
     with suppress(asyncio.CancelledError):
         await rich_results_cleanup_task
     await close_hsa_client()
+    await db_manager.close()
     print("👋 Cerrando aplicación...")
 
 
