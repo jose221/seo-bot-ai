@@ -39,6 +39,20 @@
             <label class="form-label">Instrucción para IA</label>
             <textarea class="form-control" rows="3" formControlName="ai_instruction"></textarea>
           </div>
+          @if (browserModes().length > 0) {
+            <div class="col-md-6">
+              <label class="form-label">Modo del navegador</label>
+              <select class="form-select" formControlName="browser_mode_code">
+                <option value="">Automático</option>
+                @for (mode of browserModes(); track mode.code) {
+                  <option [value]="mode.code">{{ mode.name }}</option>
+                }
+              </select>
+              <div class="form-text">
+                Si no eliges uno, el backend usa la lógica actual automática.
+              </div>
+            </div>
+          }
         </div>
 
         <hr class="my-4" />

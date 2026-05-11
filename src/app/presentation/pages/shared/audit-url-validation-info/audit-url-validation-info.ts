@@ -974,6 +974,7 @@ export default class PublicAuditUrlValidationInfoComponent implements OnInit, On
           `${validationName} · lote estructurado`,
           'Lote generado desde validaciones URL',
           null,
+          null,
           urls.join('\n'),
           [],
           this.richResultsBatchAnalyzeWithAi(),

@@ -30,6 +30,7 @@ from app.schemas.rich_results_schemas import (
     RichResultsValidatorDetail,
 )
 from app.services.rich_results_service import get_rich_results_service
+from app.services.browser_mode_registry_service import get_browser_mode_registry_service
 from app.services.task_progress_service import get_task_progress_service
 
 log = logging.getLogger(__name__)
@@ -106,6 +107,7 @@ class RichResultsReportService:
         user_id: UUID,
         payload: RichResultsReportRequest,
     ) -> RichResultsReport:
+        get_browser_mode_registry_service().resolve_mode(payload.browser_mode_code)
         report = RichResultsReport(
             user_id=user_id,
             url=self._normalize_url(payload.content),

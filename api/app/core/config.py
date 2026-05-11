@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     DEBUG: bool = False
     ENVIRONMENT: Literal["local", "development", "staging", "production"] = "local"
+    APP_MODE: Literal["web", "desktop"] = "web"
 
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]

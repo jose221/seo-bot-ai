@@ -483,6 +483,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
           name: fullTask.name,
           description: fullTask.description,
           ai_instruction: fullTask.ai_instruction,
+          browser_mode_code: fullTask.browser_mode_code,
           raw_urls: fullTask.input_mode === 'url'
             ? fullTask.items.map((entry) => entry.source_value).filter(Boolean).join('\n')
             : null,

@@ -100,6 +100,7 @@ export class StructuredValidationList implements OnInit, OnDestroy {
           name: detail.name,
           description: detail.description,
           ai_instruction: detail.ai_instruction,
+          browser_mode_code: detail.browser_mode_code,
           raw_urls: detail.input_mode === 'url'
             ? detail.items.map((entry) => entry.source_value).filter(Boolean).join('\n')
             : null,

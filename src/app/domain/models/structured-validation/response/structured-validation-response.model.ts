@@ -53,6 +53,15 @@ export class StructuredValidationTaskSummaryModel {
   ) {}
 }
 
+export class StructuredValidationBrowserModeOptionModel {
+  constructor(
+    public code: string,
+    public name: string,
+    public description: string,
+    public available_web: boolean,
+  ) {}
+}
+
 export class StructuredValidationTaskResponseModel {
   constructor(
     public id: string,
@@ -62,6 +71,7 @@ export class StructuredValidationTaskResponseModel {
     public name: string,
     public description: string | null,
     public ai_instruction: string | null,
+    public browser_mode_code: string | null,
     public requested_ai_result: boolean,
     public auto_extract_html: boolean,
     public validate_google: boolean,

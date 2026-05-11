@@ -25,6 +25,7 @@ class StructuredValidationCreateRequest(BaseModel):
     name: str = Field(default="Validacion estructurada", max_length=160)
     description: Optional[str] = Field(default=None, max_length=500)
     ai_instruction: Optional[str] = Field(default=None, max_length=1200)
+    browser_mode_code: Optional[str] = Field(default=None, max_length=80)
     raw_urls: Optional[str] = None
     html_items: List[str] = Field(default_factory=list)
     get_ai_result: bool = True
@@ -38,7 +39,7 @@ class StructuredValidationCreateRequest(BaseModel):
         cleaned = (value or "").strip()
         return cleaned or "Validacion estructurada"
 
-    @field_validator("description", "ai_instruction")
+    @field_validator("description", "ai_instruction", "browser_mode_code")
     @classmethod
     def trim_optional_text(cls, value: Optional[str]) -> Optional[str]:
         if value is None:
@@ -116,6 +117,7 @@ class StructuredValidationTaskResponse(BaseModel):
     name: str
     description: Optional[str] = None
     ai_instruction: Optional[str] = None
+    browser_mode_code: Optional[str] = None
     requested_ai_result: bool
     auto_extract_html: bool
     validate_google: bool
@@ -180,6 +182,13 @@ class StructuredValidationDeleteResponse(BaseModel):
     success: bool = True
     deleted_id: UUID
     message: str
+
+
+class StructuredValidationBrowserModeOption(BaseModel):
+    code: str
+    name: str
+    description: str
+    available_web: bool
 
 
 StructuredValidationPublicCommentCreate = CommentCreate

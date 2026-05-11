@@ -85,6 +85,11 @@ class RichResultsReportRequest(BaseModel):
         default=True,
         description="Si es true ejecuta la validación en validator.schema.org.",
     )
+    browser_mode_code: Optional[str] = Field(
+        default=None,
+        max_length=80,
+        description="Modo opcional de ejecución del navegador. Si se omite, usa la lógica automática.",
+    )
 
     @field_validator("content")
     @classmethod
@@ -93,6 +98,14 @@ class RichResultsReportRequest(BaseModel):
         if not value:
             raise ValueError("content no puede estar vacío")
         return value
+
+    @field_validator("browser_mode_code")
+    @classmethod
+    def validate_browser_mode_code(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
 
     @model_validator(mode="after")
     def validate_single_input(self) -> "RichResultsReportRequest":
@@ -152,6 +165,11 @@ class RichResultsBatchReportRequest(BaseModel):
         default=True,
         description="Si es true ejecuta la validación en validator.schema.org para cada URL del lote.",
     )
+    browser_mode_code: Optional[str] = Field(
+        default=None,
+        max_length=80,
+        description="Modo opcional de ejecución del navegador aplicado a todo el lote.",
+    )
 
     @field_validator("urls")
     @classmethod
@@ -174,6 +192,14 @@ class RichResultsBatchReportRequest(BaseModel):
             raise ValueError("Se requiere al menos una URL válida")
 
         return normalized
+
+    @field_validator("browser_mode_code")
+    @classmethod
+    def validate_browser_mode_code(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
 
     @model_validator(mode="after")
     def validate_requested_validators(self) -> "RichResultsBatchReportRequest":

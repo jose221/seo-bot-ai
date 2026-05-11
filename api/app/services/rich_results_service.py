@@ -189,12 +189,20 @@ class RichResultsService:
         schema_org_service = SchemaOrgValidationService(proxy_url)
 
         google_validation = (
-            await google_service.validate(input_type=input_type.value, content=content or "")
+            await google_service.validate(
+                input_type=input_type.value,
+                content=content or "",
+                browser_mode_code=payload.browser_mode_code,
+            )
             if payload.validate_google
             else self._build_disabled_segment("google", "Google Rich Results")
         )
         schema_org_validation = (
-            await schema_org_service.validate(input_type=input_type.value, content=content or "")
+            await schema_org_service.validate(
+                input_type=input_type.value,
+                content=content or "",
+                browser_mode_code=payload.browser_mode_code,
+            )
             if payload.validate_schema_org
             else self._build_disabled_segment("schema_org", "Schema.org Validator")
         )

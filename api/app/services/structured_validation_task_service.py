@@ -17,6 +17,7 @@ from app.models.structured_validation_task import (
     StructuredValidationTask,
     StructuredValidationTaskStatus,
 )
+from app.services.browser_mode_registry_service import get_browser_mode_registry_service
 from app.schemas.rich_results_schemas import (
     RichResultsAnalysisSummary,
     RichResultsAIResult,
@@ -25,6 +26,7 @@ from app.schemas.rich_results_schemas import (
     RichResultsValidatorDetail,
 )
 from app.schemas.structured_validation_schemas import (
+    StructuredValidationBrowserModeOption,
     StructuredValidationCreateRequest,
     StructuredValidationTaskItem,
     StructuredValidationTaskItemsSummary,
@@ -44,7 +46,7 @@ class StructuredValidationTaskService:
     BATCH_CONCURRENCY = 7
     CONTROL_POLL_SECONDS = 1.0
     DEFAULT_DETAIL_PAGE_SIZE = 10
-    MAX_DETAIL_PAGE_SIZE = 1000
+    MAX_DETAIL_PAGE_SIZE = 10000
     ACTIVE_STATUSES = {
         StructuredValidationTaskStatus.PENDING,
         StructuredValidationTaskStatus.IN_PROGRESS,
@@ -475,6 +477,7 @@ class StructuredValidationTaskService:
             name=report.url,
             description=report.message,
             ai_instruction=None,
+            browser_mode_code=None,
             requested_ai_result=report.requested_ai_result,
             auto_extract_html=False,
             validate_google=report.validate_google,
@@ -612,6 +615,7 @@ class StructuredValidationTaskService:
         user_id: UUID,
         payload: StructuredValidationCreateRequest,
     ) -> StructuredValidationTask:
+        get_browser_mode_registry_service().resolve_mode(payload.browser_mode_code)
         inputs = self._build_inputs(payload)
         task = StructuredValidationTask(
             user_id=user_id,
@@ -619,6 +623,7 @@ class StructuredValidationTaskService:
             name=payload.name,
             description=payload.description,
             ai_instruction=payload.ai_instruction,
+            browser_mode_code=payload.browser_mode_code,
             requested_ai_result=payload.get_ai_result,
             auto_extract_html=payload.auto_extract_html,
             validate_google=payload.validate_google,
@@ -690,6 +695,7 @@ class StructuredValidationTaskService:
                     StructuredValidationTask.input_mode,
                     StructuredValidationTask.name,
                     StructuredValidationTask.description,
+                    StructuredValidationTask.browser_mode_code,
                     StructuredValidationTask.status,
                     StructuredValidationTask.progress_percentage,
                     StructuredValidationTask.progress_message,
@@ -819,6 +825,7 @@ class StructuredValidationTaskService:
             name=task.name,
             description=task.description,
             ai_instruction=task.ai_instruction,
+            browser_mode_code=task.browser_mode_code,
             requested_ai_result=task.requested_ai_result,
             auto_extract_html=task.auto_extract_html,
             validate_google=task.validate_google,
@@ -854,6 +861,17 @@ class StructuredValidationTaskService:
         page_size: int = DEFAULT_DETAIL_PAGE_SIZE,
     ) -> StructuredValidationTaskResponse:
         return self._build_legacy_task_response(report, page=page, page_size=page_size)
+
+    def list_available_browser_modes(self) -> list[StructuredValidationBrowserModeOption]:
+        return [
+            StructuredValidationBrowserModeOption(
+                code=mode.code,
+                name=mode.name,
+                description=mode.description,
+                available_web=mode.available_web,
+            )
+            for mode in get_browser_mode_registry_service().list_available_modes()
+        ]
 
     async def delete_task(self, session, *, task: StructuredValidationTask) -> None:
         await session.delete(task)
@@ -918,6 +936,7 @@ class StructuredValidationTaskService:
                             auto_extract_html=task.auto_extract_html if input_type == StructuredValidationInputMode.URL else False,
                             validate_google=task.validate_google,
                             validate_schema_org=task.validate_schema_org,
+                            browser_mode_code=task.browser_mode_code,
                         )
                         report = await get_rich_results_service().report_page(report_payload, token=token)
                     except Exception as exc:

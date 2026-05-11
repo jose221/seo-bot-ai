@@ -4,6 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 API_DIR="$ROOT_DIR/api"
+API_ENV_FILE="$API_DIR/.env"
 DESKTOP_VENV_DIR="$API_DIR/.desktop-python"
 PYTHON_BIN="$DESKTOP_VENV_DIR/bin/python3"
 PLAYWRIGHT_BIN="$DESKTOP_VENV_DIR/bin/playwright"
@@ -25,6 +26,7 @@ CLEANUP_CACHE_PATHS=(
   "$HOME/Library/Caches/electron-builder"
   "$HOME/Library/Caches/pip"
 )
+API_ENV_BACKUP_FILE="$(mktemp "${TMPDIR:-/tmp}/seo-bot-ai-api-env.XXXXXX")"
 
 for arg in "$@"; do
   case "$arg" in
@@ -47,6 +49,38 @@ log() {
 fail() {
   printf '\n[ERROR] %s\n' "$1" >&2
   exit 1
+}
+
+restore_api_env() {
+  if [[ -f "$API_ENV_BACKUP_FILE" ]]; then
+    cp "$API_ENV_BACKUP_FILE" "$API_ENV_FILE"
+    rm -f "$API_ENV_BACKUP_FILE"
+  fi
+}
+
+set_env_value() {
+  local target_file="$1"
+  local key="$2"
+  local value="$3"
+
+  python3 - "$target_file" "$key" "$value" <<'PY'
+from pathlib import Path
+import sys
+
+target_file, key, value = sys.argv[1:]
+path = Path(target_file)
+lines = path.read_text().splitlines()
+prefix = f"{key}="
+
+for index, line in enumerate(lines):
+    if line.startswith(prefix):
+        lines[index] = f"{key}={value}"
+        break
+else:
+    lines.append(f"{key}={value}")
+
+path.write_text("\n".join(lines) + "\n")
+PY
 }
 
 require_cmd() {
@@ -77,6 +111,7 @@ log "Validando prerequisitos"
 require_cmd node
 require_cmd npm
 require_cmd rsync
+require_cmd python3
 
 if [[ -z "$BASE_PYTHON_BIN" ]]; then
   if command -v python3.13 >/dev/null 2>&1; then
@@ -90,7 +125,10 @@ fi
 
 [[ -f "$ROOT_DIR/package.json" ]] || fail "No encontre package.json en $ROOT_DIR"
 [[ -f "$API_DIR/requirements.txt" ]] || fail "No encontre api/requirements.txt"
-[[ -f "$API_DIR/.env" ]] || fail "No encontre api/.env. El backend de escritorio lo necesita."
+[[ -f "$API_ENV_FILE" ]] || fail "No encontre api/.env. El backend de escritorio lo necesita."
+
+cp "$API_ENV_FILE" "$API_ENV_BACKUP_FILE"
+trap restore_api_env EXIT
 
 NODE_VERSION="$(node -p 'process.versions.node')"
 if ! node -e "const [major, minor] = process.versions.node.split('.').map(Number); process.exit(major > 20 || (major === 20 && minor >= 19) ? 0 : 1)"; then
@@ -102,6 +140,9 @@ cd "$ROOT_DIR"
 if [[ "$CLEAN_MODE" -eq 1 ]]; then
   run_clean
 fi
+
+log "Configurando api/.env para desktop"
+set_env_value "$API_ENV_FILE" "APP_MODE" "desktop"
 
 log "Instalando dependencias Node"
 npm install

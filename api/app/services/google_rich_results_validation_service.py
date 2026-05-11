@@ -20,6 +20,7 @@ from app.shared.rich_results_html_analyzer import (
     analyze_rich_results_html,
     build_rich_results_findings_summary,
 )
+from app.services.browser_mode_registry_service import get_browser_mode_registry_service
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +29,11 @@ class GoogleRichResultsValidationService:
     def __init__(self, proxy_url: Optional[str]) -> None:
         self.proxy_url = proxy_url
 
-    def _build_engine(self, proxy_url: Optional[str] = None) -> GoogleRichResultsEngine:
+    def _build_engine(
+        self,
+        proxy_url: Optional[str] = None,
+        browser_mode_code: Optional[str] = None,
+    ) -> GoogleRichResultsEngine:
         effective_proxy = proxy_url if proxy_url is not None else self.proxy_url
         proxy_server = None
         if effective_proxy:
@@ -36,11 +41,13 @@ class GoogleRichResultsValidationService:
             proxy_server = f"{parsed.scheme}://{parsed.hostname}"
             if parsed.port:
                 proxy_server = f"{proxy_server}:{parsed.port}"
+        browser_mode = get_browser_mode_registry_service().resolve_mode(browser_mode_code)
 
         return GoogleRichResultsEngine(
             proxy_server=proxy_server,
             screenshots_dir=f"{settings.STORAGE_PATH}/images",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images",
+            headless=browser_mode.headless if browser_mode else False,
         )
 
     @staticmethod
@@ -64,9 +71,15 @@ class GoogleRichResultsValidationService:
             return "Google bloqueó la validación; se devuelven screenshots y el mensaje de error"
         return error_message or "No fue posible generar el reporte de Google Rich Results"
 
-    async def validate(self, *, input_type: str, content: str) -> RichResultsValidatorDetail:
+    async def validate(
+        self,
+        *,
+        input_type: str,
+        content: str,
+        browser_mode_code: Optional[str] = None,
+    ) -> RichResultsValidatorDetail:
         # Primer intento: sin proxy
-        validation = await self._build_engine(proxy_url=None).validate(
+        validation = await self._build_engine(proxy_url=None, browser_mode_code=browser_mode_code).validate(
             input_type=self._to_input_type(input_type),
             content=content,
         )
@@ -78,7 +91,10 @@ class GoogleRichResultsValidationService:
                 logger.warning(
                     "Google bloqueó la solicitud sin proxy — reintentando con proxy de .env"
                 )
-                validation = await self._build_engine(proxy_url=fallback_proxy).validate(
+                validation = await self._build_engine(
+                    proxy_url=fallback_proxy,
+                    browser_mode_code=browser_mode_code,
+                ).validate(
                     input_type=self._to_input_type(input_type),
                     content=content,
                 )

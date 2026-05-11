@@ -41,11 +41,14 @@ async def report_page(
             detail="Solo se soportan reportes basados en URL",
         )
 
-    report = await get_rich_results_report_service().create_pending_report(
-        session,
-        user_id=current_user.id,
-        payload=payload,
-    )
+    try:
+        report = await get_rich_results_report_service().create_pending_report(
+            session,
+            user_id=current_user.id,
+            payload=payload,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
 
     auth_token = getattr(current_user, "_token", None)
     background_tasks.add_task(
@@ -88,12 +91,16 @@ async def report_page_batch(
             auto_extract_html=payload.auto_extract_html,
             validate_google=payload.validate_google,
             validate_schema_org=payload.validate_schema_org,
+            browser_mode_code=payload.browser_mode_code,
         )
-        report = await get_rich_results_report_service().create_pending_report(
-            session,
-            user_id=current_user.id,
-            payload=report_payload,
-        )
+        try:
+            report = await get_rich_results_report_service().create_pending_report(
+                session,
+                user_id=current_user.id,
+                payload=report_payload,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
         queued_reports.append((report.id, report_payload))
         items.append(
             RichResultsReportTaskResponse(

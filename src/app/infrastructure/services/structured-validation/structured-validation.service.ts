@@ -17,6 +17,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationBrowserModeOptionModel,
   StructuredValidationTaskControlAction,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
@@ -30,6 +31,7 @@ import {
   StructuredValidationCreateRequestDto,
 } from '@/app/infrastructure/dto/request/structured-validation-request.dto';
 import {
+  StructuredValidationBrowserModeOptionDto,
   StructuredValidationRerunResponseDto,
   StructuredValidationTaskCreateResponseDto,
   StructuredValidationTaskListResponseDto,
@@ -71,6 +73,16 @@ export class StructuredValidationService extends BaseService {
       this.getToken,
     );
     return this.mapper.mapResponseList(response);
+  }
+
+  async getBrowserModes(): Promise<StructuredValidationBrowserModeOptionModel[]> {
+    const response = await this.httpService.get<StructuredValidationBrowserModeOptionDto[]>(
+      `${this.endpoint}/browser-modes`,
+      {},
+      {},
+      this.getToken,
+    );
+    return this.mapper.mapBrowserModes(response);
   }
 
   async find(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel> {

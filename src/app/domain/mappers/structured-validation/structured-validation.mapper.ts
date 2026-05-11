@@ -14,6 +14,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationBrowserModeOptionModel,
   StructuredValidationEmbeddedReportModel,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
@@ -29,6 +30,7 @@ import {
   StructuredValidationCreateRequestDto,
 } from '@/app/infrastructure/dto/request/structured-validation-request.dto';
 import {
+  StructuredValidationBrowserModeOptionDto,
   StructuredValidationEmbeddedReportDto,
   StructuredValidationRerunResponseDto,
   StructuredValidationTaskCreateResponseDto,
@@ -178,6 +180,17 @@ export class StructuredValidationMapper extends AppMapper {
     );
   }
 
+  mapBrowserModes(dtos: StructuredValidationBrowserModeOptionDto[]): StructuredValidationBrowserModeOptionModel[] {
+    return (dtos ?? []).map(
+      (dto) => new StructuredValidationBrowserModeOptionModel(
+        dto.code,
+        dto.name,
+        dto.description,
+        dto.available_web,
+      ),
+    );
+  }
+
   mapResponseTaskCreate(dto: StructuredValidationTaskCreateResponseDto): StructuredValidationTaskCreateResponseModel {
     return this.autoMap<any, any>(dto, { except: [] });
   }
@@ -191,6 +204,7 @@ export class StructuredValidationMapper extends AppMapper {
       dto.name,
       dto.description,
       dto.ai_instruction,
+      dto.browser_mode_code,
       dto.requested_ai_result,
       dto.auto_extract_html,
       dto.validate_google,

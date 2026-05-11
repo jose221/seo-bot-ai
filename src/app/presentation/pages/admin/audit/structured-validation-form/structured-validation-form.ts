@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
 import { requiredTrimmed } from '@/app/presentation/utils/form-validators.util';
 import { StructuredValidationCreateRequestModel } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
+import { StructuredValidationBrowserModeOptionModel } from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
 
 @Component({
   selector: 'app-structured-validation-form',
@@ -12,7 +13,7 @@ import { StructuredValidationCreateRequestModel } from '@/app/domain/models/stru
   templateUrl: './structured-validation-form.html',
   styleUrl: './structured-validation-form.scss',
 })
-export class StructuredValidationForm {
+export class StructuredValidationForm implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly repository = inject(StructuredValidationRepository);
   private readonly router = inject(Router);
@@ -20,12 +21,14 @@ export class StructuredValidationForm {
   readonly loading = signal(false);
   readonly submitted = signal(false);
   readonly error = signal('');
+  readonly browserModes = signal<StructuredValidationBrowserModeOptionModel[]>([]);
 
   readonly form = this.fb.group({
     input_mode: ['url' as 'url' | 'html', Validators.required],
     name: ['Validacion estructurada', [Validators.maxLength(160)]],
     description: ['', [Validators.maxLength(500)]],
     ai_instruction: ['', [Validators.maxLength(1200)]],
+    browser_mode_code: [''],
     raw_urls: [''],
     html_items: this.fb.array([this.fb.control('', [requiredTrimmed()])]),
     get_ai_result: [true],
@@ -43,6 +46,7 @@ export class StructuredValidationForm {
         name: rerunData.name ?? 'Validacion estructurada',
         description: rerunData.description ?? '',
         ai_instruction: rerunData.ai_instruction ?? '',
+        browser_mode_code: rerunData.browser_mode_code ?? '',
         raw_urls: rerunData.raw_urls ?? '',
         get_ai_result: rerunData.get_ai_result ?? true,
         auto_extract_html: rerunData.auto_extract_html ?? false,
@@ -54,6 +58,14 @@ export class StructuredValidationForm {
       if (this.htmlItems.length === 0) this.addHtmlItem();
     }
     this.onModeChange();
+  }
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.browserModes.set(await this.repository.getBrowserModes());
+    } catch {
+      this.browserModes.set([]);
+    }
   }
 
   get htmlItems(): FormArray<FormControl<string | null>> {
@@ -122,6 +134,7 @@ export class StructuredValidationForm {
           `${this.form.get('name')?.value ?? ''}`.trim() || 'Validacion estructurada',
           `${this.form.get('description')?.value ?? ''}`.trim() || null,
           `${this.form.get('ai_instruction')?.value ?? ''}`.trim() || null,
+          `${this.form.get('browser_mode_code')?.value ?? ''}`.trim() || null,
           inputMode === 'url' ? rawUrls : null,
           inputMode === 'html' ? htmlItems : [],
           !!this.form.get('get_ai_result')?.value,

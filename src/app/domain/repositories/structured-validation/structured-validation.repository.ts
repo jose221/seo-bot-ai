@@ -12,6 +12,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationBrowserModeOptionModel,
   StructuredValidationTaskControlAction,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
@@ -27,6 +28,7 @@ export abstract class StructuredValidationRepository {
   abstract getAll(
     params?: FilterStructuredValidationTasksRequestModel,
   ): Promise<StructuredValidationTaskListResponseModel>;
+  abstract getBrowserModes(): Promise<StructuredValidationBrowserModeOptionModel[]>;
   abstract find(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel>;
   abstract findPublic(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel>;
   abstract getLogs(id: string): Promise<TaskLogListResponseModel>;

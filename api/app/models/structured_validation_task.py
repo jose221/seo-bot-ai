@@ -35,6 +35,7 @@ class StructuredValidationTask(SQLModel, table=True):
     name: str = Field(default="Validacion estructurada", sa_column=Column(String(160), nullable=False))
     description: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
     ai_instruction: Optional[str] = Field(default=None, sa_column=Column(Text, nullable=True))
+    browser_mode_code: Optional[str] = Field(default=None, sa_column=Column(String(80), nullable=True))
     requested_ai_result: bool = Field(default=True)
     auto_extract_html: bool = Field(default=False)
     validate_google: bool = Field(default=True)

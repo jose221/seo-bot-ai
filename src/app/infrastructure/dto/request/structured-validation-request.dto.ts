@@ -4,6 +4,7 @@ export class StructuredValidationCreateRequestDto {
     public name: string,
     public description: string | null = null,
     public ai_instruction: string | null = null,
+    public browser_mode_code: string | null = null,
     public raw_urls: string | null = null,
     public html_items: string[] = [],
     public get_ai_result: boolean = true,

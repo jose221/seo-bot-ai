@@ -160,6 +160,10 @@ class DatabaseManager:
                 ALTER TABLE rich_results_reports
                 ADD COLUMN IF NOT EXISTS schema_org_validation_result JSONB
             """))
+            await conn.execute(text("""
+                ALTER TABLE structured_validation_tasks
+                ADD COLUMN IF NOT EXISTS browser_mode_code VARCHAR(80)
+            """))
 
     @asynccontextmanager
     async def async_session_context(self) -> AsyncGenerator[AsyncSession, None]:

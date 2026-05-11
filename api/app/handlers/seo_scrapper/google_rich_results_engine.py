@@ -45,13 +45,15 @@ class GoogleRichResultsEngine:
     proxy_server: Optional[str] = None,
     screenshots_dir: str = "storage/images",
     storage_url_prefix: str = "/storage/images",
-    max_concurrent_tasks: int = 3 # Límite de navegadores simultáneos
+    max_concurrent_tasks: int = 3, # Límite de navegadores simultáneos
+    headless: bool = False,
   ):
     """
     Inicializa el motor de validación exclusivo con Nodriver.
     Nota: proxy_server debe ser un string con el formato "http://ip:port"
     """
     self._proxy_server = proxy_server
+    self._headless = headless
     self.target_url = "https://search.google.com/test/rich-results?hl=es"
     self.screenshots_dir = Path(screenshots_dir)
     self.storage_url_prefix = storage_url_prefix.rstrip("/")
@@ -98,7 +100,7 @@ class GoogleRichResultsEngine:
       # BLOQUE PROTEGIDO: Solo un proceso a la vez puede crear un display virtual y abrir Chrome
       # Esto evita que las peticiones paralelas se roben la variable os.environ['DISPLAY']
       async with self._startup_lock:
-        if sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
+        if not self._headless and sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
           try:
             from pyvirtualdisplay import Display
             logger.info("Starting Xvfb virtual display...")
@@ -118,7 +120,7 @@ class GoogleRichResultsEngine:
           browser_args.append(f"--proxy-server={self._proxy_server}")
 
         # Lanzamos el navegador heredando el entorno seguro
-        browser = await uc.start(headless=False, browser_args=browser_args)
+        browser = await uc.start(headless=self._headless, browser_args=browser_args)
 
       # --- FIN DEL BLOQUE PROTEGIDO ---
 

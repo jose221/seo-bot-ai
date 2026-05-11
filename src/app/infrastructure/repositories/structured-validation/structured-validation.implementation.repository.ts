@@ -15,6 +15,7 @@ import {
   StructuredValidationCreateRequestModel,
 } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
 import {
+  StructuredValidationBrowserModeOptionModel,
   StructuredValidationTaskControlAction,
   StructuredValidationRerunResponseModel,
   StructuredValidationTaskCreateResponseModel,
@@ -33,6 +34,10 @@ export class StructuredValidationImplementationRepository implements StructuredV
 
   getAll(params?: FilterStructuredValidationTasksRequestModel): Promise<StructuredValidationTaskListResponseModel> {
     return this.primaryService.getAll(params);
+  }
+
+  getBrowserModes(): Promise<StructuredValidationBrowserModeOptionModel[]> {
+    return this.primaryService.getBrowserModes();
   }
 
   find(id: string, params?: StructuredValidationTaskDetailRequestModel): Promise<StructuredValidationTaskResponseModel> {

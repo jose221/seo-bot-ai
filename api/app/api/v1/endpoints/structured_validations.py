@@ -16,6 +16,7 @@ from app.models.user import User
 from app.schemas.rich_results_schemas import RichResultsReportRequest
 from app.schemas.audit_schemas import CommentListResponse, CommentResponse
 from app.schemas.structured_validation_schemas import (
+    StructuredValidationBrowserModeOption,
     StructuredValidationTaskAction,
     StructuredValidationTaskActionRequest,
     StructuredValidationCommentAnswerRequest,
@@ -35,6 +36,11 @@ from app.schemas.task_log_schemas import TaskLogEntryResponse, TaskLogListRespon
 router = APIRouter(prefix="/structured-validations")
 
 
+@router.get("/browser-modes", response_model=list[StructuredValidationBrowserModeOption])
+async def list_structured_validation_browser_modes():
+    return get_structured_validation_task_service().list_available_browser_modes()
+
+
 @router.post("", response_model=StructuredValidationTaskCreateResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_structured_validation_task(
     payload: StructuredValidationCreateRequest,
@@ -42,11 +48,14 @@ async def create_structured_validation_task(
     current_user: User = Depends(get_current_user),
     session=Depends(get_session),
 ):
-    task = await get_structured_validation_task_service().create_task(
-        session,
-        user_id=current_user.id,
-        payload=payload,
-    )
+    try:
+        task = await get_structured_validation_task_service().create_task(
+            session,
+            user_id=current_user.id,
+            payload=payload,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     background_tasks.add_task(
         get_structured_validation_task_service().run_task,
         task_id=task.id,
@@ -81,7 +90,7 @@ async def list_structured_validation_tasks(
 async def get_structured_validation_task(
     task_id: UUID,
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=1000),
+    page_size: int = Query(10, ge=1, le=10000),
     current_user: User = Depends(get_current_user),
     session=Depends(get_session),
 ):
@@ -140,7 +149,7 @@ async def get_structured_validation_task_logs(
 async def get_structured_validation_task_public(
     task_id: UUID,
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=1000),
+    page_size: int = Query(10, ge=1, le=10000),
     session=Depends(get_session),
 ):
     task = await get_structured_validation_task_service().get_task(session, task_id=task_id)
@@ -252,6 +261,7 @@ async def rerun_structured_validation_task(
             auto_extract_html=False,
             validate_google=report.validate_google,
             validate_schema_org=report.validate_schema_org,
+            browser_mode_code=None,
         ),
         token=getattr(current_user, "_token", None) or "",
     )

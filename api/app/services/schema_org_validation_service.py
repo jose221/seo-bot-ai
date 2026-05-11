@@ -21,6 +21,7 @@ from app.shared.schema_org_html_analyzer import (
     build_schema_org_findings_summary,
 )
 from app.shared.schema_org_local_validator import validate_locally
+from app.services.browser_mode_registry_service import get_browser_mode_registry_service
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +30,11 @@ class SchemaOrgValidationService:
     def __init__(self, proxy_url: Optional[str]) -> None:
         self.proxy_url = proxy_url
 
-    def _build_engine(self, proxy_url: Optional[str] = None) -> SchemaOrgValidatorEngine:
+    def _build_engine(
+        self,
+        proxy_url: Optional[str] = None,
+        browser_mode_code: Optional[str] = None,
+    ) -> SchemaOrgValidatorEngine:
         effective_proxy = proxy_url if proxy_url is not None else self.proxy_url
         proxy_server = None
         if effective_proxy:
@@ -37,11 +42,13 @@ class SchemaOrgValidationService:
             proxy_server = f"{parsed.scheme}://{parsed.hostname}"
             if parsed.port:
                 proxy_server = f"{proxy_server}:{parsed.port}"
+        browser_mode = get_browser_mode_registry_service().resolve_mode(browser_mode_code)
 
         return SchemaOrgValidatorEngine(
             proxy_server=proxy_server,
             screenshots_dir=f"{settings.STORAGE_PATH}/images/schema_org",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images/schema_org",
+            headless=browser_mode.headless if browser_mode else False,
         )
 
     @staticmethod
@@ -63,9 +70,15 @@ class SchemaOrgValidationService:
             return "Reporte de Schema.org Validator generado correctamente"
         return error_message or "No fue posible generar el reporte de Schema.org Validator"
 
-    async def validate(self, *, input_type: str, content: str) -> RichResultsValidatorDetail:
+    async def validate(
+        self,
+        *,
+        input_type: str,
+        content: str,
+        browser_mode_code: Optional[str] = None,
+    ) -> RichResultsValidatorDetail:
         # Primer intento: sin proxy
-        validation = await self._build_engine(proxy_url=None).validate(
+        validation = await self._build_engine(proxy_url=None, browser_mode_code=browser_mode_code).validate(
             input_type=self._to_input_type(input_type),
             content=content,
         )
@@ -77,7 +90,10 @@ class SchemaOrgValidationService:
                 logger.warning(
                     "validator.schema.org bloqueó sin proxy — reintentando con proxy de .env"
                 )
-                validation = await self._build_engine(proxy_url=fallback_proxy).validate(
+                validation = await self._build_engine(
+                    proxy_url=fallback_proxy,
+                    browser_mode_code=browser_mode_code,
+                ).validate(
                     input_type=self._to_input_type(input_type),
                     content=content,
                 )

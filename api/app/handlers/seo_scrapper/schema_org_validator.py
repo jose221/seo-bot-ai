@@ -61,12 +61,14 @@ class SchemaOrgValidatorEngine:
     proxy_server: Optional[str] = None,
     screenshots_dir: str = "storage/images/schema_org",
     storage_url_prefix: str = "/storage/images/schema_org",
-    max_concurrent_tasks: int = 3
+    max_concurrent_tasks: int = 3,
+    headless: bool = False,
   ):
     """
     Inicializa el motor de validación para validator.schema.org.
     """
     self._proxy_server = proxy_server
+    self._headless = headless
     self.target_url = "https://validator.schema.org/"
     self.screenshots_dir = Path(screenshots_dir)
     self.storage_url_prefix = storage_url_prefix.rstrip("/")
@@ -254,7 +256,7 @@ class SchemaOrgValidatorEngine:
     try:
       # 1. Configuración de Display Virtual seguro para concurrencia
       async with self._startup_lock:
-        if sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
+        if not self._headless and sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
           try:
             from pyvirtualdisplay import Display
             display = Display(visible=False, size=(1920, 1080))
@@ -277,7 +279,7 @@ class SchemaOrgValidatorEngine:
         if self._proxy_server:
           browser_args.append(f"--proxy-server={self._proxy_server}")
 
-        browser = await uc.start(headless=False, browser_args=browser_args)
+        browser = await uc.start(headless=self._headless, browser_args=browser_args)
 
       # --- FIN DEL BLOQUE PROTEGIDO ---
 
