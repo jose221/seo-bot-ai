@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy import func
+from sqlalchemy.orm import load_only
 from sqlmodel import desc, select
 
 from app.core.database import db_manager
@@ -556,6 +557,25 @@ class StructuredValidationTaskService:
         task_items = (
             await session.execute(
                 select(StructuredValidationTask)
+                .options(load_only(
+                    StructuredValidationTask.id,
+                    StructuredValidationTask.user_id,
+                    StructuredValidationTask.input_mode,
+                    StructuredValidationTask.name,
+                    StructuredValidationTask.description,
+                    StructuredValidationTask.status,
+                    StructuredValidationTask.progress_percentage,
+                    StructuredValidationTask.progress_message,
+                    StructuredValidationTask.total_items,
+                    StructuredValidationTask.completed_items,
+                    StructuredValidationTask.successful_items,
+                    StructuredValidationTask.failed_items,
+                    StructuredValidationTask.validate_google,
+                    StructuredValidationTask.validate_schema_org,
+                    StructuredValidationTask.requested_ai_result,
+                    StructuredValidationTask.created_at,
+                    StructuredValidationTask.completed_at,
+                ))
                 .where(StructuredValidationTask.user_id == user_id)
                 .order_by(desc(StructuredValidationTask.created_at))
                 .limit(fetch_limit)
@@ -564,6 +584,20 @@ class StructuredValidationTaskService:
         legacy_reports = (
             await session.execute(
                 select(RichResultsReport)
+                .options(load_only(
+                    RichResultsReport.id,
+                    RichResultsReport.user_id,
+                    RichResultsReport.url,
+                    RichResultsReport.status,
+                    RichResultsReport.progress_percentage,
+                    RichResultsReport.progress_message,
+                    RichResultsReport.success,
+                    RichResultsReport.message,
+                    RichResultsReport.validate_google,
+                    RichResultsReport.validate_schema_org,
+                    RichResultsReport.requested_ai_result,
+                    RichResultsReport.created_at,
+                ))
                 .where(RichResultsReport.user_id == user_id)
                 .order_by(desc(RichResultsReport.created_at))
                 .limit(fetch_limit)
