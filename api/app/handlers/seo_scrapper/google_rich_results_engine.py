@@ -48,6 +48,7 @@ class GoogleRichResultsEngine:
     artifact_storage: Optional[PublicAssetStorage] = None,
     storage_folder: str = "images",
     headless: bool = False,
+    hide_window: bool = False,
   ):
     self._proxy_settings = proxy_settings
     self._proxy_forwarder = (
@@ -62,6 +63,7 @@ class GoogleRichResultsEngine:
     )
     self._proxy_bypass_list = proxy_settings.chrome_bypass_list if proxy_settings else None
     self._headless = headless
+    self._hide_window = hide_window
     self.target_url = "https://search.google.com/test/rich-results?hl=es"
     self.artifact_storage = artifact_storage
     self.storage_folder = storage_folder.strip("/")
@@ -130,6 +132,7 @@ class GoogleRichResultsEngine:
       headless=self._headless,
       proxy_server=self._proxy_server,
       proxy_bypass=self._proxy_bypass_list,
+      hide_window=self._hide_window,
     )
 
     try:

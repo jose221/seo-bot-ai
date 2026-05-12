@@ -48,6 +48,7 @@ class GoogleRichResultsValidationService:
             artifact_storage=get_public_asset_storage(),
             storage_folder="images/google",
             headless=browser_mode.headless if browser_mode else False,
+            hide_window=browser_mode.hide_window if browser_mode else False,
         )
 
     @staticmethod

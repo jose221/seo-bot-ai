@@ -12,6 +12,7 @@ class BrowserModeDefinition:
     name: str
     description: str
     headless: bool
+    hide_window: bool = False
     available_web: bool = True
     available_desktop: bool = True
 
@@ -23,14 +24,16 @@ class BrowserModeRegistryService:
             name="Chrome view",
             description="Abre Chrome visible mientras corre la validación.",
             headless=False,
+            hide_window=False,
             available_web=False,
             available_desktop=True,
         ),
         BrowserModeDefinition(
             code="no_display",
             name="No display mode",
-            description="Ejecuta el navegador sin interfaz visible.",
-            headless=True,
+            description="Ejecuta el navegador oculto, sin interfaz visible para el usuario.",
+            headless=False,
+            hide_window=True,
             available_web=True,
             available_desktop=True,
         ),

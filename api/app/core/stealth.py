@@ -255,6 +255,7 @@ def _build_browser_args(
     user_agent: str,
     proxy_server: str | None = None,
     proxy_bypass: str | None = None,
+    hide_window: bool = False,
 ) -> list[str]:
     args = [
         f"--window-size={viewport_w},{viewport_h}",
@@ -279,6 +280,11 @@ def _build_browser_args(
         args.append(f"--proxy-server={proxy_server}")
     if proxy_bypass:
         args.append(f"--proxy-bypass-list={proxy_bypass}")
+    if hide_window:
+        args.extend([
+            "--window-position=-32000,-32000",
+            "--start-minimized",
+        ])
     return args
 
 
@@ -302,6 +308,7 @@ class StealthConfig:
         headless: bool = False,
         proxy_server: str | None = None,
         proxy_bypass: str | None = None,
+        hide_window: bool = False,
     ) -> None:
         self.user_agent = random.choice(_USER_AGENTS)
         hw_concurrency, device_memory, platform = random.choice(_HARDWARE_PROFILES)
@@ -320,6 +327,7 @@ class StealthConfig:
             user_agent=self.user_agent,
             proxy_server=proxy_server,
             proxy_bypass=proxy_bypass,
+            hide_window=hide_window,
         )
 
         logger.debug(

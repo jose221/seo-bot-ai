@@ -49,6 +49,7 @@ class SchemaOrgValidatorEngine:
     artifact_storage: Optional[PublicAssetStorage] = None,
     storage_folder: str = "images/schema_org",
     headless: bool = False,
+    hide_window: bool = False,
   ):
     """
     Inicializa el motor de validación para validator.schema.org.
@@ -66,6 +67,7 @@ class SchemaOrgValidatorEngine:
     )
     self._proxy_bypass_list = proxy_settings.chrome_bypass_list if proxy_settings else None
     self._headless = headless
+    self._hide_window = hide_window
     self.target_url = "https://validator.schema.org/"
     self.artifact_storage = artifact_storage
     self.storage_folder = storage_folder.strip("/")
@@ -215,6 +217,7 @@ class SchemaOrgValidatorEngine:
       headless=self._headless,
       proxy_server=self._proxy_server,
       proxy_bypass=self._proxy_bypass_list,
+      hide_window=self._hide_window,
     )
 
     try:

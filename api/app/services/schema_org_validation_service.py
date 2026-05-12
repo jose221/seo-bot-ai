@@ -49,6 +49,7 @@ class SchemaOrgValidationService:
             artifact_storage=get_public_asset_storage(),
             storage_folder="images/schema_org",
             headless=browser_mode.headless if browser_mode else False,
+            hide_window=browser_mode.hide_window if browser_mode else False,
         )
 
     @staticmethod
