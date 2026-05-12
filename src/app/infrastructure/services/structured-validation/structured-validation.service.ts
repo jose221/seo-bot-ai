@@ -48,7 +48,17 @@ export class StructuredValidationService extends BaseService {
   private readonly mapper = new StructuredValidationMapper();
 
   private get endpoint(): string {
-    return (environment.endpoints as any).structuredValidation.path as string;
+    const structuredValidation = (
+      environment.endpoints as {
+        structuredValidation?: { path?: string };
+      }
+    ).structuredValidation;
+
+    if (!structuredValidation?.path) {
+      throw new Error('Missing environment.endpoints.structuredValidation.path');
+    }
+
+    return structuredValidation.path;
   }
 
   constructor(private httpService: HttpService) {

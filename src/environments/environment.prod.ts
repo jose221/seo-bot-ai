@@ -49,6 +49,9 @@ export const environment = {
     },
     richResults:{
       path: '/rich-results'
+    },
+    structuredValidation:{
+      path: '/structured-validations'
     }
   },
   settings:{
