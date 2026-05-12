@@ -1,11 +1,16 @@
 import { DatePipe, NgClass } from '@angular/common';
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
 import {
   StructuredValidationTaskControlAction,
   StructuredValidationTaskListItemModel,
 } from '@/app/domain/models/structured-validation/response/structured-validation-response.model';
+import {
+  StructuredValidationTaskChangedEvent,
+  TaskNotificationService,
+} from '@/app/infrastructure/services/general/task-notification.service';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 
 @Component({
@@ -19,23 +24,26 @@ export class StructuredValidationList implements OnInit, OnDestroy {
   private readonly repository = inject(StructuredValidationRepository);
   private readonly router = inject(Router);
   private readonly sweetAlert = inject(SweetAlertUtil);
+  private readonly taskNotificationService = inject(TaskNotificationService);
 
   readonly isLoading = signal(true);
   readonly items = signal<StructuredValidationTaskListItemModel[]>([]);
   readonly autoReload = signal(true);
   readonly activeActions = signal<Record<string, string>>({});
 
-  private intervalId: ReturnType<typeof setInterval> | null = null;
+  private taskChangesSubscription: Subscription | null = null;
 
   async ngOnInit(): Promise<void> {
+    this.taskNotificationService.start();
     await this.load();
-    this.intervalId = setInterval(() => {
-      if (this.autoReload()) this.load(true);
-    }, 10000);
+    this.taskChangesSubscription = this.taskNotificationService
+      .structuredValidationTaskChanges()
+      .subscribe((event) => this.applyRealtimeChange(event));
   }
 
   ngOnDestroy(): void {
-    if (this.intervalId) clearInterval(this.intervalId);
+    this.taskChangesSubscription?.unsubscribe();
+    this.taskChangesSubscription = null;
   }
 
   async load(silent = false): Promise<void> {
@@ -45,6 +53,52 @@ export class StructuredValidationList implements OnInit, OnDestroy {
       this.items.set(response.items);
     } finally {
       if (!silent) this.isLoading.set(false);
+    }
+  }
+
+  private applyRealtimeChange(event: StructuredValidationTaskChangedEvent): void {
+    if (!this.autoReload()) return;
+
+    const currentItems = [...this.items()];
+
+    if (event.action === 'deleted') {
+      this.items.set(currentItems.filter((item) => item.id !== event.task_id));
+      return;
+    }
+
+    const payload = event.list_item as StructuredValidationTaskListItemModel | undefined;
+    if (!payload) return;
+
+    const item = new StructuredValidationTaskListItemModel(
+      payload.id,
+      payload.task_kind,
+      payload.supports_runtime_control,
+      payload.input_mode,
+      payload.name,
+      payload.description,
+      payload.status,
+      payload.progress_percentage,
+      payload.progress_message,
+      payload.total_items,
+      payload.completed_items,
+      payload.successful_items,
+      payload.failed_items,
+      payload.validate_google,
+      payload.validate_schema_org,
+      payload.requested_ai_result,
+      payload.created_at,
+      payload.completed_at,
+    );
+
+    const existingIndex = currentItems.findIndex((entry) => entry.id === item.id);
+    if (existingIndex >= 0) {
+      currentItems[existingIndex] = item;
+      this.items.set(currentItems);
+      return;
+    }
+
+    if (event.action === 'created') {
+      this.items.set([item, ...currentItems].slice(0, 20));
     }
   }
 

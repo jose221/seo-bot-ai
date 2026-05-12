@@ -29,6 +29,7 @@ from app.schemas.structured_validation_schemas import (
     StructuredValidationTaskResponse,
 )
 from app.services.rich_results_report_service import get_rich_results_report_service
+from app.services.task_notification_service import get_task_notification_service
 from app.services.structured_validation_task_service import get_structured_validation_task_service
 from app.services.task_progress_service import get_task_progress_service
 from app.schemas.task_log_schemas import TaskLogEntryResponse, TaskLogListResponse
@@ -287,6 +288,12 @@ async def delete_structured_validation_task(
         for comment in comments:
             await session.delete(comment)
         await get_structured_validation_task_service().delete_task(session, task=task)
+        await get_task_notification_service().publish_structured_validation_task_change(
+            user_id=current_user.id,
+            action="deleted",
+            task_id=task_id,
+            route=f"/admin/audit/structured-validations/{task_id}/info",
+        )
         return StructuredValidationDeleteResponse(deleted_id=task_id, message="Tarea eliminada")
 
     report = await get_structured_validation_task_service().get_legacy_report(

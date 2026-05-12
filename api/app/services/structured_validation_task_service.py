@@ -37,6 +37,7 @@ from app.schemas.structured_validation_schemas import (
 )
 from app.services.rich_results_report_service import get_rich_results_report_service
 from app.services.rich_results_service import get_rich_results_service
+from app.services.task_notification_service import get_task_notification_service
 from app.services.task_progress_service import get_task_progress_service
 
 log = logging.getLogger(__name__)
@@ -516,6 +517,94 @@ class StructuredValidationTaskService:
         )
 
     @staticmethod
+    def _build_task_route(task_id: UUID) -> str:
+        return f"/admin/audit/structured-validations/{task_id}/info"
+
+    @staticmethod
+    def _build_list_item_payload(task: StructuredValidationTask) -> dict[str, Any]:
+        return StructuredValidationTaskListItem(
+            id=task.id,
+            task_kind=StructuredValidationTaskService.TASK_TYPE,
+            supports_runtime_control=True,
+            input_mode=task.input_mode,
+            name=task.name,
+            description=task.description,
+            status=task.status,
+            progress_percentage=task.progress_percentage,
+            progress_message=task.progress_message,
+            total_items=task.total_items,
+            completed_items=task.completed_items,
+            successful_items=task.successful_items,
+            failed_items=task.failed_items,
+            validate_google=task.validate_google,
+            validate_schema_org=task.validate_schema_org,
+            requested_ai_result=task.requested_ai_result,
+            created_at=task.created_at,
+            completed_at=task.completed_at,
+        ).model_dump(mode="json")
+
+    @classmethod
+    def _build_detail_payload_from_task(
+        cls,
+        task: StructuredValidationTask,
+        *,
+        summary: StructuredValidationTaskItemsSummary | None = None,
+    ) -> dict[str, Any]:
+        resolved_summary = summary or cls._build_task_items_summary(
+            total_items=task.total_items or len(task.inputs_json or []),
+            completed_items=task.completed_items,
+            raw_results=list(task.results_json or []),
+        )
+        return {
+            "id": str(task.id),
+            "status": task.status.value if isinstance(task.status, StructuredValidationTaskStatus) else str(task.status),
+            "progress_percentage": task.progress_percentage,
+            "progress_message": task.progress_message,
+            "total_items": task.total_items,
+            "completed_items": task.completed_items,
+            "successful_items": task.successful_items,
+            "failed_items": task.failed_items,
+            "success": task.success,
+            "message": task.message,
+            "error_message": task.error_message,
+            "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+            "completed_at": task.completed_at.isoformat() if task.completed_at else None,
+            "summary": resolved_summary.model_dump(mode="json"),
+        }
+
+    @classmethod
+    def _build_item_update_payload(
+        cls,
+        *,
+        item_key: str,
+        input_index: int,
+        item_payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        return {
+            "item_key": item_key,
+            "input_index": input_index,
+            "item": cls._deserialize_item(item_payload).model_dump(mode="json"),
+        }
+
+    async def _publish_task_change(
+        self,
+        *,
+        task: StructuredValidationTask,
+        action: str,
+        summary: StructuredValidationTaskItemsSummary | None = None,
+        item_update: dict[str, Any] | None = None,
+    ) -> None:
+        await get_task_notification_service().publish_structured_validation_task_change(
+            user_id=task.user_id,
+            action=action,
+            task_id=task.id,
+            route=self._build_task_route(task.id),
+            list_item=self._build_list_item_payload(task),
+            detail=self._build_detail_payload_from_task(task, summary=summary),
+            item_update=item_update,
+        )
+
+    @staticmethod
     def _log_progress(task_id: UUID, message: str, level: str = "info", progress_percentage: Optional[int] = None) -> None:
         get_task_progress_service().log_sync(
             task_type=StructuredValidationTaskService.TASK_TYPE,
@@ -568,6 +657,7 @@ class StructuredValidationTaskService:
         successful_items: int,
         total: int,
         progress_value: int,
+        item_update: dict[str, Any] | None = None,
     ) -> Optional[StructuredValidationTask]:
         async with db_manager.async_session_context() as session:
             task = await self.get_task(session, task_id=task_id)
@@ -605,6 +695,16 @@ class StructuredValidationTaskService:
             session.add(task)
             await session.commit()
             await session.refresh(task)
+            await self._publish_task_change(
+                task=task,
+                action="progress",
+                summary=self._build_task_items_summary(
+                    total_items=task.total_items or len(inputs_json),
+                    completed_items=task.completed_items,
+                    raw_results=ordered_results,
+                ),
+                item_update=item_update,
+            )
             return task
 
     async def _mark_runtime_task_started(self, task_id: UUID) -> Optional[StructuredValidationTask]:
@@ -623,6 +723,7 @@ class StructuredValidationTaskService:
                 session.add(task)
                 await session.commit()
                 await session.refresh(task)
+                await self._publish_task_change(task=task, action="status")
             return task
 
     async def _mark_runtime_task_completed(
@@ -657,6 +758,7 @@ class StructuredValidationTaskService:
             session.add(task)
             await session.commit()
             await session.refresh(task)
+            await self._publish_task_change(task=task, action="completed")
             return task
 
     async def _mark_runtime_task_failed(
@@ -682,6 +784,7 @@ class StructuredValidationTaskService:
             session.add(task)
             await session.commit()
             await session.refresh(task)
+            await self._publish_task_change(task=task, action="failed")
             return task
 
     async def _set_task_status(
@@ -722,6 +825,7 @@ class StructuredValidationTaskService:
             completed_at=None,
         )
         self._log_progress(task.id, paused_message, level="warning", progress_percentage=task.progress_percentage)
+        await self._publish_task_change(task=task, action="status")
         return task
 
     async def resume_task(self, session, *, task: StructuredValidationTask) -> StructuredValidationTask:
@@ -739,6 +843,7 @@ class StructuredValidationTaskService:
             completed_at=None,
         )
         self._log_progress(task.id, resume_message, level="info", progress_percentage=task.progress_percentage)
+        await self._publish_task_change(task=task, action="status")
         return task
 
     async def cancel_task(self, session, *, task: StructuredValidationTask) -> StructuredValidationTask:
@@ -756,6 +861,7 @@ class StructuredValidationTaskService:
             completed_at=datetime.utcnow(),
         )
         self._log_progress(task.id, cancel_message, level="warning", progress_percentage=task.progress_percentage)
+        await self._publish_task_change(task=task, action="status")
         return task
 
     async def create_task(
@@ -791,6 +897,7 @@ class StructuredValidationTaskService:
         await session.commit()
         await session.refresh(task)
         self._log_progress(task.id, f"Tarea creada con {len(inputs)} elementos", progress_percentage=0)
+        await self._publish_task_change(task=task, action="created")
         return task
 
     async def rerun_task(self, session, *, task: StructuredValidationTask) -> StructuredValidationTask:
@@ -810,6 +917,7 @@ class StructuredValidationTaskService:
         await session.commit()
         await session.refresh(task)
         self._log_progress(task.id, "Reejecucion encolada", progress_percentage=0)
+        await self._publish_task_change(task=task, action="status")
         return task
 
     async def list_tasks(
@@ -1151,6 +1259,11 @@ class StructuredValidationTaskService:
                         successful_items=successful_items,
                         total=total,
                         progress_value=progress_value,
+                        item_update=self._build_item_update_payload(
+                            item_key=item_key,
+                            input_index=index,
+                            item_payload=serialized,
+                        ),
                     )
                     if not persisted_task or persisted_task.status == StructuredValidationTaskStatus.CANCELLED:
                         return

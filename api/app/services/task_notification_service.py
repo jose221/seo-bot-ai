@@ -23,6 +23,19 @@ class TaskStatusNotification:
     occurred_at: str
 
 
+@dataclass
+class StructuredValidationTaskNotification:
+    event: str
+    action: str
+    task_id: str
+    task_kind: str
+    route: str
+    occurred_at: str
+    list_item: dict[str, Any] | None = None
+    detail: dict[str, Any] | None = None
+    item_update: dict[str, Any] | None = None
+
+
 class TaskNotificationService:
     def __init__(self) -> None:
         self._connections: dict[str, set[WebSocket]] = {}
@@ -74,6 +87,30 @@ class TaskNotificationService:
             route=route,
             label=label,
             occurred_at=datetime.now(timezone.utc).isoformat(),
+        )
+        await self.send_to_user(user_id=user_id, payload=asdict(payload))
+
+    async def publish_structured_validation_task_change(
+        self,
+        *,
+        user_id: UUID | str,
+        action: str,
+        task_id: UUID | str,
+        route: str,
+        list_item: dict[str, Any] | None = None,
+        detail: dict[str, Any] | None = None,
+        item_update: dict[str, Any] | None = None,
+    ) -> None:
+        payload = StructuredValidationTaskNotification(
+            event="structured-validation-task-changed",
+            action=action,
+            task_id=str(task_id),
+            task_kind="structured_validation_task",
+            route=route,
+            occurred_at=datetime.now(timezone.utc).isoformat(),
+            list_item=list_item,
+            detail=detail,
+            item_update=item_update,
         )
         await self.send_to_user(user_id=user_id, payload=asdict(payload))
 

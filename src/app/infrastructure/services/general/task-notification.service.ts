@@ -1,6 +1,8 @@
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
+import { Observable, Subject } from 'rxjs';
+import { filter } from 'rxjs/operators';
 
 import { AuthRepository } from '@/app/domain/repositories/auth/auth.repository';
 import { StatusType } from '@/app/domain/types/status.type';
@@ -34,6 +36,48 @@ interface TaskStatusChangedEvent {
   occurred_at: string;
 }
 
+export interface StructuredValidationTaskChangedDetail {
+  id: string;
+  status: string;
+  progress_percentage: number;
+  progress_message: string | null;
+  total_items: number;
+  completed_items: number;
+  successful_items: number;
+  failed_items: number;
+  success: boolean;
+  message: string;
+  error_message: string | null;
+  updated_at: string | null;
+  completed_at: string | null;
+  summary: {
+    total: number;
+    ok: number;
+    warning: number;
+    critical: number;
+    error: number;
+    pending: number;
+  };
+}
+
+export interface StructuredValidationTaskChangedItem {
+  item_key: string;
+  input_index: number;
+  item: unknown;
+}
+
+export interface StructuredValidationTaskChangedEvent {
+  event: 'structured-validation-task-changed';
+  action: 'created' | 'progress' | 'status' | 'completed' | 'failed' | 'deleted';
+  task_id: string;
+  task_kind: 'structured_validation_task';
+  route: string;
+  occurred_at: string;
+  list_item?: unknown;
+  detail?: StructuredValidationTaskChangedDetail | null;
+  item_update?: StructuredValidationTaskChangedItem | null;
+}
+
 type BrowserWindowWithDesktopNotifications = Window & {
   desktopNotifications?: DesktopNotificationsBridge;
 };
@@ -49,6 +93,7 @@ export class TaskNotificationService {
 
   private readonly reconnectDelayMs = 4000;
   private readonly pingIntervalMs = 25000;
+  private readonly eventsSubject = new Subject<TaskStatusChangedEvent | StructuredValidationTaskChangedEvent>();
 
   private started = false;
   private manualStop = false;
@@ -96,6 +141,12 @@ export class TaskNotificationService {
 
   registerPendingTask(_kind: TrackableTaskKind, _id: string): void {
     this.start();
+  }
+
+  structuredValidationTaskChanges(): Observable<StructuredValidationTaskChangedEvent> {
+    return this.eventsSubject.asObservable().pipe(
+      filter((event): event is StructuredValidationTaskChangedEvent => event.event === 'structured-validation-task-changed'),
+    );
   }
 
   notifyTaskResult({
@@ -180,10 +231,17 @@ export class TaskNotificationService {
 
   private handleSocketMessage(rawMessage: string): void {
     try {
-      const payload = JSON.parse(rawMessage) as TaskStatusChangedEvent | { event: 'pong' };
+      const payload = JSON.parse(rawMessage) as TaskStatusChangedEvent | StructuredValidationTaskChangedEvent | { event: 'pong' };
+      if (payload.event === 'structured-validation-task-changed') {
+        this.eventsSubject.next(payload);
+        return;
+      }
+
       if (payload.event !== 'task-status-changed') {
         return;
       }
+
+      this.eventsSubject.next(payload);
 
       const status = this.normalizeStatus(payload.status);
       if (!this.isTerminalStatus(status)) {

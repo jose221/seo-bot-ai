@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit, PLATFORM_ID, computed, inject, signal } f
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { MarkdownModule } from 'ngx-markdown';
+import { Subscription } from 'rxjs';
 import { environment } from '@/environments/environment';
 import { StructuredValidationRepository } from '@/app/domain/repositories/structured-validation/structured-validation.repository';
 import { StructuredValidationTaskDetailRequestModel } from '@/app/domain/models/structured-validation/request/structured-validation-request.model';
@@ -14,6 +15,10 @@ import {
 import { AnswerCommentRequestModel, CreatePublicCommentRequestModel } from '@/app/domain/models/audit-url-validation/request/audit-url-validation-request.model';
 import { PublicCommentItemModel } from '@/app/domain/models/audit-url-validation/response/audit-url-validation-response.model';
 import { RichResultsScreenshotModel, RichResultsValidatorDetailModel } from '@/app/domain/models/rich-results/response/rich-results-response.model';
+import {
+  StructuredValidationTaskChangedEvent,
+  TaskNotificationService,
+} from '@/app/infrastructure/services/general/task-notification.service';
 import { SweetAlertUtil } from '@/app/presentation/utils/sweetAlert.util';
 
 const LS_USERNAME_KEY = 'structured-validation-comment-username';
@@ -30,6 +35,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   private readonly router = inject(Router);
   private readonly sweetAlert = inject(SweetAlertUtil);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly taskNotificationService = inject(TaskNotificationService);
 
   readonly task = signal<StructuredValidationTaskResponseModel | null>(null);
   readonly commentsMap = signal<Map<string, PublicCommentItemModel[]>>(new Map());
@@ -50,6 +56,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   private readonly apiBase = environment.apiUrl.replace(/\/api\/v1\/?$/, '');
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private taskChangesSubscription: Subscription | null = null;
   private photoSwipeInstance: { close: () => void } | null = null;
 
   readonly filteredItems = computed(() => {
@@ -104,21 +111,90 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
     }
     await this.load(id);
     await this.loadComments(id);
-    this.startPolling(id);
+    this.configureLiveUpdates(id);
   }
 
   ngOnDestroy(): void {
     if (this.pollTimer) clearInterval(this.pollTimer);
+    this.taskChangesSubscription?.unsubscribe();
+    this.taskChangesSubscription = null;
     this.photoSwipeInstance?.close();
   }
 
-  private startPolling(id: string): void {
+  private configureLiveUpdates(id: string): void {
+    const task = this.task();
+    const shouldUseWebSocket = this.layout() === 'admin' && !!task && this.isTaskActive(task.status);
+
+    this.taskChangesSubscription?.unsubscribe();
+    this.taskChangesSubscription = null;
+
     if (this.pollTimer) clearInterval(this.pollTimer);
-    this.pollTimer = setInterval(async () => {
-      const task = this.task();
-      if (!task || !['pending', 'in_progress', 'paused'].includes(task.status)) return;
-      await this.load(id, true);
-    }, 10000);
+    this.pollTimer = null;
+
+    if (shouldUseWebSocket) {
+      this.taskNotificationService.start();
+      this.taskChangesSubscription = this.taskNotificationService
+        .structuredValidationTaskChanges()
+        .subscribe((event) => this.applyRealtimeChange(id, event));
+      return;
+    }
+
+    if (this.layout() !== 'admin') {
+      this.pollTimer = setInterval(async () => {
+        const currentTask = this.task();
+        if (!currentTask || !this.isTaskActive(currentTask.status)) return;
+        await this.load(id, true);
+      }, 10000);
+    }
+  }
+
+  private isTaskActive(status: string): boolean {
+    return ['pending', 'in_progress', 'paused'].includes(status);
+  }
+
+  private applyRealtimeChange(routeTaskId: string, event: StructuredValidationTaskChangedEvent): void {
+    if (event.task_id !== routeTaskId) return;
+
+    if (event.action === 'deleted') {
+      void this.router.navigate(['/admin/audit/structured-validations']);
+      return;
+    }
+
+    const currentTask = this.task();
+    const detail = event.detail;
+    if (!currentTask || !detail) return;
+
+    const nextItems = [...currentTask.items];
+    const itemUpdate = event.item_update;
+    if (itemUpdate?.item_key) {
+      const itemIndex = nextItems.findIndex((item) => item.item_key === itemUpdate.item_key);
+      if (itemIndex >= 0) {
+        nextItems[itemIndex] = itemUpdate.item as StructuredValidationTaskItemModel;
+      }
+    }
+
+    this.task.set({
+      ...currentTask,
+      status: detail.status,
+      progress_percentage: detail.progress_percentage,
+      progress_message: detail.progress_message,
+      total_items: detail.total_items,
+      completed_items: detail.completed_items,
+      successful_items: detail.successful_items,
+      failed_items: detail.failed_items,
+      success: detail.success,
+      message: detail.message,
+      error_message: detail.error_message,
+      updated_at: detail.updated_at ?? currentTask.updated_at,
+      completed_at: detail.completed_at,
+      summary: detail.summary,
+      items: nextItems,
+    } as StructuredValidationTaskResponseModel);
+
+    if (!this.isTaskActive(detail.status)) {
+      this.taskChangesSubscription?.unsubscribe();
+      this.taskChangesSubscription = null;
+    }
   }
 
   async load(id: string, silent = false): Promise<void> {
@@ -135,6 +211,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
       if (selectedKey && !task.items.some((item) => item.item_key === selectedKey)) {
         this.selectedItemKey.set(null);
       }
+      this.configureLiveUpdates(id);
     } finally {
       if (!silent) this.isLoading.set(false);
     }
