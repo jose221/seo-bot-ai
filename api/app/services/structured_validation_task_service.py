@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -46,6 +47,8 @@ class StructuredValidationTaskService:
     SCHEMA_VALIDATOR_URL = "https://validator.schema.org/"
     TASK_TYPE = "structured_validation_task"
     BATCH_CONCURRENCY = 7
+    BATCH_STAGGER_MIN_SECONDS = 5
+    BATCH_STAGGER_MAX_SECONDS = 30
     CONTROL_POLL_SECONDS = 1.0
     DEFAULT_DETAIL_PAGE_SIZE = 10
     MAX_DETAIL_PAGE_SIZE = 10000
@@ -541,6 +544,19 @@ class StructuredValidationTaskService:
             if status is None or status != StructuredValidationTaskStatus.PAUSED:
                 return status
             await asyncio.sleep(self.CONTROL_POLL_SECONDS)
+
+    async def _sleep_with_runtime_control(self, task_id: UUID, delay_seconds: float) -> Optional[StructuredValidationTaskStatus]:
+        remaining = max(0.0, float(delay_seconds))
+        while remaining > 0:
+            status = await self._wait_until_resumable(task_id)
+            if status is None or status == StructuredValidationTaskStatus.CANCELLED:
+                return status
+
+            sleep_slice = min(self.CONTROL_POLL_SECONDS, remaining)
+            await asyncio.sleep(sleep_slice)
+            remaining -= sleep_slice
+
+        return await self._get_runtime_status(task_id)
 
     async def _persist_runtime_progress(
         self,
@@ -1047,10 +1063,6 @@ class StructuredValidationTaskService:
                 for index, item in enumerate(task_inputs, start=1)
                 if (item.get("item_key") or item.get("label") or "") not in results_by_key
             ]
-            pending_queue: asyncio.Queue[tuple[int, Dict[str, Any]]] = asyncio.Queue()
-            for entry in pending_inputs:
-                pending_queue.put_nowait(entry)
-
             update_lock = asyncio.Lock()
 
             async def process_item(index: int, item: Dict[str, Any]) -> tuple[str, str, Dict[str, Any], bool]:
@@ -1094,51 +1106,103 @@ class StructuredValidationTaskService:
                 )
                 return item_key, label, serialized, report.success
 
-            async def worker() -> None:
+            async def process_scheduled_item(
+                index: int,
+                item: Dict[str, Any],
+                *,
+                launch_delay_seconds: float,
+            ) -> None:
                 nonlocal completed_items, successful_items
-                while True:
-                    runtime_status = await self._wait_until_resumable(task_id)
-                    if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+                runtime_status = await self._wait_until_resumable(task_id)
+                if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+                    return
+
+                if launch_delay_seconds > 0:
+                    delayed_status = await self._sleep_with_runtime_control(task_id, launch_delay_seconds)
+                    if delayed_status is None or delayed_status == StructuredValidationTaskStatus.CANCELLED:
                         return
-                    try:
-                        index, item = pending_queue.get_nowait()
-                    except asyncio.QueueEmpty:
+
+                runtime_status = await self._wait_until_resumable(task_id)
+                if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+                    return
+
+                item_key, label, serialized, success = await process_item(index, item)
+
+                async with update_lock:
+                    results_by_key[item_key] = serialized
+                    completed_items += 1
+                    if success:
+                        successful_items += 1
+
+                    report_message = serialized.get("message") or "Elemento procesado"
+                    progress_value = self._clamp_progress(int((completed_items / total) * 100))
+                    self._log_progress(
+                        task_id,
+                        f"{label}: {report_message}",
+                        level="success" if success else "warning",
+                        progress_percentage=progress_value,
+                    )
+
+                    persisted_task = await self._persist_runtime_progress(
+                        task_id=task_id,
+                        inputs_json=task_inputs,
+                        results_by_key=results_by_key,
+                        completed_items=completed_items,
+                        successful_items=successful_items,
+                        total=total,
+                        progress_value=progress_value,
+                    )
+                    if not persisted_task or persisted_task.status == StructuredValidationTaskStatus.CANCELLED:
                         return
 
-                    item_key, label, serialized, success = await process_item(index, item)
+            def build_batches(items: list[tuple[int, Dict[str, Any]]]) -> list[list[tuple[int, Dict[str, Any]]]]:
+                batch_size = max(1, self.BATCH_CONCURRENCY)
+                return [items[offset:offset + batch_size] for offset in range(0, len(items), batch_size)]
 
-                    async with update_lock:
-                        results_by_key[item_key] = serialized
-                        completed_items += 1
-                        if success:
-                            successful_items += 1
+            pending_batches = build_batches(pending_inputs)
+            for batch_index, batch_items in enumerate(pending_batches, start=1):
+                runtime_status = await self._wait_until_resumable(task_id)
+                if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+                    break
 
-                        report_message = serialized.get("message") or "Elemento procesado"
-                        progress_value = self._clamp_progress(int((completed_items / total) * 100))
+                self._log_progress(
+                    task_id,
+                    f"Iniciando lote {batch_index} de {len(pending_batches)} con {len(batch_items)} elementos",
+                    progress_percentage=self._clamp_progress(int((completed_items / total) * 100)),
+                )
+
+                cumulative_delay = 0.0
+                scheduled_workers = []
+                for item_position, (index, item) in enumerate(batch_items, start=1):
+                    if item_position > 1:
+                        cumulative_delay += random.uniform(
+                            self.BATCH_STAGGER_MIN_SECONDS,
+                            self.BATCH_STAGGER_MAX_SECONDS,
+                        )
+
+                    label = item.get("label") or item.get("item_key") or f"Elemento {index}"
+                    if cumulative_delay > 0:
                         self._log_progress(
                             task_id,
-                            f"{label}: {report_message}",
-                            level="success" if success else "warning",
-                            progress_percentage=progress_value,
+                            f"{label}: programado para iniciar en {int(round(cumulative_delay))} segundos",
+                            progress_percentage=self._clamp_progress(int((completed_items / total) * 100)),
                         )
 
-                        persisted_task = await self._persist_runtime_progress(
-                            task_id=task_id,
-                            inputs_json=task_inputs,
-                            results_by_key=results_by_key,
-                            completed_items=completed_items,
-                            successful_items=successful_items,
-                            total=total,
-                            progress_value=progress_value,
+                    scheduled_workers.append(
+                        asyncio.create_task(
+                            process_scheduled_item(
+                                index,
+                                item,
+                                launch_delay_seconds=cumulative_delay,
+                            )
                         )
-                        if not persisted_task or persisted_task.status == StructuredValidationTaskStatus.CANCELLED:
-                            return
+                    )
 
-            workers = [
-                asyncio.create_task(worker())
-                for _ in range(max(1, min(self.BATCH_CONCURRENCY, len(pending_inputs) or 1)))
-            ]
-            await asyncio.gather(*workers)
+                await asyncio.gather(*scheduled_workers)
+
+                runtime_status = await self._get_runtime_status(task_id)
+                if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+                    break
 
             final_task = await self._mark_runtime_task_completed(
                 task_id=task_id,
