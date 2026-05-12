@@ -46,6 +46,7 @@ class RichResultsValidatorDetail(BaseModel):
     label: str
     enabled: bool = False
     executed: bool = False
+    proxy_used: bool = False
     success: Optional[bool] = None
     method_used: Optional[str] = None
     result_url: Optional[str] = None

@@ -346,6 +346,9 @@
                     <span [ngClass]="getValidatorStateClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
                       {{ getValidatorStatusLabel(validator) }}
                     </span>
+                    <span [ngClass]="validator.proxy_used ? 'sv-badge sv-badge--warning' : 'sv-badge sv-badge--neutral'">
+                      {{ validator.proxy_used ? 'Con proxy' : 'Sin proxy' }}
+                    </span>
                   </div>
                   <p class="validator-panel__message">{{ validator.message || validator.error_message || 'Sin mensaje adicional' }}</p>
                 </div>

@@ -123,6 +123,7 @@ export class RichResultsValidatorDetailModel {
     public label: string,
     public enabled: boolean,
     public executed: boolean,
+    public proxy_used: boolean,
     public success: boolean | null,
     public method_used: string | null,
     public result_url: string | null,

@@ -119,6 +119,7 @@ export class StructuredValidationMapper extends AppMapper {
       dto.label,
       dto.enabled,
       dto.executed,
+      dto.proxy_used ?? false,
       dto.success ?? null,
       dto.method_used ?? null,
       dto.result_url ?? null,

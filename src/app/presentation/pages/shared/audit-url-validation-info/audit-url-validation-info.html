@@ -793,6 +793,9 @@
                                               <span class="sv-badge" [ngClass]="getRichResultsValidatorStateClass(segment)">
                                                 {{ segment.success ? 'success' : (segment.error_message ? 'error' : 'info') }}
                                               </span>
+                                              <span class="sv-badge" [ngClass]="segment.proxy_used ? 'sv-warning' : 'sv-secondary'">
+                                                {{ segment.proxy_used ? 'Con proxy' : 'Sin proxy' }}
+                                              </span>
                                               @if (getRichResultsFindingCount(segment.findings_summary, 'warning') > 0) {
                                                 <span class="sv-badge sv-warning">
                                                   {{ getRichResultsFindingCount(segment.findings_summary, 'warning') }} warnings

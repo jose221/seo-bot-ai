@@ -32,6 +32,7 @@ class ValidationResult(BaseModel):
   error_message: Optional[str] = None
   method_used: str = "nodriver"
   blocked_by_schema: bool = False
+  proxy_used: bool = False
   screenshots: list[dict[str, str]] = Field(default_factory=list)
 
 class SchemaOrgValidatorEngine:
@@ -336,6 +337,7 @@ class SchemaOrgValidatorEngine:
         result_url=current_url,
         html_content=final_html,
         method_used="nodriver",
+        proxy_used=bool(self._proxy_server),
         screenshots=screenshots
       )
 
@@ -355,6 +357,7 @@ class SchemaOrgValidatorEngine:
         error_message=error_message,
         method_used="nodriver",
         blocked_by_schema=False,
+        proxy_used=bool(self._proxy_server),
         screenshots=screenshots
       )
 

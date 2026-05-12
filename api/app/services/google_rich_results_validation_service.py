@@ -113,6 +113,7 @@ class GoogleRichResultsValidationService:
             label="Google Rich Results",
             enabled=True,
             executed=True,
+            proxy_used=validation.proxy_used,
             success=validation.is_success,
             method_used=validation.method_used,
             result_url=validation.result_url,

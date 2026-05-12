@@ -32,6 +32,7 @@ class ValidationResult(BaseModel):
   error_message: Optional[str] = None
   method_used: str = "nodriver"
   blocked_by_google: bool = False
+  proxy_used: bool = False
   screenshots: list[dict[str, str]] = Field(default_factory=list)
 
 
@@ -256,6 +257,7 @@ class GoogleRichResultsEngine:
         result_url=current_url,
         html_content=final_html,
         method_used="nodriver",
+        proxy_used=bool(self._proxy_server),
         screenshots=screenshots
       )
 
@@ -275,6 +277,7 @@ class GoogleRichResultsEngine:
         error_message=error_message,
         method_used="nodriver",
         blocked_by_google="block" in error_message.lower() or "captcha" in error_message.lower() or "sorry" in error_message.lower(),
+        proxy_used=bool(self._proxy_server),
         screenshots=screenshots
       )
 
