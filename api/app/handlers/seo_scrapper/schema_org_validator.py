@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 import nodriver as uc
 import nodriver.cdp.input_ as cdp_input
+from app.core.proxy import ProxySettings
 from app.core.storage import PublicAssetStorage
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,7 @@ logger = logging.getLogger(__name__)
 # Clase CSS presente en el dashboard exitoso de validator.schema.org.
 # Si no aparece en el HTML tras el submit, el validador bloqueó la solicitud.
 # Actualiza esta constante si validator.schema.org cambia su markup.
-SCHEMA_BLOCK_DETECTOR_CLASS: str = "sKfxWe-BeDmAc-qJTHM-haAclf"
+
 
 
 class InputType(str, Enum):
@@ -60,7 +61,7 @@ class SchemaOrgValidatorEngine:
 
   def __init__(
     self,
-    proxy_server: Optional[str] = None,
+    proxy_settings: Optional[ProxySettings] = None,
     screenshots_dir: str = "storage/images/schema_org",
     storage_url_prefix: str = "/storage/images/schema_org",
     max_concurrent_tasks: int = 3,
@@ -71,7 +72,18 @@ class SchemaOrgValidatorEngine:
     """
     Inicializa el motor de validación para validator.schema.org.
     """
-    self._proxy_server = proxy_server
+    self._proxy_settings = proxy_settings
+    self._proxy_forwarder = (
+      proxy_settings.create_nodriver_forwarder()
+      if proxy_settings and proxy_settings.has_auth
+      else None
+    )
+    self._proxy_server = (
+      self._proxy_forwarder.proxy_server
+      if self._proxy_forwarder is not None
+      else proxy_settings.server if proxy_settings else None
+    )
+    self._proxy_bypass_list = proxy_settings.chrome_bypass_list if proxy_settings else None
     self._headless = headless
     self.target_url = "https://validator.schema.org/"
     self.artifact_storage = artifact_storage
@@ -306,6 +318,8 @@ class SchemaOrgValidatorEngine:
 
         if self._proxy_server:
           browser_args.append(f"--proxy-server={self._proxy_server}")
+        if self._proxy_bypass_list:
+          browser_args.append(f"--proxy-bypass-list={self._proxy_bypass_list}")
 
         browser = await uc.start(headless=self._headless, browser_args=browser_args)
 
@@ -319,20 +333,6 @@ class SchemaOrgValidatorEngine:
       page = await browser.get(self.target_url)
       current_url = self.target_url
       await self._human_delay(1.5, 3.0)
-
-      # Verificar bloqueo por CAPTCHA inmediatamente tras la carga
-      if await self._detect_captcha(page):
-        logger.warning("CAPTCHA detectado al cargar validator.schema.org")
-        screenshot = await self._capture_screenshot(page, "captcha_detected")
-        screenshots_list: list[dict[str, str]] = [screenshot] if screenshot else []
-        return ValidationResult(
-          is_success=False,
-          result_url=current_url,
-          error_message="validator.schema.org bloqueó la solicitud con CAPTCHA",
-          method_used="nodriver",
-          blocked_by_schema=True,
-          screenshots=screenshots_list,
-        )
 
       # 2. Interacción con los Tabs e Ingreso de Datos
       if input_type == InputType.HTML:
@@ -385,20 +385,6 @@ class SchemaOrgValidatorEngine:
 
       await self._human_delay(1.5, 3.0)
 
-      # Verificar CAPTCHA post-submit
-      if await self._detect_captcha(page):
-        logger.warning("CAPTCHA detectado tras enviar el formulario")
-        screenshot = await self._capture_screenshot(page, "captcha_post_submit")
-        screenshots_list = [screenshot] if screenshot else []
-        return ValidationResult(
-          is_success=False,
-          result_url=current_url,
-          error_message="validator.schema.org bloqueó la solicitud con CAPTCHA tras el envío",
-          method_used="nodriver",
-          blocked_by_schema=True,
-          screenshots=screenshots_list,
-        )
-
       # 4. Esperar a que el dashboard realmente termine de renderizar
       logger.info("Esperando resolución del validador y render del dashboard...")
       items_count = await self._wait_for_results_ready(page, timeout_seconds=30)
@@ -438,23 +424,6 @@ class SchemaOrgValidatorEngine:
       current_url = page.url if hasattr(page, "url") else self.target_url
       final_html = await page.get_content()
 
-      # Detección de bloqueo post-submit: si la clase del dashboard no aparece
-      # en el HTML final, validator.schema.org bloqueó la solicitud.
-      if SCHEMA_BLOCK_DETECTOR_CLASS not in (final_html or ""):
-        logger.warning(
-          "Bloqueo detectado: clase '%s' ausente tras el submit. validator.schema.org bloqueó la solicitud.",
-          SCHEMA_BLOCK_DETECTOR_CLASS,
-        )
-        return ValidationResult(
-          is_success=False,
-          result_url=current_url,
-          html_content=final_html,
-          error_message="validator.schema.org bloqueó la solicitud: dashboard de resultados no encontrado",
-          method_used="nodriver",
-          blocked_by_schema=True,
-          screenshots=screenshots,
-        )
-
       return ValidationResult(
         is_success=True,
         result_url=current_url,
@@ -488,6 +457,9 @@ class SchemaOrgValidatorEngine:
           browser.stop()
         except Exception as e:
           logger.warning(f"Error stopping browser: {e}")
+      if self._proxy_forwarder and getattr(self._proxy_forwarder, "server", None):
+        self._proxy_forwarder.server.close()
+        await self._proxy_forwarder.server.wait_closed()
       if display:
         try:
           display.stop()

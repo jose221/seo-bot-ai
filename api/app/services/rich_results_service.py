@@ -12,6 +12,7 @@ from sqlmodel import select
 
 from app.core.config import settings
 from app.core.database import db_manager
+from app.core.proxy import ProxySettings, resolve_proxy_settings
 from app.handlers.seo_scrapper.google_rich_results_engine import InputType
 from app.models.webpage import WebPage
 from app.schemas.rich_results_schemas import (
@@ -32,10 +33,20 @@ class RichResultsService:
     def __init__(self) -> None:
         self.ai_client = get_ai_client()
 
-    def _resolve_proxy_url(self) -> Optional[str]:
-        if settings.RICH_RESULTS_PROXY_URL and settings.RICH_RESULTS_PROXY_URL.strip():
-            return settings.RICH_RESULTS_PROXY_URL.strip()
-        return None
+    def _resolve_proxy_settings(self) -> Optional[ProxySettings]:
+        raw_proxy = (
+            settings.RICH_RESULTS_PROXY_URL.strip()
+            if settings.RICH_RESULTS_PROXY_URL and settings.RICH_RESULTS_PROXY_URL.strip()
+            else (
+                settings.HTML_EXTRACTION_PROXY_URL.strip()
+                if settings.HTML_EXTRACTION_PROXY_URL and settings.HTML_EXTRACTION_PROXY_URL.strip()
+                else None
+            )
+        )
+        return resolve_proxy_settings(
+            raw_proxy,
+            no_proxy=settings.HTML_EXTRACTION_NO_PROXY,
+        )
 
     @staticmethod
     def _build_disabled_segment(validator: str, label: str) -> RichResultsValidatorDetail:
@@ -184,9 +195,9 @@ class RichResultsService:
         token: Optional[str] = None,
     ) -> RichResultsReportResponse:
         input_type, content, source_url = await self._build_effective_input(payload)
-        proxy_url = self._resolve_proxy_url()
-        google_service = GoogleRichResultsValidationService(proxy_url)
-        schema_org_service = SchemaOrgValidationService(proxy_url)
+        proxy_settings = self._resolve_proxy_settings()
+        google_service = GoogleRichResultsValidationService(proxy_settings)
+        schema_org_service = SchemaOrgValidationService(proxy_settings)
 
         google_validation = (
             await google_service.validate(

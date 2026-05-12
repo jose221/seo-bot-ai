@@ -31,6 +31,7 @@ except ImportError:
 import nodriver as uc
 
 from app.core.config import get_settings
+from app.core.proxy import resolve_proxy_settings
 from app.core.storage import get_public_asset_storage
 
 # Configurar Logger
@@ -48,8 +49,12 @@ class AuditEngine:
         self.settings = get_settings()
         self.asset_storage = get_public_asset_storage()
         self.browser: Optional[Browser] = None
+        self.proxy_settings = resolve_proxy_settings(
+            self.settings.HTML_EXTRACTION_PROXY_URL or self.settings.RICH_RESULTS_PROXY_URL,
+            no_proxy=self.settings.HTML_EXTRACTION_NO_PROXY,
+        )
 
-    async def _init_browser(self):
+    async def _init_browser(self, proxy_settings=None):
         """Initialize Playwright browser with stealth arguments."""
         if self.browser is None:
             playwright = await async_playwright().start()
@@ -67,7 +72,8 @@ class AuditEngine:
 
             self.browser = await playwright.chromium.launch(
                 headless=True,
-                args=browser_args
+                args=browser_args,
+                proxy=proxy_settings.as_playwright_proxy() if proxy_settings else None,
             )
 
     async def _close_browser(self):
@@ -75,6 +81,21 @@ class AuditEngine:
         if self.browser:
             await self.browser.close()
             self.browser = None
+
+    @staticmethod
+    def _looks_blocked(content: str) -> bool:
+        lowered = (content or "").lower()
+        indicators = (
+            "captcha-delivery",
+            "datadome",
+            "access denied",
+            "access forbidden",
+            "request blocked",
+            "forbidden",
+            "not permitted",
+            "temporary block",
+        )
+        return any(indicator in lowered for indicator in indicators)
 
     async def _apply_playwright_stealth(self, page: Page):
         """Manual stealth injection for Playwright."""
@@ -134,7 +155,7 @@ class AuditEngine:
         # Caso Base: Primitivos
         return data
 
-    async def _execute_nodriver_audit(self, url: str) -> Dict[str, Any]:
+    async def _execute_nodriver_audit(self, url: str, proxy_settings=None) -> Dict[str, Any]:
         """
         Fallback Method: Executes audit using 'nodriver' (Chrome CDP).
         Used when Playwright is detected by DataDome.
@@ -142,6 +163,11 @@ class AuditEngine:
         logger.info(f"🛡️ Activating Fallback Protocol (nodriver) for: {url}")
         browser = None
         display = None
+        proxy_forwarder = (
+            proxy_settings.create_nodriver_forwarder()
+            if proxy_settings and proxy_settings.has_auth
+            else None
+        )
 
         try:
             # --- Virtual Display Logic for Ubuntu Server ---
@@ -188,6 +214,12 @@ class AuditEngine:
                 # Flags experimentales para ocultar headless/automation
                 "--enable-features=NetworkService,NetworkServiceInProcess",
             ]
+            if proxy_forwarder is not None:
+                browser_args.append(f"--proxy-server={proxy_forwarder.proxy_server}")
+            elif proxy_settings:
+                browser_args.append(f"--proxy-server={proxy_settings.server}")
+            if proxy_settings and proxy_settings.chrome_bypass_list:
+                browser_args.append(f"--proxy-bypass-list={proxy_settings.chrome_bypass_list}")
 
             logger.info("🚀 Starting nodriver browser (headless=False for DataDome bypass)...")
             browser = await uc.start(
@@ -428,6 +460,9 @@ class AuditEngine:
                     browser.stop()
                 except:
                     pass
+            if proxy_forwarder and getattr(proxy_forwarder, "server", None):
+                proxy_forwarder.server.close()
+                await proxy_forwarder.server.wait_closed()
             # Clean up virtual display
             if display:
                 try:
@@ -450,7 +485,7 @@ class AuditEngine:
         Raises:
             Exception: Si no se pudo obtener el HTML por ningún método.
         """
-        await self._init_browser()
+        await self._init_browser(proxy_settings=None)
         context = None
 
         try:
@@ -466,22 +501,32 @@ class AuditEngine:
 
             logger.info(f"🌐 [fetch_html] Navigating to: {url}")
 
+            # Use 'domcontentloaded' — reliable for Angular/SPA pages.
+            # 'networkidle' can hang indefinitely on apps with WebSockets or polling.
             try:
-                await page.goto(url, wait_until='networkidle', timeout=timeout_ms)
+                await page.goto(url, wait_until='domcontentloaded', timeout=timeout_ms)
+            except Exception as nav_err:
+                logger.warning(f"⚠️ [fetch_html] goto raised ({type(nav_err).__name__}): {nav_err} — continuing with current DOM")
+
+            # Wait for <body> to have actual content (not just a bare shell).
+            try:
+                await page.wait_for_selector('body:not(:empty)', timeout=10_000)
             except Exception:
                 pass
 
-            await asyncio.sleep(5)
+            # Extra wait for JS-driven rendering (Angular hydration, lazy components, etc.)
+            await asyncio.sleep(8)
+
             content = await page.content()
 
             # Block detection
-            if "captcha-delivery" in content or "DataDome" in content:
-                logger.warning(f"🚨 [fetch_html] Block detected for {url}, trying nodriver fallback...")
+            if self._looks_blocked(content):
+                logger.warning(f"🚨 [fetch_html] Block detected for {url}, retrying with proxy fallback...")
                 await context.close()
                 context = None
                 await self._close_browser()
 
-                nodriver_result = await self._execute_nodriver_audit(url)
+                nodriver_result = await self._execute_nodriver_audit(url, proxy_settings=self.proxy_settings)
                 if nodriver_result.get("error"):
                     raise Exception(nodriver_result.get("message", "Blocked by anti-bot"))
                 return nodriver_result.get("html_content_raw", nodriver_result.get("html_content", ""))
@@ -511,7 +556,7 @@ class AuditEngine:
         Tries Playwright first, switches to Nodriver if blocked.
         If manual_html_content is provided, it uses it directly.
         """
-        await self._init_browser()
+        await self._init_browser(proxy_settings=None)
         context = None
 
         try:
@@ -593,7 +638,7 @@ class AuditEngine:
             await asyncio.sleep(2) # Allow JS redirects to happen
             content_check = await page.content()
 
-            if "captcha-delivery" in content_check or "DataDome" in content_check:
+            if self._looks_blocked(content_check):
                 logger.warning("🚨 DataDome Block detected in Playwright.")
 
                 # Cleanup Playwright context before switching
@@ -601,7 +646,7 @@ class AuditEngine:
                 await self._close_browser()
 
                 # TRIGGER FALLBACK
-                return await self._execute_nodriver_audit(url)
+                return await self._execute_nodriver_audit(url, proxy_settings=self.proxy_settings)
 
             # 3. Standard Playwright Extraction (If not blocked)
             if instructions:
@@ -660,7 +705,7 @@ class AuditEngine:
             # Try fallback one last time if it was a generic error that looks like a timeout/block
             if "Timeout" in str(e) or "Target closed" in str(e):
                 logger.info(f"🔄 Retrying with Nodriver due to timeout/error: {e}")
-                nodriver_result = await self._execute_nodriver_audit(url)
+                nodriver_result = await self._execute_nodriver_audit(url, proxy_settings=self.proxy_settings)
 
                 if nodriver_result.get("error") and manual_html_content:
                     logger.warning("⚠️ Nodriver failed after timeout. Switching to MANUAL HTML FALLBACK.")

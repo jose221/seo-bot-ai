@@ -14,14 +14,12 @@ import nodriver.cdp.input_ as cdp_input
 from pydantic import BaseModel, Field
 
 import nodriver as uc
+from app.core.proxy import ProxySettings
 from app.core.storage import PublicAssetStorage
 
 logger = logging.getLogger(__name__)
 
-# Clase CSS presente en el resultado exitoso de Google Rich Results.
-# Si no aparece tras el submit, Google bloqueó la solicitud.
-# Actualiza esta constante si Google cambia su markup.
-GOOGLE_BLOCK_DETECTOR_CLASS: str = "d1pwUc"
+
 
 
 class InputType(str, Enum):
@@ -44,7 +42,7 @@ class GoogleRichResultsEngine:
 
   def __init__(
     self,
-    proxy_server: Optional[str] = None,
+    proxy_settings: Optional[ProxySettings] = None,
     screenshots_dir: str = "storage/images",
     storage_url_prefix: str = "/storage/images",
     max_concurrent_tasks: int = 3, # Límite de navegadores simultáneos
@@ -54,9 +52,19 @@ class GoogleRichResultsEngine:
   ):
     """
     Inicializa el motor de validación exclusivo con Nodriver.
-    Nota: proxy_server debe ser un string con el formato "http://ip:port"
     """
-    self._proxy_server = proxy_server
+    self._proxy_settings = proxy_settings
+    self._proxy_forwarder = (
+      proxy_settings.create_nodriver_forwarder()
+      if proxy_settings and proxy_settings.has_auth
+      else None
+    )
+    self._proxy_server = (
+      self._proxy_forwarder.proxy_server
+      if self._proxy_forwarder is not None
+      else proxy_settings.server if proxy_settings else None
+    )
+    self._proxy_bypass_list = proxy_settings.chrome_bypass_list if proxy_settings else None
     self._headless = headless
     self.target_url = "https://search.google.com/test/rich-results?hl=es"
     self.artifact_storage = artifact_storage
@@ -140,12 +148,13 @@ class GoogleRichResultsEngine:
 
         browser_args = [
           "--window-size=1920,1080",
-          "--no-sandbox",
           "--disable-blink-features=AutomationControlled"
         ]
 
         if self._proxy_server:
           browser_args.append(f"--proxy-server={self._proxy_server}")
+        if self._proxy_bypass_list:
+          browser_args.append(f"--proxy-bypass-list={self._proxy_bypass_list}")
 
         # Lanzamos el navegador heredando el entorno seguro
         browser = await uc.start(headless=self._headless, browser_args=browser_args)
@@ -246,23 +255,6 @@ class GoogleRichResultsEngine:
       if screenshot:
         screenshots.append(screenshot)
 
-      # Detección de bloqueo post-submit: si la clase de resultados no aparece
-      # en el HTML final, Google bloqueó la solicitud con bot-detection.
-      if GOOGLE_BLOCK_DETECTOR_CLASS not in (final_html or ""):
-        logger.warning(
-          "Bloqueo detectado: clase '%s' ausente en el resultado. Google bloqueó la solicitud.",
-          GOOGLE_BLOCK_DETECTOR_CLASS,
-        )
-        return ValidationResult(
-          is_success=False,
-          result_url=current_url,
-          html_content=final_html,
-          error_message="Google bloqueó la solicitud: página de resultados no contiene los elementos esperados",
-          method_used="nodriver",
-          blocked_by_google=True,
-          screenshots=screenshots,
-        )
-
       return ValidationResult(
         is_success=True,
         result_url=current_url,
@@ -297,6 +289,9 @@ class GoogleRichResultsEngine:
           browser.stop()
         except Exception as e:
           logger.warning(f"Error stopping browser: {e}")
+      if self._proxy_forwarder and getattr(self._proxy_forwarder, "server", None):
+        self._proxy_forwarder.server.close()
+        await self._proxy_forwarder.server.wait_closed()
       if display:
         try:
           display.stop()

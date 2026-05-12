@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
-from urllib.parse import urlparse
 
 from app.core.config import settings
+from app.core.proxy import ProxySettings, resolve_proxy_settings
 from app.core.storage import get_public_asset_storage
 from app.handlers.seo_scrapper.schema_org_validator import (
     InputType as SchemaInputType,
@@ -28,25 +28,19 @@ logger = logging.getLogger(__name__)
 
 
 class SchemaOrgValidationService:
-    def __init__(self, proxy_url: Optional[str]) -> None:
-        self.proxy_url = proxy_url
+    def __init__(self, proxy_settings: Optional[ProxySettings]) -> None:
+        self.proxy_settings = proxy_settings
 
     def _build_engine(
         self,
-        proxy_url: Optional[str] = None,
+        proxy_settings: Optional[ProxySettings] = None,
         browser_mode_code: Optional[str] = None,
     ) -> SchemaOrgValidatorEngine:
-        effective_proxy = proxy_url if proxy_url is not None else self.proxy_url
-        proxy_server = None
-        if effective_proxy:
-            parsed = urlparse(effective_proxy)
-            proxy_server = f"{parsed.scheme}://{parsed.hostname}"
-            if parsed.port:
-                proxy_server = f"{proxy_server}:{parsed.port}"
+        effective_proxy = proxy_settings if proxy_settings is not None else self.proxy_settings
         browser_mode = get_browser_mode_registry_service().resolve_mode(browser_mode_code)
 
         return SchemaOrgValidatorEngine(
-            proxy_server=proxy_server,
+            proxy_settings=effective_proxy,
             screenshots_dir=f"{settings.STORAGE_PATH}/images/schema_org",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images/schema_org",
             artifact_storage=get_public_asset_storage(),
@@ -80,21 +74,25 @@ class SchemaOrgValidationService:
         content: str,
         browser_mode_code: Optional[str] = None,
     ) -> RichResultsValidatorDetail:
-        # Primer intento: sin proxy
-        validation = await self._build_engine(proxy_url=None, browser_mode_code=browser_mode_code).validate(
+        validation = await self._build_engine(
+            proxy_settings=None,
+            browser_mode_code=browser_mode_code,
+        ).validate(
             input_type=self._to_input_type(input_type),
             content=content,
         )
 
-        # Si bloqueó, reintentar con el proxy configurado en .env antes del fallback local
         if validation.blocked_by_schema:
-            fallback_proxy = settings.RICH_RESULTS_PROXY_URL.strip() if settings.RICH_RESULTS_PROXY_URL else None
+            fallback_proxy = self.proxy_settings or resolve_proxy_settings(
+                settings.RICH_RESULTS_PROXY_URL.strip() if settings.RICH_RESULTS_PROXY_URL else settings.HTML_EXTRACTION_PROXY_URL,
+                no_proxy=settings.HTML_EXTRACTION_NO_PROXY,
+            )
             if fallback_proxy:
                 logger.warning(
                     "validator.schema.org bloqueó sin proxy — reintentando con proxy de .env"
                 )
                 validation = await self._build_engine(
-                    proxy_url=fallback_proxy,
+                    proxy_settings=fallback_proxy,
                     browser_mode_code=browser_mode_code,
                 ).validate(
                     input_type=self._to_input_type(input_type),
