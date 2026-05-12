@@ -31,6 +31,7 @@ except ImportError:
 import nodriver as uc
 
 from app.core.config import get_settings
+from app.core.storage import get_public_asset_storage
 
 # Configurar Logger
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +46,7 @@ class AuditEngine:
 
     def __init__(self):
         self.settings = get_settings()
+        self.asset_storage = get_public_asset_storage()
         self.browser: Optional[Browser] = None
 
     async def _init_browser(self):
@@ -292,28 +294,59 @@ class AuditEngine:
 
                 # Save debug evidence
                 try:
-                    storage_path = self.settings.STORAGE_PATH
-                    storage_url_prefix = self.settings.STORAGE_URL_PREFIX
-                    debug_dir = f"{storage_path}/reports"
-                    if not os.path.exists(debug_dir):
-                        os.makedirs(debug_dir, exist_ok=True)
-
                     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
 
                     # Save screenshot
                     screenshot_filename = f"BLOCK_DEBUG_{timestamp}.png"
-                    screenshot_path = f"{debug_dir}/{screenshot_filename}"
-                    screenshot_url = f"{storage_url_prefix}/reports/{screenshot_filename}"
-                    await page.save_screenshot(screenshot_path)
-                    logger.error(f"📸 Screenshot saved: {screenshot_url}")
+                    if self.asset_storage.uses_remote_storage():
+                        import tempfile
+                        from pathlib import Path
+
+                        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+                            screenshot_path = Path(tmp_file.name)
+                        try:
+                            await page.save_screenshot(str(screenshot_path))
+                            screenshot_artifact = self.asset_storage.upload_public_file(
+                                screenshot_path,
+                                folder="reports/debug",
+                                filename=screenshot_filename,
+                                content_type="image/png",
+                                remove_local=True,
+                            )
+                        finally:
+                            try:
+                                if screenshot_path.exists():
+                                    screenshot_path.unlink()
+                            except OSError:
+                                pass
+                    else:
+                        debug_dir = f"{self.settings.STORAGE_PATH}/reports"
+                        if not os.path.exists(debug_dir):
+                            os.makedirs(debug_dir, exist_ok=True)
+                        screenshot_path = f"{debug_dir}/{screenshot_filename}"
+                        await page.save_screenshot(screenshot_path)
+                        screenshot_artifact = {
+                            "url": f"{self.settings.STORAGE_URL_PREFIX}/reports/{screenshot_filename}",
+                        }
+                    logger.error(f"📸 Screenshot saved: {screenshot_artifact['url']}")
 
                     # Save HTML content for analysis
                     html_filename = f"BLOCK_DEBUG_{timestamp}.html"
-                    html_path = f"{debug_dir}/{html_filename}"
-                    html_url = f"{storage_url_prefix}/reports/{html_filename}"
-                    with open(html_path, 'w', encoding='utf-8') as f:
-                        f.write(content[:50000])  # First 50KB
-                    logger.error(f"📄 HTML saved: {html_url}")
+                    if self.asset_storage.uses_remote_storage():
+                        html_artifact = self.asset_storage.upload_public_text(
+                            filename=html_filename,
+                            folder="reports/debug",
+                            content=content[:50000],
+                            content_type="text/html; charset=utf-8",
+                        )
+                    else:
+                        html_path = f"{self.settings.STORAGE_PATH}/reports/{html_filename}"
+                        with open(html_path, 'w', encoding='utf-8') as f:
+                            f.write(content[:50000])  # First 50KB
+                        html_artifact = {
+                            "url": f"{self.settings.STORAGE_URL_PREFIX}/reports/{html_filename}",
+                        }
+                    logger.error(f"📄 HTML saved: {html_artifact['url']}")
 
                 except Exception as dbg_err:
                     logger.error(f"❌ Could not save debug evidence: {dbg_err}")
@@ -438,7 +471,7 @@ class AuditEngine:
             except Exception:
                 pass
 
-            await asyncio.sleep(1)
+            await asyncio.sleep(5)
             content = await page.content()
 
             # Block detection

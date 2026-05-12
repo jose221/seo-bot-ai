@@ -42,6 +42,8 @@ log = logging.getLogger(__name__)
 
 
 class StructuredValidationTaskService:
+    GOOGLE_VALIDATOR_URL = "https://search.google.com/test/rich-results?hl=es"
+    SCHEMA_VALIDATOR_URL = "https://validator.schema.org/"
     TASK_TYPE = "structured_validation_task"
     BATCH_CONCURRENCY = 7
     CONTROL_POLL_SECONDS = 1.0
@@ -363,7 +365,7 @@ class StructuredValidationTaskService:
             success=False,
             input_type=input_type.value,
             method_used="error",
-            result_url=None,
+            result_url=StructuredValidationTaskService.GOOGLE_VALIDATOR_URL if validate_google else StructuredValidationTaskService.SCHEMA_VALIDATOR_URL if validate_schema_org else None,
             message=message,
             error_message=message,
             blocked_by_google=False,
@@ -377,6 +379,7 @@ class StructuredValidationTaskService:
                 label="Google Rich Results",
                 enabled=validate_google,
                 executed=False,
+                result_url=StructuredValidationTaskService.GOOGLE_VALIDATOR_URL if validate_google else None,
                 error_message=message if validate_google else None,
             ),
             schema_org_validation=RichResultsValidatorDetail(
@@ -384,6 +387,7 @@ class StructuredValidationTaskService:
                 label="Schema.org Validator",
                 enabled=validate_schema_org,
                 executed=False,
+                result_url=StructuredValidationTaskService.SCHEMA_VALIDATOR_URL if validate_schema_org else None,
                 error_message=message if validate_schema_org else None,
             ),
             get_ai_result=None,
@@ -522,6 +526,10 @@ class StructuredValidationTaskService:
         session.expire_all()
         return await self.get_task(session, task_id=task_id)
 
+    async def _load_runtime_task(self, task_id: UUID) -> Optional[StructuredValidationTask]:
+        async with db_manager.async_session_context() as session:
+            return await self.get_task(session, task_id=task_id)
+
     async def _get_runtime_status(self, task_id: UUID) -> Optional[StructuredValidationTaskStatus]:
         async with db_manager.async_session_context() as control_session:
             task = await self.get_task(control_session, task_id=task_id)
@@ -533,6 +541,132 @@ class StructuredValidationTaskService:
             if status is None or status != StructuredValidationTaskStatus.PAUSED:
                 return status
             await asyncio.sleep(self.CONTROL_POLL_SECONDS)
+
+    async def _persist_runtime_progress(
+        self,
+        *,
+        task_id: UUID,
+        inputs_json: list[dict[str, Any]],
+        results_by_key: Dict[str, Dict[str, Any]],
+        completed_items: int,
+        successful_items: int,
+        total: int,
+        progress_value: int,
+    ) -> Optional[StructuredValidationTask]:
+        async with db_manager.async_session_context() as session:
+            task = await self.get_task(session, task_id=task_id)
+            if not task:
+                return None
+
+            ordered_results = [
+                results_by_key[item.get("item_key") or item.get("label") or ""]
+                for item in inputs_json
+                if (item.get("item_key") or item.get("label") or "") in results_by_key
+            ]
+            task.results_json = ordered_results
+            task.completed_items = completed_items
+            task.successful_items = successful_items
+            task.failed_items = completed_items - successful_items
+            task.progress_percentage = progress_value
+            task.updated_at = datetime.utcnow()
+
+            current_status = task.status
+            if current_status == StructuredValidationTaskStatus.CANCELLED:
+                task.message = "Tarea cancelada manualmente"
+                task.progress_message = "Tarea cancelada manualmente"
+                task.completed_at = task.completed_at or datetime.utcnow()
+                task.success = False
+            elif current_status == StructuredValidationTaskStatus.PAUSED:
+                task.message = "Tarea pausada manualmente"
+                task.progress_message = "Tarea pausada manualmente"
+                task.completed_at = None
+            else:
+                task.status = StructuredValidationTaskStatus.IN_PROGRESS
+                task.message = "Tarea en progreso"
+                task.progress_message = f"Procesados {completed_items} de {total} elementos"
+                task.completed_at = None
+
+            session.add(task)
+            await session.commit()
+            await session.refresh(task)
+            return task
+
+    async def _mark_runtime_task_started(self, task_id: UUID) -> Optional[StructuredValidationTask]:
+        async with db_manager.async_session_context() as session:
+            task = await self.get_task(session, task_id=task_id)
+            if not task:
+                return None
+
+            if task.status == StructuredValidationTaskStatus.PENDING:
+                task.status = StructuredValidationTaskStatus.IN_PROGRESS
+                task.progress_percentage = max(task.progress_percentage, 5)
+                task.message = "Tarea en progreso"
+                task.progress_message = "Iniciando validaciones"
+                task.updated_at = datetime.utcnow()
+                task.completed_at = None
+                session.add(task)
+                await session.commit()
+                await session.refresh(task)
+            return task
+
+    async def _mark_runtime_task_completed(
+        self,
+        *,
+        task_id: UUID,
+        completed_items: int,
+        successful_items: int,
+        total: int,
+    ) -> Optional[StructuredValidationTask]:
+        async with db_manager.async_session_context() as session:
+            task = await self.get_task(session, task_id=task_id)
+            if not task:
+                return None
+
+            if task.status == StructuredValidationTaskStatus.CANCELLED:
+                task.success = False
+                task.completed_at = task.completed_at or datetime.utcnow()
+                task.updated_at = datetime.utcnow()
+            else:
+                task.status = StructuredValidationTaskStatus.COMPLETED
+                task.success = successful_items == total
+                task.message = "Tarea completada" if task.success else "Tarea completada con incidencias"
+                task.progress_percentage = 100
+                task.progress_message = task.message
+                task.completed_items = completed_items
+                task.successful_items = successful_items
+                task.failed_items = completed_items - successful_items
+                task.completed_at = datetime.utcnow()
+                task.updated_at = datetime.utcnow()
+
+            session.add(task)
+            await session.commit()
+            await session.refresh(task)
+            return task
+
+    async def _mark_runtime_task_failed(
+        self,
+        *,
+        task_id: UUID,
+        error_message: str,
+        progress_percentage: int,
+    ) -> Optional[StructuredValidationTask]:
+        async with db_manager.async_session_context() as session:
+            task = await self.get_task(session, task_id=task_id)
+            if not task:
+                return None
+
+            task.status = StructuredValidationTaskStatus.FAILED
+            task.success = False
+            task.error_message = error_message
+            task.message = "La tarea fallo"
+            task.progress_message = error_message
+            task.progress_percentage = progress_percentage
+            task.updated_at = datetime.utcnow()
+            task.completed_at = datetime.utcnow()
+            session.add(task)
+            await session.commit()
+            await session.refresh(task)
+            return task
 
     async def _set_task_status(
         self,
@@ -878,190 +1012,151 @@ class StructuredValidationTaskService:
         await session.commit()
 
     async def run_task(self, *, task_id: UUID, token: str = "") -> None:
-        async with db_manager.async_session_context() as session:
-            task = await self.get_task(session, task_id=task_id)
-            if not task:
+        task = await self._load_runtime_task(task_id)
+        if not task:
+            return
+
+        try:
+            if task.status == StructuredValidationTaskStatus.CANCELLED:
                 return
-            try:
-                if task.status == StructuredValidationTaskStatus.CANCELLED:
-                    return
-                if task.status == StructuredValidationTaskStatus.PENDING:
-                    task.status = StructuredValidationTaskStatus.IN_PROGRESS
-                    task.progress_percentage = max(task.progress_percentage, 5)
-                    task.message = "Tarea en progreso"
-                    task.progress_message = "Iniciando validaciones"
-                    task.updated_at = datetime.utcnow()
-                    task.completed_at = None
-                    session.add(task)
-                    await session.commit()
-                    self._log_progress(task.id, "Iniciando validacion de elementos", progress_percentage=task.progress_percentage)
 
-                total = max(1, len(task.inputs_json or []))
-                results_by_key: Dict[str, Dict[str, Any]] = {
-                    item.get("item_key", ""): self._compact_serialized_item(item)
-                    for item in (task.results_json or [])
-                    if item.get("item_key")
-                }
-                completed_items = len(results_by_key)
-                successful_items = sum(1 for item in results_by_key.values() if item.get("success"))
-                pending_inputs = [
-                    (index, item)
-                    for index, item in enumerate(task.inputs_json or [], start=1)
-                    if (item.get("item_key") or item.get("label") or "") not in results_by_key
-                ]
-                pending_queue: asyncio.Queue[tuple[int, Dict[str, Any]]] = asyncio.Queue()
-                for entry in pending_inputs:
-                    pending_queue.put_nowait(entry)
+            started_task = await self._mark_runtime_task_started(task_id)
+            if not started_task:
+                return
+            task = started_task
+            if task.status == StructuredValidationTaskStatus.IN_PROGRESS:
+                self._log_progress(task.id, "Iniciando validacion de elementos", progress_percentage=task.progress_percentage)
 
-                update_lock = asyncio.Lock()
+            total = max(1, len(task.inputs_json or []))
+            task_inputs = list(task.inputs_json or [])
+            validate_google = task.validate_google
+            validate_schema_org = task.validate_schema_org
+            requested_ai_result = task.requested_ai_result
+            auto_extract_html = task.auto_extract_html
+            browser_mode_code = task.browser_mode_code
 
-                async def process_item(index: int, item: Dict[str, Any]) -> tuple[str, str, Dict[str, Any], bool]:
-                    input_type = StructuredValidationInputMode(
-                        item.get("input_type", StructuredValidationInputMode.URL.value)
+            results_by_key: Dict[str, Dict[str, Any]] = {
+                item.get("item_key", ""): self._compact_serialized_item(item)
+                for item in (task.results_json or [])
+                if item.get("item_key")
+            }
+            completed_items = len(results_by_key)
+            successful_items = sum(1 for item in results_by_key.values() if item.get("success"))
+            pending_inputs = [
+                (index, item)
+                for index, item in enumerate(task_inputs, start=1)
+                if (item.get("item_key") or item.get("label") or "") not in results_by_key
+            ]
+            pending_queue: asyncio.Queue[tuple[int, Dict[str, Any]]] = asyncio.Queue()
+            for entry in pending_inputs:
+                pending_queue.put_nowait(entry)
+
+            update_lock = asyncio.Lock()
+
+            async def process_item(index: int, item: Dict[str, Any]) -> tuple[str, str, Dict[str, Any], bool]:
+                input_type = StructuredValidationInputMode(
+                    item.get("input_type", StructuredValidationInputMode.URL.value)
+                )
+                label = item.get("label") or item.get("item_key") or f"Elemento {index}"
+                source_value = item.get("value") or ""
+                item_key = item.get("item_key") or label
+
+                self._log_progress(
+                    task_id,
+                    f"Procesando {label}",
+                    progress_percentage=self._clamp_progress(int((max(completed_items, 0) / total) * 100)),
+                )
+                try:
+                    report_payload = RichResultsReportRequest(
+                        content=source_value,
+                        is_url=input_type == StructuredValidationInputMode.URL,
+                        get_ai_result=requested_ai_result,
+                        auto_extract_html=auto_extract_html if input_type == StructuredValidationInputMode.URL else False,
+                        validate_google=validate_google,
+                        validate_schema_org=validate_schema_org,
+                        browser_mode_code=browser_mode_code,
                     )
-                    label = item.get("label") or item.get("item_key") or f"Elemento {index}"
-                    source_value = item.get("value") or ""
-                    item_key = item.get("item_key") or label
-
-                    self._log_progress(
-                        task.id,
-                        f"Procesando {label}",
-                        progress_percentage=self._clamp_progress(int((max(completed_items, 0) / total) * 100)),
-                    )
-                    try:
-                        report_payload = RichResultsReportRequest(
-                            content=source_value,
-                            is_url=input_type == StructuredValidationInputMode.URL,
-                            get_ai_result=task.requested_ai_result,
-                            auto_extract_html=task.auto_extract_html if input_type == StructuredValidationInputMode.URL else False,
-                            validate_google=task.validate_google,
-                            validate_schema_org=task.validate_schema_org,
-                            browser_mode_code=task.browser_mode_code,
-                        )
-                        report = await get_rich_results_service().report_page(report_payload, token=token)
-                    except Exception as exc:
-                        log.exception("Error procesando elemento %s de structured task %s", label, task.id)
-                        report = self._build_failed_report(
-                            input_type=input_type,
-                            validate_google=task.validate_google,
-                            validate_schema_org=task.validate_schema_org,
-                            message=str(exc),
-                        )
-                    serialized = self._serialize_result(
-                        item_key=item_key,
-                        label=label,
+                    report = await get_rich_results_service().report_page(report_payload, token=token)
+                except Exception as exc:
+                    log.exception("Error procesando elemento %s de structured task %s", label, task_id)
+                    report = self._build_failed_report(
                         input_type=input_type,
-                        source_value=source_value,
-                        report=report,
+                        validate_google=validate_google,
+                        validate_schema_org=validate_schema_org,
+                        message=str(exc),
                     )
-                    return item_key, label, serialized, report.success
+                serialized = self._serialize_result(
+                    item_key=item_key,
+                    label=label,
+                    input_type=input_type,
+                    source_value=source_value,
+                    report=report,
+                )
+                return item_key, label, serialized, report.success
 
-                async def worker() -> None:
-                    nonlocal completed_items, successful_items, task
-                    while True:
-                        runtime_status = await self._wait_until_resumable(task.id)
-                        if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+            async def worker() -> None:
+                nonlocal completed_items, successful_items
+                while True:
+                    runtime_status = await self._wait_until_resumable(task_id)
+                    if runtime_status is None or runtime_status == StructuredValidationTaskStatus.CANCELLED:
+                        return
+                    try:
+                        index, item = pending_queue.get_nowait()
+                    except asyncio.QueueEmpty:
+                        return
+
+                    item_key, label, serialized, success = await process_item(index, item)
+
+                    async with update_lock:
+                        results_by_key[item_key] = serialized
+                        completed_items += 1
+                        if success:
+                            successful_items += 1
+
+                        report_message = serialized.get("message") or "Elemento procesado"
+                        progress_value = self._clamp_progress(int((completed_items / total) * 100))
+                        self._log_progress(
+                            task_id,
+                            f"{label}: {report_message}",
+                            level="success" if success else "warning",
+                            progress_percentage=progress_value,
+                        )
+
+                        persisted_task = await self._persist_runtime_progress(
+                            task_id=task_id,
+                            inputs_json=task_inputs,
+                            results_by_key=results_by_key,
+                            completed_items=completed_items,
+                            successful_items=successful_items,
+                            total=total,
+                            progress_value=progress_value,
+                        )
+                        if not persisted_task or persisted_task.status == StructuredValidationTaskStatus.CANCELLED:
                             return
-                        try:
-                            index, item = pending_queue.get_nowait()
-                        except asyncio.QueueEmpty:
-                            return
 
-                        item_key, label, serialized, success = await process_item(index, item)
+            workers = [
+                asyncio.create_task(worker())
+                for _ in range(max(1, min(self.BATCH_CONCURRENCY, len(pending_inputs) or 1)))
+            ]
+            await asyncio.gather(*workers)
 
-                        async with update_lock:
-                            results_by_key[item_key] = serialized
-                            completed_items += 1
-                            if success:
-                                successful_items += 1
-
-                            report_message = serialized.get("message") or "Elemento procesado"
-                            progress_value = self._clamp_progress(int((completed_items / total) * 100))
-                            self._log_progress(
-                                task.id,
-                                f"{label}: {report_message}",
-                                level="success" if success else "warning",
-                                progress_percentage=progress_value,
-                            )
-
-                            task = await self._reload_task(session, task.id)
-                            if not task:
-                                return
-
-                            ordered_results = [
-                                results_by_key[item.get("item_key") or item.get("label") or ""]
-                                for item in (task.inputs_json or [])
-                                if (item.get("item_key") or item.get("label") or "") in results_by_key
-                            ]
-                            task.results_json = ordered_results
-                            task.completed_items = completed_items
-                            task.successful_items = successful_items
-                            task.failed_items = completed_items - successful_items
-                            task.progress_percentage = progress_value
-                            task.updated_at = datetime.utcnow()
-
-                            current_status = task.status
-                            if current_status == StructuredValidationTaskStatus.CANCELLED:
-                                task.message = "Tarea cancelada manualmente"
-                                task.progress_message = "Tarea cancelada manualmente"
-                                task.completed_at = task.completed_at or datetime.utcnow()
-                                task.success = False
-                            elif current_status == StructuredValidationTaskStatus.PAUSED:
-                                task.message = "Tarea pausada manualmente"
-                                task.progress_message = "Tarea pausada manualmente"
-                                task.completed_at = None
-                            else:
-                                task.status = StructuredValidationTaskStatus.IN_PROGRESS
-                                task.message = "Tarea en progreso"
-                                task.progress_message = f"Procesados {completed_items} de {total} elementos"
-                                task.completed_at = None
-
-                            session.add(task)
-                            await session.commit()
-
-                workers = [
-                    asyncio.create_task(worker())
-                    for _ in range(max(1, min(self.BATCH_CONCURRENCY, len(pending_inputs) or 1)))
-                ]
-                await asyncio.gather(*workers)
-
-                task = await self._reload_task(session, task.id)
-                if not task:
-                    return
-
-                if task.status == StructuredValidationTaskStatus.CANCELLED:
-                    task.success = False
-                    task.completed_at = task.completed_at or datetime.utcnow()
-                    task.updated_at = datetime.utcnow()
-                    session.add(task)
-                    await session.commit()
-                    return
-
-                task.status = StructuredValidationTaskStatus.COMPLETED
-                task.success = successful_items == total
-                task.message = "Tarea completada" if task.success else "Tarea completada con incidencias"
-                task.progress_percentage = 100
-                task.progress_message = task.message
-                task.completed_items = completed_items
-                task.successful_items = successful_items
-                task.failed_items = completed_items - successful_items
-                task.completed_at = datetime.utcnow()
-                task.updated_at = datetime.utcnow()
-                session.add(task)
-                await session.commit()
-                self._log_progress(task.id, task.message, level="success", progress_percentage=100)
-            except Exception as exc:
-                log.exception("Error ejecutando structured validation task %s", task_id)
-                task.status = StructuredValidationTaskStatus.FAILED
-                task.success = False
-                task.error_message = str(exc)
-                task.message = "La tarea fallo"
-                task.progress_message = str(exc)
-                task.updated_at = datetime.utcnow()
-                task.completed_at = datetime.utcnow()
-                session.add(task)
-                await session.commit()
-                self._log_progress(task.id, str(exc), level="error", progress_percentage=task.progress_percentage)
+            final_task = await self._mark_runtime_task_completed(
+                task_id=task_id,
+                completed_items=completed_items,
+                successful_items=successful_items,
+                total=total,
+            )
+            if final_task and final_task.status == StructuredValidationTaskStatus.COMPLETED:
+                self._log_progress(final_task.id, final_task.message, level="success", progress_percentage=100)
+        except Exception as exc:
+            log.exception("Error ejecutando structured validation task %s", task_id)
+            progress_percentage = self._clamp_progress(int((completed_items / total) * 100)) if 'completed_items' in locals() and 'total' in locals() else 0
+            failed_task = await self._mark_runtime_task_failed(
+                task_id=task_id,
+                error_message=str(exc),
+                progress_percentage=progress_percentage,
+            )
+            self._log_progress(task_id, str(exc), level="error", progress_percentage=failed_task.progress_percentage if failed_task else progress_percentage)
 
 
 _structured_validation_task_service: StructuredValidationTaskService | None = None

@@ -40,7 +40,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   readonly onlyIssues = signal(false);
   readonly currentPage = signal(1);
   readonly currentPageSize = signal(10);
-  readonly openComments = signal<string | null>(null);
+  readonly selectedItemKey = signal<string | null>(null);
   readonly commentUsername = signal('');
   readonly commentDrafts = signal<Record<string, string>>({});
   readonly answerDrafts = signal<Record<string, string>>({});
@@ -70,6 +70,12 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
       error: 0,
       pending: 0,
     };
+  });
+
+  readonly selectedItem = computed(() => {
+    const selectedKey = this.selectedItemKey();
+    if (!selectedKey) return null;
+    return (this.task()?.items ?? []).find((item) => item.item_key === selectedKey) ?? null;
   });
 
   readonly totalPages = computed(() => {
@@ -124,6 +130,10 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
       this.currentPage.set(task.page);
       this.currentPageSize.set(task.page_size);
       this.task.set(task);
+      const selectedKey = this.selectedItemKey();
+      if (selectedKey && !task.items.some((item) => item.item_key === selectedKey)) {
+        this.selectedItemKey.set(null);
+      }
     } finally {
       if (!silent) this.isLoading.set(false);
     }
@@ -234,6 +244,57 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
     return (validator.findings_summary.by_severity['critical'] || 0) + (validator.findings_summary.by_severity['error'] || 0);
   }
 
+  getItemWarningCount(item: StructuredValidationTaskItemModel): number {
+    return this.getValidatorWarningCount(item.report.google_validation) + this.getValidatorWarningCount(item.report.schema_org_validation);
+  }
+
+  getItemErrorCount(item: StructuredValidationTaskItemModel): number {
+    return this.getValidatorErrorCount(item.report.google_validation) + this.getValidatorErrorCount(item.report.schema_org_validation);
+  }
+
+  getItemFindingsCount(item: StructuredValidationTaskItemModel): number {
+    return item.report.google_validation.findings_summary.total + item.report.schema_org_validation.findings_summary.total;
+  }
+
+  getItemSourceText(item: StructuredValidationTaskItemModel): string {
+    return item.source_preview || item.source_value || 'Sin origen disponible';
+  }
+
+  getItemSourceUrl(item: StructuredValidationTaskItemModel): string | null {
+    return item.input_type === 'url' && item.source_value ? item.source_value : null;
+  }
+
+  openItemDetails(item: StructuredValidationTaskItemModel): void {
+    this.selectedItemKey.set(item.item_key);
+  }
+
+  closeItemDetails(): void {
+    this.selectedItemKey.set(null);
+  }
+
+  getValidatorStatusLabel(validator: RichResultsValidatorDetailModel): string {
+    const warningCount = this.getValidatorWarningCount(validator);
+    const errorCount = this.getValidatorErrorCount(validator);
+    if (!validator.executed) return 'No ejecutado';
+    if (errorCount > 0 || validator.error_message) return 'Error';
+    if (warningCount > 0 || validator.success === false) return 'Warning';
+    return 'OK';
+  }
+
+  getValidatorListForItem(item: StructuredValidationTaskItemModel): RichResultsValidatorDetailModel[] {
+    return [item.report.google_validation, item.report.schema_org_validation];
+  }
+
+  getValidatorsWithResultUrl(item: StructuredValidationTaskItemModel): RichResultsValidatorDetailModel[] {
+    return this.getValidatorListForItem(item).filter((validator) => validator.executed && !!validator.result_url);
+  }
+
+  getValidatorButtonLabel(validator: RichResultsValidatorDetailModel): string {
+    if (validator.validator === 'google') return 'Google validator';
+    if (validator.validator === 'schema_org') return 'Schema validator';
+    return validator.label;
+  }
+
   getSeverityLabel(severity: string | null): string {
     if (severity === 'critical') return 'Crítico';
     if (severity === 'error') return 'Error';
@@ -341,10 +402,6 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
       img.onerror = () => resolve({ width: 1600, height: 900 });
       img.src = src;
     });
-  }
-
-  toggleComments(itemKey: string): void {
-    this.openComments.set(this.openComments() === itemKey ? null : itemKey);
   }
 
   commentsFor(itemKey: string): PublicCommentItemModel[] {

@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import sys
+import tempfile
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -13,6 +14,7 @@ from pydantic import BaseModel, Field
 
 import nodriver as uc
 import nodriver.cdp.input_ as cdp_input
+from app.core.storage import PublicAssetStorage
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +64,8 @@ class SchemaOrgValidatorEngine:
     screenshots_dir: str = "storage/images/schema_org",
     storage_url_prefix: str = "/storage/images/schema_org",
     max_concurrent_tasks: int = 3,
+    artifact_storage: Optional[PublicAssetStorage] = None,
+    storage_folder: str = "images/schema_org",
     headless: bool = False,
   ):
     """
@@ -70,9 +74,12 @@ class SchemaOrgValidatorEngine:
     self._proxy_server = proxy_server
     self._headless = headless
     self.target_url = "https://validator.schema.org/"
+    self.artifact_storage = artifact_storage
+    self.storage_folder = storage_folder.strip("/")
     self.screenshots_dir = Path(screenshots_dir)
     self.storage_url_prefix = storage_url_prefix.rstrip("/")
-    self.screenshots_dir.mkdir(parents=True, exist_ok=True)
+    if not self.artifact_storage or not self.artifact_storage.uses_remote_storage():
+      self.screenshots_dir.mkdir(parents=True, exist_ok=True)
 
     self._semaphore = asyncio.Semaphore(max_concurrent_tasks)
 
@@ -169,9 +176,29 @@ class SchemaOrgValidatorEngine:
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
     filename = f"schema_org_{label}_{timestamp}.png"
-    target_path = self.screenshots_dir / filename
 
     try:
+      if self.artifact_storage and self.artifact_storage.uses_remote_storage():
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+          target_path = Path(tmp_file.name)
+        try:
+          await page.save_screenshot(str(target_path))
+          stored = self.artifact_storage.upload_public_file(
+            target_path,
+            folder=self.storage_folder,
+            filename=filename,
+            content_type="image/png",
+            remove_local=True,
+          )
+          return {"path": stored["path"], "url": stored["url"]}
+        finally:
+          try:
+            if target_path.exists():
+              target_path.unlink()
+          except OSError:
+            pass
+
+      target_path = self.screenshots_dir / filename
       await page.save_screenshot(str(target_path))
       return self._build_screenshot_artifact(filename)
     except Exception as exc:
@@ -252,6 +279,7 @@ class SchemaOrgValidatorEngine:
     browser = None
     display = None
     page = None
+    current_url = self.target_url
 
     try:
       # 1. Configuración de Display Virtual seguro para concurrencia
@@ -289,6 +317,7 @@ class SchemaOrgValidatorEngine:
 
       # Navegar al validador con el stealth ya activo
       page = await browser.get(self.target_url)
+      current_url = self.target_url
       await self._human_delay(1.5, 3.0)
 
       # Verificar bloqueo por CAPTCHA inmediatamente tras la carga
@@ -298,6 +327,7 @@ class SchemaOrgValidatorEngine:
         screenshots_list: list[dict[str, str]] = [screenshot] if screenshot else []
         return ValidationResult(
           is_success=False,
+          result_url=current_url,
           error_message="validator.schema.org bloqueó la solicitud con CAPTCHA",
           method_used="nodriver",
           blocked_by_schema=True,
@@ -362,6 +392,7 @@ class SchemaOrgValidatorEngine:
         screenshots_list = [screenshot] if screenshot else []
         return ValidationResult(
           is_success=False,
+          result_url=current_url,
           error_message="validator.schema.org bloqueó la solicitud con CAPTCHA tras el envío",
           method_used="nodriver",
           blocked_by_schema=True,
@@ -444,6 +475,7 @@ class SchemaOrgValidatorEngine:
 
       return ValidationResult(
         is_success=False,
+        result_url=current_url or self.target_url,
         error_message=error_message,
         method_used="nodriver",
         blocked_by_schema=False,

@@ -8,6 +8,7 @@ from sqlalchemy import String, cast as sql_cast, desc
 from sqlmodel import select
 
 from app.core.config import settings
+from app.core.storage import get_public_asset_storage
 from app.models import (
     AuditComparison,
     AuditReport,
@@ -34,6 +35,7 @@ class ReportLifecycleService:
 
     def __init__(self) -> None:
         self.reports_root = Path(settings.STORAGE_PATH) / "reports"
+        self.asset_storage = get_public_asset_storage()
 
     async def ensure_audit_pdf(self, session, audit: AuditReport) -> str:
         current_path = self._consume_existing_path(audit, "report_pdf_path")
@@ -47,9 +49,14 @@ class ReportLifecycleService:
         )
 
         pdf_path = ReportGenerator(audit=audit).generate_pdf()
+        stored_pdf_path = self._persist_generated_report(
+            Path(pdf_path),
+            folder=f"reports/audits/{audit.id}",
+            content_type="application/pdf",
+        )
         self._replace_paths(
             audit,
-            report_pdf_path=pdf_path,
+            report_pdf_path=stored_pdf_path,
         )
         await self._persist_async(session, audit)
         return audit.report_pdf_path
@@ -66,13 +73,21 @@ class ReportLifecycleService:
         )
 
         source_pdf_path = self._consume_existing_path(audit, "report_pdf_path")
+        resolved_pdf_path = None
+        if source_pdf_path and not self.asset_storage.is_remote_url(source_pdf_path):
+            resolved_pdf_path = Path(source_pdf_path)
         word_path = ReportGenerator(audit=audit).generate_docx(
-            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
-            keep_pdf=bool(source_pdf_path),
+            pdf_path=resolved_pdf_path,
+            keep_pdf=bool(resolved_pdf_path),
+        )
+        stored_word_path = self._persist_generated_report(
+            Path(word_path),
+            folder=f"reports/audits/{audit.id}",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self._replace_paths(
             audit,
-            report_word_path=word_path,
+            report_word_path=stored_word_path,
         )
         await self._persist_async(session, audit)
         return audit.report_word_path
@@ -95,9 +110,14 @@ class ReportLifecycleService:
         )
 
         pdf_path = ReportGenerator(audit=base_audit).generate_comparison_pdf(comparison.comparison_result)
+        stored_pdf_path = self._persist_generated_report(
+            Path(pdf_path),
+            folder=f"reports/comparisons/{comparison.id}",
+            content_type="application/pdf",
+        )
         self._replace_paths(
             comparison,
-            report_pdf_path=pdf_path,
+            report_pdf_path=stored_pdf_path,
         )
         await self._persist_async(session, comparison)
         return comparison.report_pdf_path
@@ -120,14 +140,22 @@ class ReportLifecycleService:
         )
 
         source_pdf_path = self._consume_existing_path(comparison, "report_pdf_path")
+        resolved_pdf_path = None
+        if source_pdf_path and not self.asset_storage.is_remote_url(source_pdf_path):
+            resolved_pdf_path = Path(source_pdf_path)
         word_path = ReportGenerator(audit=base_audit).generate_comparison_word(
             comparison.comparison_result,
-            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
-            keep_pdf=bool(source_pdf_path),
+            pdf_path=resolved_pdf_path,
+            keep_pdf=bool(resolved_pdf_path),
+        )
+        stored_word_path = self._persist_generated_report(
+            Path(word_path),
+            folder=f"reports/comparisons/{comparison.id}",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self._replace_paths(
             comparison,
-            report_word_path=word_path,
+            report_word_path=stored_word_path,
         )
         await self._persist_async(session, comparison)
         return comparison.report_word_path
@@ -139,9 +167,14 @@ class ReportLifecycleService:
 
         report_audit, report_body = await self._build_schema_report_context_async(session, schema_audit)
         pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(report_body)
+        stored_pdf_path = self._persist_generated_report(
+            Path(pdf_path),
+            folder=f"reports/schemas/{schema_audit.id}",
+            content_type="application/pdf",
+        )
         self._replace_paths(
             schema_audit,
-            report_pdf_path=pdf_path,
+            report_pdf_path=stored_pdf_path,
         )
         await self._persist_async(session, schema_audit)
         return schema_audit.report_pdf_path
@@ -153,14 +186,22 @@ class ReportLifecycleService:
 
         report_audit, report_body = await self._build_schema_report_context_async(session, schema_audit)
         source_pdf_path = self._consume_existing_path(schema_audit, "report_pdf_path")
+        resolved_pdf_path = None
+        if source_pdf_path and not self.asset_storage.is_remote_url(source_pdf_path):
+            resolved_pdf_path = Path(source_pdf_path)
         word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
             report_body,
-            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
-            keep_pdf=bool(source_pdf_path),
+            pdf_path=resolved_pdf_path,
+            keep_pdf=bool(resolved_pdf_path),
+        )
+        stored_word_path = self._persist_generated_report(
+            Path(word_path),
+            folder=f"reports/schemas/{schema_audit.id}",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self._replace_paths(
             schema_audit,
-            report_word_path=word_path,
+            report_word_path=stored_word_path,
         )
         await self._persist_async(session, schema_audit)
         return schema_audit.report_word_path
@@ -181,9 +222,14 @@ class ReportLifecycleService:
             token,
         )
         pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(detailed_content)
+        stored_pdf_path = self._persist_generated_report(
+            Path(pdf_path),
+            folder=f"reports/comparisons/{comparison.id}/proposal",
+            content_type="application/pdf",
+        )
         self._replace_paths(
             comparison,
-            proposal_report_pdf_path=pdf_path,
+            proposal_report_pdf_path=stored_pdf_path,
         )
         await self._persist_async(session, comparison)
         return comparison.proposal_report_pdf_path
@@ -204,14 +250,22 @@ class ReportLifecycleService:
             token,
         )
         source_pdf_path = self._consume_existing_path(comparison, "proposal_report_pdf_path")
+        resolved_pdf_path = None
+        if source_pdf_path and not self.asset_storage.is_remote_url(source_pdf_path):
+            resolved_pdf_path = Path(source_pdf_path)
         word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
             detailed_content,
-            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
-            keep_pdf=bool(source_pdf_path),
+            pdf_path=resolved_pdf_path,
+            keep_pdf=bool(resolved_pdf_path),
+        )
+        stored_word_path = self._persist_generated_report(
+            Path(word_path),
+            folder=f"reports/comparisons/{comparison.id}/proposal",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self._replace_paths(
             comparison,
-            proposal_report_word_path=word_path,
+            proposal_report_word_path=stored_word_path,
         )
         await self._persist_async(session, comparison)
         return comparison.proposal_report_word_path
@@ -223,9 +277,14 @@ class ReportLifecycleService:
 
         report_audit, markdown = await self._build_url_validation_report_context_async(session, validation)
         pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(markdown)
+        stored_pdf_path = self._persist_generated_report(
+            Path(pdf_path),
+            folder=f"reports/url-validations/{validation.id}",
+            content_type="application/pdf",
+        )
         self._replace_paths(
             validation,
-            report_pdf_path=pdf_path,
+            report_pdf_path=stored_pdf_path,
         )
         await self._persist_async(session, validation)
         return validation.report_pdf_path
@@ -237,14 +296,22 @@ class ReportLifecycleService:
 
         report_audit, markdown = await self._build_url_validation_report_context_async(session, validation)
         source_pdf_path = self._consume_existing_path(validation, "report_pdf_path")
+        resolved_pdf_path = None
+        if source_pdf_path and not self.asset_storage.is_remote_url(source_pdf_path):
+            resolved_pdf_path = Path(source_pdf_path)
         word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
             markdown,
-            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
-            keep_pdf=bool(source_pdf_path),
+            pdf_path=resolved_pdf_path,
+            keep_pdf=bool(resolved_pdf_path),
+        )
+        stored_word_path = self._persist_generated_report(
+            Path(word_path),
+            folder=f"reports/url-validations/{validation.id}",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self._replace_paths(
             validation,
-            report_word_path=word_path,
+            report_word_path=stored_word_path,
         )
         await self._persist_async(session, validation)
         return validation.report_word_path
@@ -259,9 +326,14 @@ class ReportLifecycleService:
             validation,
         )
         pdf_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_pdf(markdown)
+        stored_pdf_path = self._persist_generated_report(
+            Path(pdf_path),
+            folder=f"reports/url-validations/{validation.id}/global",
+            content_type="application/pdf",
+        )
         self._replace_paths(
             validation,
-            global_report_pdf_path=pdf_path,
+            global_report_pdf_path=stored_pdf_path,
         )
         await self._persist_async(session, validation)
         return validation.global_report_pdf_path
@@ -276,14 +348,22 @@ class ReportLifecycleService:
             validation,
         )
         source_pdf_path = self._consume_existing_path(validation, "global_report_pdf_path")
+        resolved_pdf_path = None
+        if source_pdf_path and not self.asset_storage.is_remote_url(source_pdf_path):
+            resolved_pdf_path = Path(source_pdf_path)
         word_path = ReportGenerator(audit=report_audit).generate_detailed_proposal_word(
             markdown,
-            pdf_path=Path(source_pdf_path) if source_pdf_path else None,
-            keep_pdf=bool(source_pdf_path),
+            pdf_path=resolved_pdf_path,
+            keep_pdf=bool(resolved_pdf_path),
+        )
+        stored_word_path = self._persist_generated_report(
+            Path(word_path),
+            folder=f"reports/url-validations/{validation.id}/global",
+            content_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         )
         self._replace_paths(
             validation,
-            global_report_word_path=word_path,
+            global_report_word_path=stored_word_path,
         )
         await self._persist_async(session, validation)
         return validation.global_report_word_path
@@ -475,6 +555,9 @@ class ReportLifecycleService:
         if not raw_path:
             return None
 
+        if self.asset_storage.is_remote_url(raw_path):
+            return raw_path
+
         file_path = Path(raw_path)
         if not file_path.exists():
             setattr(entity, attr_name, None)
@@ -490,9 +573,28 @@ class ReportLifecycleService:
     def _replace_paths(self, entity: Any, **new_paths: Optional[str]) -> None:
         for attr_name, new_path in new_paths.items():
             current_path = getattr(entity, attr_name, None)
-            if current_path and current_path != new_path:
+            if (
+                current_path
+                and current_path != new_path
+                and not self.asset_storage.is_remote_url(current_path)
+            ):
                 self._delete_file(Path(current_path))
             setattr(entity, attr_name, new_path)
+
+    def _persist_generated_report(
+        self,
+        file_path: Path,
+        *,
+        folder: str,
+        content_type: str,
+    ) -> str:
+        stored = self.asset_storage.upload_public_file(
+            file_path,
+            folder=folder,
+            content_type=content_type,
+            remove_local=True,
+        )
+        return stored["url"]
 
     @classmethod
     def _assert_completed(cls, status_value: Any, message: str) -> None:

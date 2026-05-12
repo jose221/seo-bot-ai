@@ -2,9 +2,10 @@
 Configuración central de la aplicación usando Pydantic Settings.
 Lee variables de entorno y proporciona valores por defecto.
 """
-from pydantic_settings import BaseSettings
-from typing import Literal
 from functools import lru_cache
+from typing import Literal
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -32,7 +33,7 @@ class Settings(BaseSettings):
     VERSION: str = "1.0.0"
     DEBUG: bool = False
     ENVIRONMENT: Literal["local", "development", "staging", "production"] = "local"
-    APP_MODE: Literal["web", "desktop"] = "web"
+    APP_MODE: Literal["web", "desktop", "local"] = "web"
 
     # CORS
     BACKEND_CORS_ORIGINS: list = ["*"]
@@ -40,6 +41,19 @@ class Settings(BaseSettings):
     # Storage
     STORAGE_PATH: str = "storage"
     STORAGE_URL_PREFIX: str = "/storage"
+    SEAWEED_ENDPOINT: str | None = None
+    SEAWEED_ACCESS_KEY: str | None = None
+    SEAWEED_SECRET_KEY: str | None = None
+    HERANDRO_STORAGE_ENDPOINT_URL: str | None = None
+    HERANDRO_STORAGE_ACCESS_KEY: str | None = None
+    HERANDRO_STORAGE_SECRET_KEY: str | None = None
+    HERANDRO_STORAGE_REGION_NAME: str = "us-east-1"
+    HERANDRO_STORAGE_SECURE: bool = False
+    HERANDRO_STORAGE_PUBLIC_BASE_URL: str | None = None
+    HERANDRO_STORAGE_PUBLIC_BUCKET: str = "public"
+    HERANDRO_STORAGE_PRIVATE_BUCKET: str = "storage"
+    HERANDRO_STORAGE_PRIVATE_URL_EXPIRATION_SECONDS: int = 3600
+    HERANDRO_STORAGE_PUBLIC_FOLDER: str = "seo-bot-ai"
 
     # Keycloak (UMA resource + scope)
     KEYCLOAK_AUTH_SERVER_URL: str = "https://your-keycloak-host"

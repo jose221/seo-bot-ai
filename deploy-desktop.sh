@@ -10,7 +10,8 @@ PYTHON_BIN="$DESKTOP_VENV_DIR/bin/python3"
 PLAYWRIGHT_BIN="$DESKTOP_VENV_DIR/bin/playwright"
 OUTPUT_DIR="$ROOT_DIR/release/desktop"
 DESKTOP_DROP_DIR="$HOME/Desktop/SEO-Bot-AI-Desktop"
-DESKTOP_APP_PATH="$DESKTOP_DROP_DIR/mac-arm64/SEO Bot AI.app"
+FALLBACK_DROP_DIR="$ROOT_DIR/release/desktop-export"
+DESKTOP_APP_PATH=""
 BASE_PYTHON_BIN="${SEO_BOT_DESKTOP_PYTHON:-}"
 DEBUG_MODE=0
 CLEAN_MODE=0
@@ -44,6 +45,10 @@ done
 
 log() {
   printf '\n[%s] %s\n' "$(date '+%H:%M:%S')" "$1"
+}
+
+warn() {
+  printf '\n[WARN] %s\n' "$1" >&2
 }
 
 fail() {
@@ -93,6 +98,17 @@ clean_path() {
   if [[ -e "$target" || -L "$target" ]]; then
     rm -rf "$target"
   fi
+}
+
+resolve_drop_dir() {
+  if mkdir -p "$DESKTOP_DROP_DIR" 2>/dev/null; then
+    printf '%s\n' "$DESKTOP_DROP_DIR"
+    return
+  fi
+
+  mkdir -p "$FALLBACK_DROP_DIR"
+  warn "macOS no permitio escribir en Desktop; se usara $FALLBACK_DROP_DIR"
+  printf '%s\n' "$FALLBACK_DROP_DIR"
 }
 
 run_clean() {
@@ -167,9 +183,20 @@ log "Empaquetando app de Electron"
 rm -rf "$OUTPUT_DIR"
 npx electron-builder --mac dmg --publish never --config.directories.output="$OUTPUT_DIR"
 
-mkdir -p "$DESKTOP_DROP_DIR"
-log "Copiando artefactos al Escritorio en $DESKTOP_DROP_DIR"
-rsync -a --delete "$OUTPUT_DIR/" "$DESKTOP_DROP_DIR/"
+DROP_DIR="$(resolve_drop_dir)"
+DESKTOP_APP_PATH="$DROP_DIR/mac-arm64/SEO Bot AI.app"
+log "Copiando artefactos a $DROP_DIR"
+if ! rsync -a --delete "$OUTPUT_DIR/" "$DROP_DIR/"; then
+  if [[ "$DROP_DIR" != "$FALLBACK_DROP_DIR" ]]; then
+    mkdir -p "$FALLBACK_DROP_DIR"
+    warn "No se pudo copiar al destino principal; reintentando en $FALLBACK_DROP_DIR"
+    DROP_DIR="$FALLBACK_DROP_DIR"
+    DESKTOP_APP_PATH="$DROP_DIR/mac-arm64/SEO Bot AI.app"
+    rsync -a --delete "$OUTPUT_DIR/" "$DROP_DIR/"
+  else
+    fail "No se pudo copiar los artefactos empaquetados"
+  fi
+fi
 
 [[ -d "$DESKTOP_APP_PATH" ]] || fail "No encontre la app empaquetada en $DESKTOP_APP_PATH"
 
@@ -181,7 +208,7 @@ else
 fi
 
 log "Deploy terminado"
-printf 'Artefactos disponibles en:\n- %s\n' "$DESKTOP_DROP_DIR"
+printf 'Artefactos disponibles en:\n- %s\n' "$DROP_DIR"
 if [[ "$DEBUG_MODE" -eq 1 ]]; then
   printf 'Log de auth/debug:\n- %s\n' "$HOME/Desktop/seo-bot-ai-auth-debug.log"
 fi

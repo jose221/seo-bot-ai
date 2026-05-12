@@ -7,10 +7,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
+from starlette.responses import RedirectResponse
 from sqlmodel import select
 
 from app.api.deps import get_current_user
 from app.core.database import get_session
+from app.core.storage import get_public_asset_storage
 from app.models import AuditComparison, AuditReport, AuditSchemaReview, AuditUrlValidation
 from app.models.user import User
 from app.services.report_lifecycle import get_report_lifecycle_service
@@ -21,6 +23,8 @@ report_lifecycle = get_report_lifecycle_service()
 
 
 def _build_download_response(file_path: str, media_type: str) -> FileResponse:
+    if get_public_asset_storage().is_remote_url(file_path):
+        return RedirectResponse(url=file_path, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
     path = Path(file_path)
     if not path.exists():
         raise HTTPException(

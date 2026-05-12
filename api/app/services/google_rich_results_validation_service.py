@@ -5,6 +5,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from app.core.config import settings
+from app.core.storage import get_public_asset_storage
 from app.handlers.seo_scrapper.google_rich_results_engine import (
     GoogleRichResultsEngine,
     InputType as GoogleInputType,
@@ -47,6 +48,8 @@ class GoogleRichResultsValidationService:
             proxy_server=proxy_server,
             screenshots_dir=f"{settings.STORAGE_PATH}/images",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images",
+            artifact_storage=get_public_asset_storage(),
+            storage_folder="images/google",
             headless=browser_mode.headless if browser_mode else False,
         )
 

@@ -5,6 +5,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 from app.core.config import settings
+from app.core.storage import get_public_asset_storage
 from app.handlers.seo_scrapper.schema_org_validator import (
     InputType as SchemaInputType,
     SchemaOrgValidatorEngine,
@@ -48,6 +49,8 @@ class SchemaOrgValidationService:
             proxy_server=proxy_server,
             screenshots_dir=f"{settings.STORAGE_PATH}/images/schema_org",
             storage_url_prefix=f"{settings.STORAGE_URL_PREFIX.rstrip('/')}/images/schema_org",
+            artifact_storage=get_public_asset_storage(),
+            storage_folder="images/schema_org",
             headless=browser_mode.headless if browser_mode else False,
         )
 
@@ -116,7 +119,7 @@ class SchemaOrgValidationService:
                 executed=True,
                 success=True,
                 method_used="local_extruct",
-                result_url=None,
+                result_url=validation.result_url,
                 message="Validación local completada (validator.schema.org bloqueó con CAPTCHA)",
                 error_message=validation.error_message,
                 blocked=True,
@@ -137,7 +140,7 @@ class SchemaOrgValidationService:
             executed=True,
             success=validation.is_success,
             method_used=validation.method_used,
-            result_url=None,
+            result_url=validation.result_url,
             message=self._build_message(validation.is_success, validation.error_message),
             error_message=validation.error_message,
             blocked=validation.blocked_by_schema,

@@ -106,7 +106,7 @@
       </div>
     </div>
 
-    <div class="surface-panel surface-panel--soft mb-4">
+    <div class="surface-panel surface-panel--soft">
       <div class="surface-panel__body">
         <div class="row g-3 align-items-end">
           <div class="col-md-6 col-xl-7">
@@ -148,7 +148,7 @@
       </div>
     </div>
 
-    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div class="structured-toolbar">
       <span class="text-muted small">{{ paginationLabel() }}</span>
       <div class="btn-group" role="group" aria-label="Paginación de elementos">
         <button type="button" class="btn btn-outline-secondary" [disabled]="currentPage() <= 1" (click)="goToPage(1)">
@@ -171,9 +171,11 @@
 
     <div class="structured-item-list">
       @for (item of filteredItems(); track item.item_key) {
+        @let warningCount = getItemWarningCount(item);
+        @let errorCount = getItemErrorCount(item);
         <article [ngClass]="getItemCardClass(item.severity, item.success)">
-          <div class="structured-item-card__header">
-            <div class="structured-item-card__title-wrap">
+          <div class="structured-item-card__body structured-item-card__body--compact">
+            <div class="structured-item-card__main">
               <div class="d-flex flex-wrap gap-2 mb-2">
                 <span [ngClass]="getSeverityClass(item.severity)">{{ getSeverityLabel(item.severity) }}</span>
                 <span class="sv-badge sv-badge--neutral text-uppercase">{{ item.input_type }}</span>
@@ -181,180 +183,57 @@
                   {{ item.success ? 'Completado' : 'Pendiente / revisión' }}
                 </span>
               </div>
+
               <h2 class="structured-item-card__title">{{ item.label }}</h2>
-              @if (item.source_preview) {
-                <p class="structured-item-card__source">{{ item.source_preview }}</p>
-              }
+              <p class="structured-item-card__source">{{ getItemSourceText(item) }}</p>
+
+              <div class="validator-chip-list">
+                @for (validator of getValidatorListForItem(item); track validator.validator) {
+                  @let validatorWarnings = getValidatorWarningCount(validator);
+                  @let validatorErrors = getValidatorErrorCount(validator);
+                  <span [ngClass]="getValidatorStateClass(validator.success, validator.executed, validatorWarnings > 0, validatorErrors > 0 || !!validator.error_message)">
+                    {{ validator.label }} · {{ getValidatorStatusLabel(validator) }}
+                  </span>
+                }
+              </div>
             </div>
 
-            <div class="structured-item-card__actions">
-              @if (item.input_type === 'url' && item.source_value) {
-                <a class="btn btn-outline-secondary btn-sm" [href]="item.source_value" target="_blank">
-                  <i class="bi bi-box-arrow-up-right me-1"></i>Abrir fuente
-                </a>
-              }
-              <button type="button" class="btn btn-outline-primary btn-sm" (click)="toggleComments(item.item_key)">
-                <i class="bi bi-chat-left-text me-1"></i>Comentarios ({{ commentsFor(item.item_key).length }})
-              </button>
+            <div class="structured-item-card__aside">
+              <div class="item-kpi-grid">
+                <div class="item-kpi">
+                  <span>Hallazgos</span>
+                  <strong>{{ getItemFindingsCount(item) }}</strong>
+                </div>
+                <div class="item-kpi item-kpi--warning">
+                  <span>Warnings</span>
+                  <strong>{{ warningCount }}</strong>
+                </div>
+                <div class="item-kpi item-kpi--danger">
+                  <span>Errores</span>
+                  <strong>{{ errorCount }}</strong>
+                </div>
+                <div class="item-kpi item-kpi--neutral">
+                  <span>Comentarios</span>
+                  <strong>{{ commentsFor(item.item_key).length }}</strong>
+                </div>
+              </div>
+
+              <div class="structured-item-card__actions">
+                @if (getItemSourceUrl(item); as sourceUrl) {
+                  <a class="btn btn-outline-secondary btn-sm" [href]="sourceUrl" target="_blank">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Abrir fuente
+                  </a>
+                }
+                @for (validator of getValidatorsWithResultUrl(item); track validator.validator) {
+                  <a class="btn btn-outline-dark btn-sm" [href]="validator.result_url!" target="_blank">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>{{ getValidatorButtonLabel(validator) }}
+                  </a>
+                }
+                <button type="button" class="btn btn-primary btn-sm" (click)="openItemDetails(item)">
+                  <i class="bi bi-layout-sidebar-inset me-1"></i>Ver detalle
+                </button>
+              </div>
             </div>
-          </div>
-
-          <div class="structured-item-card__body">
-            @if (item.report.get_ai_result?.content) {
-              <section class="ai-panel">
-                <div class="ai-panel__header">
-                  <h3><i class="bi bi-robot me-2"></i>Reporte IA</h3>
-                </div>
-                <div class="ai-panel__body">
-                  <markdown [data]="item.report.get_ai_result!.content"></markdown>
-                </div>
-              </section>
-            }
-
-            <div class="validator-grid">
-              @for (validator of [item.report.google_validation, item.report.schema_org_validation]; track validator.validator) {
-                @let warningCount = getValidatorWarningCount(validator);
-                @let errorCount = getValidatorErrorCount(validator);
-                <section [ngClass]="getValidatorCardClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
-                  <div class="validator-panel__header">
-                    <div>
-                      <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                        <h3 class="validator-panel__title">{{ validator.label }}</h3>
-                        <span [ngClass]="getValidatorStateClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
-                          {{ !validator.executed ? 'No ejecutado' : validator.success ? 'OK' : warningCount > 0 ? 'Warning' : 'Error' }}
-                        </span>
-                      </div>
-                      <p class="validator-panel__message">{{ validator.message || validator.error_message || 'Sin mensaje adicional' }}</p>
-                    </div>
-
-                    @if (validator.result_url) {
-                      <a class="btn btn-sm btn-outline-secondary" [href]="validator.result_url" target="_blank">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>Abrir validador
-                      </a>
-                    }
-                  </div>
-
-                  <div class="validator-panel__stats">
-                    <span class="validator-stat validator-stat--neutral">{{ validator.findings_summary.total }} hallazgo(s)</span>
-                    @if (warningCount > 0) {
-                      <span class="validator-stat validator-stat--warning">{{ warningCount }} warning</span>
-                    }
-                    @if (errorCount > 0) {
-                      <span class="validator-stat validator-stat--danger">{{ errorCount }} error</span>
-                    }
-                  </div>
-
-                  @if (validator.findings.length > 0) {
-                    <div class="finding-list">
-                      @for (finding of validator.findings; track finding.key) {
-                        <article class="finding-item">
-                          <div class="finding-item__header">
-                            <strong>{{ finding.item_name || finding.code }}</strong>
-                            <span [ngClass]="getSeverityClass(finding.severity)">{{ getSeverityLabel(finding.severity) }}</span>
-                          </div>
-                          <p class="finding-item__message">{{ finding.message }}</p>
-                          <div class="finding-item__links">
-                            @if (finding.element_url) {
-                              <a [href]="finding.element_url" target="_blank">Abrir detalle</a>
-                            }
-                            @if (finding.document_url) {
-                              <a [href]="finding.document_url" target="_blank">{{ finding.document_label || 'Ver documentación' }}</a>
-                            }
-                          </div>
-                        </article>
-                      }
-                    </div>
-                  } @else {
-                    <div class="validator-empty">Sin hallazgos detectados.</div>
-                  }
-
-                  @if (validator.screenshots.length > 0) {
-                    <div class="screenshot-gallery">
-                      <div class="screenshot-gallery__header">
-                        <div>
-                          <h4 class="screenshot-gallery__title">Capturas del validador</h4>
-                          <p class="screenshot-gallery__subtitle">Vista previa compacta. Da clic para abrir zoom, pan y navegación completa.</p>
-                        </div>
-                        <span class="sv-badge sv-badge--neutral">{{ validator.screenshots.length }} captura(s)</span>
-                      </div>
-
-                      <div class="screenshot-grid">
-                      @for (shot of validator.screenshots; track shot.path) {
-                        <button type="button" class="screenshot-card" (click)="openScreenshotGallery(validator.screenshots, $index)">
-                          <div class="screenshot-card__media">
-                            <img [src]="getScreenshotPreviewUrl(shot.url)" alt="Screenshot de validación" />
-                          </div>
-                          <div class="screenshot-card__footer">
-                            <div class="screenshot-card__copy">
-                              <strong>Captura {{ $index + 1 }}</strong>
-                              <span class="screenshot-card__path">{{ getScreenshotApiPath(shot.url) }}</span>
-                            </div>
-                            <span class="screenshot-card__action">
-                              <i class="bi bi-arrows-fullscreen"></i>
-                              Abrir
-                            </span>
-                          </div>
-                        </button>
-                      }
-                      </div>
-                    </div>
-                  }
-                </section>
-              }
-            </div>
-
-            @if (openComments() === item.item_key) {
-              <section class="comment-panel">
-                <div class="comment-panel__header">
-                  <h3>Comentarios</h3>
-                </div>
-
-                <div class="row g-3 mb-3">
-                  <div class="col-md-4">
-                    <input class="form-control" [ngModel]="commentUsername()" (ngModelChange)="commentUsername.set($event)" placeholder="Tu nombre" />
-                  </div>
-                  <div class="col-md-8">
-                    <div class="input-group">
-                      <input class="form-control" [ngModel]="commentDrafts()[item.item_key] || ''" (ngModelChange)="setCommentDraft(item.item_key, $event)" placeholder="Agregar comentario" />
-                      <button type="button" class="btn btn-primary" (click)="submitComment(item.item_key)">Enviar</button>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="comment-list">
-                  @for (comment of commentsFor(item.item_key); track comment.id) {
-                    <article class="comment-card">
-                      <div class="comment-card__header">
-                        <div>
-                          <strong>{{ comment.username }}</strong>
-                          <div class="text-muted small">{{ comment.created_at | date:'medium' }}</div>
-                        </div>
-                        <span class="sv-badge sv-badge--neutral">{{ comment.status }}</span>
-                      </div>
-                      <p class="mb-2 mt-2">{{ comment.comment }}</p>
-                      @if (comment.answer) {
-                        <div class="comment-answer">
-                          <strong>Respuesta:</strong> {{ comment.answer }}
-                        </div>
-                      } @else if (layout() === 'admin') {
-                        <div class="d-flex flex-column gap-2">
-                          <textarea class="form-control" rows="2" [ngModel]="answerDrafts()[comment.id] || ''" (ngModelChange)="setAnswerDraft(comment.id, $event)" placeholder="Responder comentario"></textarea>
-                          <div class="d-flex gap-2">
-                            <select class="form-select w-auto" [ngModel]="answerStatuses()[comment.id] || 'done'" (ngModelChange)="setAnswerStatus(comment.id, $event)">
-                              <option value="done">done</option>
-                              <option value="rejected">rejected</option>
-                            </select>
-                            <button type="button" class="btn btn-outline-primary" (click)="answerComment(comment)">Responder</button>
-                          </div>
-                        </div>
-                      }
-                    </article>
-                  } @empty {
-                    <div class="validator-empty">Todavía no hay comentarios para este elemento.</div>
-                  }
-                </div>
-              </section>
-            }
           </div>
         </article>
       } @empty {
@@ -366,5 +245,238 @@
         </div>
       }
     </div>
+
+    @if (selectedItem(); as activeItem) {
+      <button type="button" class="structured-drawer-backdrop" (click)="closeItemDetails()" aria-label="Cerrar detalle"></button>
+
+      <aside class="structured-drawer" role="dialog" aria-modal="true" aria-label="Detalle de validación estructurada">
+        <div class="structured-drawer__header">
+          <div>
+            <div class="d-flex flex-wrap gap-2 mb-2">
+              <span [ngClass]="getSeverityClass(activeItem.severity)">{{ getSeverityLabel(activeItem.severity) }}</span>
+              <span class="sv-badge sv-badge--neutral text-uppercase">{{ activeItem.input_type }}</span>
+              <span [ngClass]="activeItem.success ? 'sv-badge sv-badge--success' : 'sv-badge sv-badge--neutral'">
+                {{ activeItem.success ? 'Completado' : 'Pendiente / revisión' }}
+              </span>
+            </div>
+            <h2 class="structured-drawer__title">{{ activeItem.label }}</h2>
+            <p class="structured-drawer__subtitle">{{ getItemSourceText(activeItem) }}</p>
+          </div>
+
+          <button type="button" class="btn btn-outline-secondary btn-sm" (click)="closeItemDetails()">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <div class="structured-drawer__body">
+          <section class="detail-section">
+            <div class="detail-kpi-grid">
+              <article class="detail-kpi-card">
+                <span>Hallazgos</span>
+                <strong>{{ getItemFindingsCount(activeItem) }}</strong>
+              </article>
+              <article class="detail-kpi-card detail-kpi-card--warning">
+                <span>Warnings</span>
+                <strong>{{ getItemWarningCount(activeItem) }}</strong>
+              </article>
+              <article class="detail-kpi-card detail-kpi-card--danger">
+                <span>Errores</span>
+                <strong>{{ getItemErrorCount(activeItem) }}</strong>
+              </article>
+              <article class="detail-kpi-card detail-kpi-card--neutral">
+                <span>Comentarios</span>
+                <strong>{{ commentsFor(activeItem.item_key).length }}</strong>
+              </article>
+            </div>
+          </section>
+
+          <section class="detail-section">
+            <div class="detail-section__header">
+              <h3>URLs clave</h3>
+            </div>
+
+            @if (getValidatorsWithResultUrl(activeItem).length > 0) {
+              <div class="detail-validator-actions">
+                @for (validator of getValidatorsWithResultUrl(activeItem); track validator.validator) {
+                  <a class="btn btn-dark btn-sm" [href]="validator.result_url!" target="_blank">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>{{ getValidatorButtonLabel(validator) }}
+                  </a>
+                }
+              </div>
+            }
+
+            <div class="detail-link-stack">
+              @if (getItemSourceUrl(activeItem); as sourceUrl) {
+                <a class="detail-link-card" [href]="sourceUrl" target="_blank">
+                  <span class="detail-link-card__label">URL analizada</span>
+                  <span class="detail-link-card__value">{{ sourceUrl }}</span>
+                </a>
+              }
+
+              @for (validator of getValidatorListForItem(activeItem); track validator.validator) {
+                @if (validator.result_url) {
+                  <a class="detail-link-card" [href]="validator.result_url" target="_blank">
+                    <span class="detail-link-card__label">{{ validator.label }}</span>
+                    <span class="detail-link-card__value">{{ validator.result_url }}</span>
+                  </a>
+                }
+              }
+            </div>
+          </section>
+
+          @if (activeItem.report.get_ai_result?.content) {
+            <section class="detail-section ai-panel">
+              <div class="detail-section__header">
+                <h3><i class="bi bi-robot me-2"></i>Reporte IA</h3>
+              </div>
+              <div class="ai-panel__body">
+                <markdown [data]="activeItem.report.get_ai_result!.content"></markdown>
+              </div>
+            </section>
+          }
+
+          @for (validator of getValidatorListForItem(activeItem); track validator.validator) {
+            @let warningCount = getValidatorWarningCount(validator);
+            @let errorCount = getValidatorErrorCount(validator);
+            <section [ngClass]="getValidatorCardClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
+              <div class="validator-panel__header">
+                <div>
+                  <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                    <h3 class="validator-panel__title">{{ validator.label }}</h3>
+                    <span [ngClass]="getValidatorStateClass(validator.success, validator.executed, warningCount > 0, errorCount > 0 || !!validator.error_message)">
+                      {{ getValidatorStatusLabel(validator) }}
+                    </span>
+                  </div>
+                  <p class="validator-panel__message">{{ validator.message || validator.error_message || 'Sin mensaje adicional' }}</p>
+                </div>
+
+                @if (validator.result_url) {
+                  <a class="btn btn-sm btn-outline-secondary" [href]="validator.result_url" target="_blank">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>Abrir validador
+                  </a>
+                }
+              </div>
+
+              <div class="validator-panel__stats">
+                <span class="validator-stat validator-stat--neutral">{{ validator.findings_summary.total }} hallazgo(s)</span>
+                @if (warningCount > 0) {
+                  <span class="validator-stat validator-stat--warning">{{ warningCount }} warning</span>
+                }
+                @if (errorCount > 0) {
+                  <span class="validator-stat validator-stat--danger">{{ errorCount }} error</span>
+                }
+              </div>
+
+              @if (validator.findings.length > 0) {
+                <div class="finding-list">
+                  @for (finding of validator.findings; track finding.key) {
+                    <article class="finding-item">
+                      <div class="finding-item__header">
+                        <strong>{{ finding.item_name || finding.code }}</strong>
+                        <span [ngClass]="getSeverityClass(finding.severity)">{{ getSeverityLabel(finding.severity) }}</span>
+                      </div>
+                      <p class="finding-item__message">{{ finding.message }}</p>
+                      <div class="finding-item__links">
+                        @if (finding.element_url) {
+                          <a [href]="finding.element_url" target="_blank">Abrir detalle</a>
+                        }
+                        @if (finding.document_url) {
+                          <a [href]="finding.document_url" target="_blank">{{ finding.document_label || 'Ver documentación' }}</a>
+                        }
+                      </div>
+                    </article>
+                  }
+                </div>
+              } @else {
+                <div class="validator-empty">Sin hallazgos detectados.</div>
+              }
+
+              @if (validator.screenshots.length > 0) {
+                <div class="screenshot-gallery">
+                  <div class="screenshot-gallery__header">
+                    <div>
+                      <h4 class="screenshot-gallery__title">Capturas detectadas</h4>
+                      <p class="screenshot-gallery__subtitle">Abre cualquier captura para verla con zoom o en una pestaña nueva.</p>
+                    </div>
+                    <span class="sv-badge sv-badge--neutral">{{ validator.screenshots.length }} captura(s)</span>
+                  </div>
+
+                  <div class="screenshot-grid">
+                    @for (shot of validator.screenshots; track shot.path) {
+                      <button type="button" class="screenshot-card" (click)="openScreenshotGallery(validator.screenshots, $index)">
+                        <div class="screenshot-card__media">
+                          <img [src]="getScreenshotPreviewUrl(shot.url)" alt="Screenshot de validación" />
+                        </div>
+                        <div class="screenshot-card__footer">
+                          <div class="screenshot-card__copy">
+                            <strong>Captura {{ $index + 1 }}</strong>
+                            <span class="screenshot-card__path">{{ shot.url }}</span>
+                          </div>
+                          <span class="screenshot-card__action">
+                            <i class="bi bi-arrows-fullscreen"></i>
+                            Abrir
+                          </span>
+                        </div>
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </section>
+          }
+
+          <section class="detail-section comment-panel">
+            <div class="detail-section__header">
+              <h3>Comentarios</h3>
+            </div>
+
+            <div class="row g-3 mb-3">
+              <div class="col-md-4">
+                <input class="form-control" [ngModel]="commentUsername()" (ngModelChange)="commentUsername.set($event)" placeholder="Tu nombre" />
+              </div>
+              <div class="col-md-8">
+                <div class="input-group">
+                  <input class="form-control" [ngModel]="commentDrafts()[activeItem.item_key] || ''" (ngModelChange)="setCommentDraft(activeItem.item_key, $event)" placeholder="Agregar comentario" />
+                  <button type="button" class="btn btn-primary" (click)="submitComment(activeItem.item_key)">Enviar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="comment-list">
+              @for (comment of commentsFor(activeItem.item_key); track comment.id) {
+                <article class="comment-card">
+                  <div class="comment-card__header">
+                    <div>
+                      <strong>{{ comment.username }}</strong>
+                      <div class="text-muted small">{{ comment.created_at | date:'medium' }}</div>
+                    </div>
+                    <span class="sv-badge sv-badge--neutral">{{ comment.status }}</span>
+                  </div>
+                  <p class="mb-2 mt-2">{{ comment.comment }}</p>
+                  @if (comment.answer) {
+                    <div class="comment-answer">
+                      <strong>Respuesta:</strong> {{ comment.answer }}
+                    </div>
+                  } @else if (layout() === 'admin') {
+                    <div class="d-flex flex-column gap-2">
+                      <textarea class="form-control" rows="2" [ngModel]="answerDrafts()[comment.id] || ''" (ngModelChange)="setAnswerDraft(comment.id, $event)" placeholder="Responder comentario"></textarea>
+                      <div class="d-flex gap-2">
+                        <select class="form-select w-auto" [ngModel]="answerStatuses()[comment.id] || 'done'" (ngModelChange)="setAnswerStatus(comment.id, $event)">
+                          <option value="done">done</option>
+                          <option value="rejected">rejected</option>
+                        </select>
+                        <button type="button" class="btn btn-outline-primary" (click)="answerComment(comment)">Responder</button>
+                      </div>
+                    </div>
+                  }
+                </article>
+              } @empty {
+                <div class="validator-empty">Todavía no hay comentarios para este elemento.</div>
+              }
+            </div>
+          </section>
+        </div>
+      </aside>
+    }
   }
 </section>

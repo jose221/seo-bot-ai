@@ -37,7 +37,7 @@ class BrowserModeRegistryService:
     )
 
     def _is_available(self, mode: BrowserModeDefinition) -> bool:
-        if settings.APP_MODE == "desktop":
+        if settings.APP_MODE in {"desktop", "local"}:
             return mode.available_desktop
         return mode.available_web
 

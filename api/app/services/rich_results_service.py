@@ -145,7 +145,7 @@ class RichResultsService:
 
         html_content: Optional[str] = None
         try:
-            html_content = await get_audit_engine().fetch_html(url, timeout_ms=30_000)
+            html_content = await get_audit_engine().fetch_html(url, timeout_ms=150_000)
         except Exception:
             html_content = None
 

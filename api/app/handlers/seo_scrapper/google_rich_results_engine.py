@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import sys
+import tempfile
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -13,6 +14,7 @@ import nodriver.cdp.input_ as cdp_input
 from pydantic import BaseModel, Field
 
 import nodriver as uc
+from app.core.storage import PublicAssetStorage
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,8 @@ class GoogleRichResultsEngine:
     screenshots_dir: str = "storage/images",
     storage_url_prefix: str = "/storage/images",
     max_concurrent_tasks: int = 3, # Límite de navegadores simultáneos
+    artifact_storage: Optional[PublicAssetStorage] = None,
+    storage_folder: str = "images",
     headless: bool = False,
   ):
     """
@@ -55,9 +59,12 @@ class GoogleRichResultsEngine:
     self._proxy_server = proxy_server
     self._headless = headless
     self.target_url = "https://search.google.com/test/rich-results?hl=es"
+    self.artifact_storage = artifact_storage
+    self.storage_folder = storage_folder.strip("/")
     self.screenshots_dir = Path(screenshots_dir)
     self.storage_url_prefix = storage_url_prefix.rstrip("/")
-    self.screenshots_dir.mkdir(parents=True, exist_ok=True)
+    if not self.artifact_storage or not self.artifact_storage.uses_remote_storage():
+      self.screenshots_dir.mkdir(parents=True, exist_ok=True)
 
     # Semáforo para controlar cuánta RAM le exigimos al servidor
     self._semaphore = asyncio.Semaphore(max_concurrent_tasks)
@@ -74,9 +81,29 @@ class GoogleRichResultsEngine:
 
     timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
     filename = f"rich_results_{label}_{timestamp}.png"
-    target_path = self.screenshots_dir / filename
 
     try:
+      if self.artifact_storage and self.artifact_storage.uses_remote_storage():
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
+          target_path = Path(tmp_file.name)
+        try:
+          await page.save_screenshot(str(target_path))
+          stored = self.artifact_storage.upload_public_file(
+            target_path,
+            folder=self.storage_folder,
+            filename=filename,
+            content_type="image/png",
+            remove_local=True,
+          )
+          return {"path": stored["path"], "url": stored["url"]}
+        finally:
+          try:
+            if target_path.exists():
+              target_path.unlink()
+          except OSError:
+            pass
+
+      target_path = self.screenshots_dir / filename
       await page.save_screenshot(str(target_path))
       return self._build_screenshot_artifact(filename)
     except Exception as exc:
@@ -95,6 +122,7 @@ class GoogleRichResultsEngine:
     browser = None
     display = None
     page = None
+    current_url = self.target_url
 
     try:
       # BLOQUE PROTEGIDO: Solo un proceso a la vez puede crear un display virtual y abrir Chrome
@@ -125,6 +153,7 @@ class GoogleRichResultsEngine:
       # --- FIN DEL BLOQUE PROTEGIDO ---
 
       page = await browser.get(self.target_url)
+      current_url = self.target_url
       await asyncio.sleep(random.uniform(2.0, 4.0))
 
       # 3. Interacción con la UI de Google
@@ -254,6 +283,7 @@ class GoogleRichResultsEngine:
 
       return ValidationResult(
         is_success=False,
+        result_url=current_url or self.target_url,
         error_message=error_message,
         method_used="nodriver",
         blocked_by_google="block" in error_message.lower() or "captcha" in error_message.lower() or "sorry" in error_message.lower(),

@@ -174,8 +174,6 @@ class DatabaseManager:
             except Exception:
                 await session.rollback()
                 raise
-            finally:
-                await session.close()
 
     @contextmanager
     def sync_session_context(self) -> Generator[Session, None, None]:
