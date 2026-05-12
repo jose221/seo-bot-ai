@@ -259,6 +259,11 @@
   background: #f8fafc;
   box-shadow: -24px 0 60px rgba(15, 23, 42, 0.25);
   z-index: 1050;
+  transition: width 0.22s ease;
+}
+
+.structured-drawer--expanded {
+  width: min(1280px, calc(100vw - 2rem));
 }
 
 .structured-drawer__header {
@@ -269,6 +274,13 @@
   padding: 1.25rem 1.25rem 1rem;
   border-bottom: 1px solid #e2e8f0;
   background: #fff;
+}
+
+.structured-drawer__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
 }
 
 .structured-drawer__title {
@@ -626,7 +638,8 @@
     flex-direction: column;
   }
 
-  .structured-drawer {
+  .structured-drawer,
+  .structured-drawer--expanded {
     width: 100vw;
   }
 }

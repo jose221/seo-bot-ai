@@ -41,6 +41,7 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   readonly currentPage = signal(1);
   readonly currentPageSize = signal(10);
   readonly selectedItemKey = signal<string | null>(null);
+  readonly isDrawerExpanded = signal(false);
   readonly commentUsername = signal('');
   readonly commentDrafts = signal<Record<string, string>>({});
   readonly answerDrafts = signal<Record<string, string>>({});
@@ -265,11 +266,21 @@ export default class StructuredValidationInfo implements OnInit, OnDestroy {
   }
 
   openItemDetails(item: StructuredValidationTaskItemModel): void {
+    this.isDrawerExpanded.set(false);
     this.selectedItemKey.set(item.item_key);
   }
 
   closeItemDetails(): void {
+    this.isDrawerExpanded.set(false);
     this.selectedItemKey.set(null);
+  }
+
+  expandItemDetails(): void {
+    this.isDrawerExpanded.set(true);
+  }
+
+  collapseItemDetails(): void {
+    this.isDrawerExpanded.set(false);
   }
 
   getValidatorStatusLabel(validator: RichResultsValidatorDetailModel): string {
