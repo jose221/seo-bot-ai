@@ -114,18 +114,24 @@ class GoogleRichResultsEngine:
       logger.warning("Could not save screenshot %s: %s", label, exc)
       return None
 
-  async def validate(self, input_type: InputType, content: str) -> ValidationResult:
-    """Punto de entrada seguro para concurrencia."""
+  async def validate(self, input_type: InputType, content: str, worker_id: str = "default") -> ValidationResult:
+    """
+    Punto de entrada seguro para concurrencia.
+    worker_id: ID único del hilo/worker (ej. '1', '2') para aislar el caché del navegador.
+    """
     async with self._semaphore:
-      return await self._validate_internal(input_type, content)
+      return await self._validate_internal(input_type, content, worker_id)
 
-  async def _validate_internal(self, input_type: InputType, content: str) -> ValidationResult:
-    """Lógica central de validación con stealth mejorado."""
-    logger.info(f"Starting validation for {input_type.value}...")
+  async def _validate_internal(self, input_type: InputType, content: str, worker_id: str) -> ValidationResult:
+    """Lógica central de validación con stealth mejorado y optimización de red."""
+    logger.info(f"[Worker {worker_id}] Starting validation for {input_type.value}...")
     browser = None
     display = None
     page = None
     current_url = self.target_url
+
+    # Ruta de caché persistente y aislada por worker
+    cache_path = os.path.abspath(f"storage/browser_cache/worker_{worker_id}")
 
     # Perfil de fingerprint aleatorio y consistente por sesión
     stealth = StealthConfig(
@@ -134,6 +140,20 @@ class GoogleRichResultsEngine:
       proxy_bypass=self._proxy_bypass_list,
       hide_window=self._hide_window,
     )
+
+    # Inyección de optimizaciones para ahorro masivo de ancho de banda
+    optimization_args = [
+      "--blink-settings=imagesEnabled=false",
+      "--disable-background-networking",
+      "--disable-component-update",
+      "--safebrowsing-disable-auto-update",
+      "--disable-sync",
+      "--disable-default-apps",
+      "--disable-extensions",
+      "--enable-features=NetworkService,NetworkServiceInProcess",
+      f"--disk-cache-size={100 * 1024 * 1024}"
+    ]
+    stealth.browser_args.extend(optimization_args)
 
     try:
       async with self._startup_lock:
@@ -147,7 +167,11 @@ class GoogleRichResultsEngine:
           except ImportError:
             logger.warning("pyvirtualdisplay not found. Browsing might fail on headless server.")
 
-        browser = await uc.start(headless=stealth.headless_mode, browser_args=stealth.browser_args)
+        browser = await uc.start(
+          headless=stealth.headless_mode,
+          browser_args=stealth.browser_args,
+          user_data_dir=cache_path
+        )
 
       # Inyectar stealth en about:blank ANTES de navegar al sitio objetivo
       page = await browser.get("about:blank")
@@ -155,7 +179,7 @@ class GoogleRichResultsEngine:
       await stealth.simulate_mouse_move(page)
       await stealth.human_delay(0.5, 1.2)
 
-      logger.info(f"Navigating to: {self.target_url}")
+      logger.info(f"[Worker {worker_id}] Navigating to: {self.target_url}")
       page = await browser.get(self.target_url)
       current_url = self.target_url
 
@@ -227,7 +251,7 @@ class GoogleRichResultsEngine:
         await submit_btn.click()
         logger.info("Clicked 'probar URL' button")
 
-      # 4. Polling: esperar a que Google redirija a /result?id=
+      # 4. Polling con detección nativa de reCAPTCHA
       logger.info("Polling for URL change indicating analysis completion...")
       current_url = ""
 
@@ -235,7 +259,12 @@ class GoogleRichResultsEngine:
         current_url = await page.evaluate("window.location.href")
 
         if "sorry" in current_url.lower():
-          raise Exception("Google explicitly blocked the request (429/Captcha).")
+          raise Exception("Google explicitly blocked the request (429/Sorry).")
+
+        # Detección instantánea de Iframe de reCAPTCHA (sin Timeouts)
+        recaptcha_frames = await page.select_all('iframe[src*="recaptcha"]')
+        if recaptcha_frames:
+          raise Exception("Google explicitly blocked the request (reCAPTCHA detected).")
 
         if "/result?id=" in current_url:
           break
@@ -266,7 +295,7 @@ class GoogleRichResultsEngine:
 
     except Exception as e:
       error_message = str(e)
-      logger.error(f"Validation failed: {error_message}")
+      logger.error(f"[Worker {worker_id}] Validation failed: {error_message}")
       screenshots: list[dict[str, str]] = []
 
       if page:
@@ -279,7 +308,7 @@ class GoogleRichResultsEngine:
         result_url=current_url or self.target_url,
         error_message=error_message,
         method_used="nodriver",
-        blocked_by_google="block" in error_message.lower() or "captcha" in error_message.lower() or "sorry" in error_message.lower(),
+        blocked_by_google="block" in error_message.lower() or "captcha" in error_message.lower() or "sorry" in error_message.lower() or "recaptcha" in error_message.lower(),
         proxy_used=bool(self._proxy_server),
         screenshots=screenshots
       )

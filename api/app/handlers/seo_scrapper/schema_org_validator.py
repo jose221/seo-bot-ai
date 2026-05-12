@@ -218,10 +218,13 @@ class SchemaOrgValidatorEngine:
       logger.debug(f"Error silencioso evaluando reCAPTCHA: {e}")
       return False
 
-  async def _launch_browser(self, use_proxy: bool, display=None):
+  async def _launch_browser(self, use_proxy: bool, worker_id: str, display=None):
     """Inicia el browser (con o sin proxy) y navega al validador. Retorna (browser, page, display, stealth)."""
     proxy_server = self._proxy_server if use_proxy else None
     proxy_bypass = self._proxy_bypass_list if use_proxy else None
+
+    # Ruta de caché persistente y aislada por worker
+    cache_path = os.path.abspath(f"storage/browser_cache/schema_worker_{worker_id}")
 
     stealth = StealthConfig(
       headless=self._headless,
@@ -229,6 +232,20 @@ class SchemaOrgValidatorEngine:
       proxy_bypass=proxy_bypass,
       hide_window=self._hide_window,
     )
+
+    # Inyección de optimizaciones masivas para ahorro de proxy
+    optimization_args = [
+      "--blink-settings=imagesEnabled=false",
+      "--disable-background-networking",
+      "--disable-component-update",
+      "--safebrowsing-disable-auto-update",
+      "--disable-sync",
+      "--disable-default-apps",
+      "--disable-extensions",
+      "--enable-features=NetworkService,NetworkServiceInProcess",
+      f"--disk-cache-size={100 * 1024 * 1024}"
+    ]
+    stealth.browser_args.extend(optimization_args)
 
     async with self._startup_lock:
       if display is None and not self._headless and sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
@@ -240,7 +257,11 @@ class SchemaOrgValidatorEngine:
         except ImportError:
           logger.warning("pyvirtualdisplay not found.")
 
-      browser = await uc.start(headless=stealth.headless_mode, browser_args=stealth.browser_args)
+      browser = await uc.start(
+        headless=stealth.headless_mode,
+        browser_args=stealth.browser_args,
+        user_data_dir=cache_path
+      )
 
     page = await browser.get("about:blank")
     await stealth.inject(page)
@@ -253,14 +274,14 @@ class SchemaOrgValidatorEngine:
 
     return browser, page, display, stealth
 
-  async def validate(self, input_type: InputType, content: str) -> ValidationResult:
+  async def validate(self, input_type: InputType, content: str, worker_id: str = "default") -> ValidationResult:
     """Punto de entrada seguro para concurrencia."""
     async with self._semaphore:
-      return await self._validate_internal(input_type, content)
+      return await self._validate_internal(input_type, content, worker_id)
 
-  async def _validate_internal(self, input_type: InputType, content: str) -> ValidationResult:
-    """Lógica central de validación interactiva con stealth mejorado."""
-    logger.info(f"Starting Schema.org validation for {input_type.value}...")
+  async def _validate_internal(self, input_type: InputType, content: str, worker_id: str) -> ValidationResult:
+    """Lógica central de validación interactiva con stealth mejorado y caché concurrente."""
+    logger.info(f"[Schema Worker {worker_id}] Starting Schema.org validation for {input_type.value}...")
     browser = None
     display = None
     page = None
@@ -269,12 +290,12 @@ class SchemaOrgValidatorEngine:
 
     try:
       # Primer intento: sin proxy
-      browser, page, display, stealth = await self._launch_browser(use_proxy=False)
+      browser, page, display, stealth = await self._launch_browser(use_proxy=False, worker_id=worker_id)
       current_url = self.target_url
 
       # Verificar si la página está bloqueada por reCAPTCHA
       if await self._is_blocked_by_recaptcha(page):
-        logger.warning("Página bloqueada por reCAPTCHA (rc-anchor-container detectado). Cerrando browser...")
+        logger.warning(f"[Schema Worker {worker_id}] Página bloqueada por reCAPTCHA. Cerrando browser...")
         try:
           browser.stop()
         except Exception as e:
@@ -283,7 +304,7 @@ class SchemaOrgValidatorEngine:
         page = None
 
         if not self._proxy_server:
-          logger.error("reCAPTCHA detectado pero no hay proxy configurado.")
+          logger.error(f"[Schema Worker {worker_id}] reCAPTCHA detectado pero no hay proxy configurado.")
           return ValidationResult(
             is_success=False,
             result_url=self.target_url,
@@ -293,10 +314,10 @@ class SchemaOrgValidatorEngine:
             proxy_used=False,
           )
 
-        logger.info("Reiniciando browser con proxy para evadir reCAPTCHA...")
-        browser, page, display, stealth = await self._launch_browser(use_proxy=True, display=display)
+        logger.info(f"[Schema Worker {worker_id}] Reiniciando browser con proxy para evadir reCAPTCHA...")
+        browser, page, display, stealth = await self._launch_browser(use_proxy=True, worker_id=worker_id, display=display)
         proxy_used = True
-        logger.info("Browser reiniciado con proxy.")
+        logger.info(f"[Schema Worker {worker_id}] Browser reiniciado con proxy.")
 
       # 2. Interacción con los Tabs e Ingreso de Datos
       if input_type == InputType.HTML:
@@ -399,7 +420,7 @@ class SchemaOrgValidatorEngine:
 
     except Exception as e:
       error_message = str(e)
-      logger.error(f"Schema Validation failed: {error_message}")
+      logger.error(f"[Schema Worker {worker_id}] Schema Validation failed: {error_message}")
       screenshots: list[dict[str, str]] = []
 
       if page:
