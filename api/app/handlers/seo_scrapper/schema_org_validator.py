@@ -201,14 +201,21 @@ class SchemaOrgValidatorEngine:
       return None
 
   async def _is_blocked_by_recaptcha(self, page) -> bool:
-    """Verifica si la página está bloqueada por reCAPTCHA detectando rc-anchor-container."""
+    """Verifica si la página está bloqueada por reCAPTCHA usando puro nodriver."""
     try:
-      anchor = await page.query_selector("#rc-anchor-container")
-      if anchor:
+      # 1. Chequeo de URL nativo usando la propiedad del target
+      if page.target.url and 'google.com/sorry/index' in page.target.url:
         return True
-      html = await page.get_content()
-      return "rc-anchor-container" in (html or "")
-    except Exception:
+
+      # 2. Búsqueda instantánea del iframe sin bloquear el hilo (cero Timeouts)
+      recaptcha_frames = await page.select_all('iframe[src*="recaptcha"]')
+      if recaptcha_frames:
+        return True
+
+      return False
+
+    except Exception as e:
+      logger.debug(f"Error silencioso evaluando reCAPTCHA: {e}")
       return False
 
   async def _launch_browser(self, use_proxy: bool, display=None):
