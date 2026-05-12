@@ -34,8 +34,11 @@ class GoogleRichResultsValidationService:
         self,
         proxy_settings: Optional[ProxySettings] = None,
         browser_mode_code: Optional[str] = None,
+        *,
+        use_proxy: bool = False,
     ) -> GoogleRichResultsEngine:
-        effective_proxy = proxy_settings if proxy_settings is not None else self.proxy_settings
+        # Only pass proxy when explicitly requested — never fall back silently to self.proxy_settings
+        effective_proxy = proxy_settings if use_proxy else None
         browser_mode = get_browser_mode_registry_service().resolve_mode(browser_mode_code)
 
         return GoogleRichResultsEngine(
@@ -76,8 +79,8 @@ class GoogleRichResultsValidationService:
         browser_mode_code: Optional[str] = None,
     ) -> RichResultsValidatorDetail:
         validation = await self._build_engine(
-            proxy_settings=None,
             browser_mode_code=browser_mode_code,
+            use_proxy=False,
         ).validate(
             input_type=self._to_input_type(input_type),
             content=content,
@@ -95,6 +98,7 @@ class GoogleRichResultsValidationService:
                 validation = await self._build_engine(
                     proxy_settings=fallback_proxy,
                     browser_mode_code=browser_mode_code,
+                    use_proxy=True,
                 ).validate(
                     input_type=self._to_input_type(input_type),
                     content=content,
