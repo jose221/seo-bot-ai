@@ -13,6 +13,7 @@ let frontendServer = null;
 let apiProcess = null;
 let apiOutputBuffer = [];
 let authDebugLogPath = null;
+let apiLogPath = null;
 
 function getApiRoot() {
   if (app.isPackaged) {
@@ -37,8 +38,24 @@ function getApiPidFilePath() {
   return path.join(app.getPath('userData'), 'fastapi.pid');
 }
 
+function getApiRuntimeDir() {
+  return path.join(app.getPath('userData'), 'runtime');
+}
+
+function getApiStoragePath() {
+  return path.join(getApiRuntimeDir(), 'storage');
+}
+
+function getApiLogPath() {
+  return path.join(getApiRuntimeDir(), 'logs', 'fastapi.log');
+}
+
 function getAuthDebugLogPath() {
   return path.join(app.getPath('desktop'), 'seo-bot-ai-auth-debug.log');
+}
+
+function ensureParentDir(filePath) {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
 }
 
 function appendAuthDebug(message, details) {
@@ -62,6 +79,11 @@ function appendAuthDebug(message, details) {
 function appendApiOutput(prefix, chunk) {
   const text = chunk.toString();
   process[prefix === 'stderr' ? 'stderr' : 'stdout'].write(`[api] ${text}`);
+
+  if (apiLogPath) {
+    ensureParentDir(apiLogPath);
+    fs.appendFileSync(apiLogPath, `[${new Date().toISOString()}] [${prefix}] ${text}`, 'utf8');
+  }
 
   apiOutputBuffer.push(
     ...text
@@ -214,12 +236,23 @@ async function startApiServer() {
   const pythonBin = findPythonBinary(apiRoot);
   const args = ['-m', 'uvicorn', 'app.main:app', '--host', '127.0.0.1', '--port', String(API_PORT)];
   apiOutputBuffer = [];
+  apiLogPath = getApiLogPath();
+  ensureParentDir(apiLogPath);
+  fs.writeFileSync(
+    apiLogPath,
+    `[${new Date().toISOString()}] [launcher] Starting FastAPI with ${pythonBin} ${args.join(' ')}\n`,
+    'utf8',
+  );
 
   apiProcess = spawn(pythonBin, args, {
     cwd: apiRoot,
     env: {
       ...process.env,
+      APP_MODE: 'desktop',
       PYTHONUNBUFFERED: '1',
+      PYTHONFAULTHANDLER: '1',
+      PYTHONIOENCODING: 'utf-8',
+      STORAGE_PATH: getApiStoragePath(),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -245,18 +278,22 @@ async function startApiServer() {
     app.quit();
   });
 
-  apiProcess.on('exit', (code) => {
+  apiProcess.on('close', (code, signal) => {
     clearApiPidFile();
     if (!app.isQuiting) {
+      const reason = code !== null
+        ? `exit code: ${code}`
+        : `signal: ${signal ?? 'desconocida'}`;
       const details = apiOutputBuffer.length
         ? `\n\nUltimas lineas:\n${apiOutputBuffer.join('\n')}`
         : '';
       dialog.showErrorBox(
         'API local detenida',
-        `La API de FastAPI se cerró inesperadamente (exit code: ${code ?? 'desconocido'}).${details}`,
+        `La API de FastAPI se cerró inesperadamente (${reason}).\n\nLog completo:\n${apiLogPath ?? 'no disponible'}${details}`,
       );
       app.quit();
     }
+    apiProcess = null;
   });
 }
 
