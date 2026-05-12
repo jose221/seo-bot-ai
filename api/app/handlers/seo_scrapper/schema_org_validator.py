@@ -200,6 +200,52 @@ class SchemaOrgValidatorEngine:
       logger.warning("Could not save screenshot %s: %s", label, exc)
       return None
 
+  async def _is_blocked_by_recaptcha(self, page) -> bool:
+    """Verifica si la página está bloqueada por reCAPTCHA detectando rc-anchor-container."""
+    try:
+      anchor = await page.query_selector("#rc-anchor-container")
+      if anchor:
+        return True
+      html = await page.get_content()
+      return "rc-anchor-container" in (html or "")
+    except Exception:
+      return False
+
+  async def _launch_browser(self, use_proxy: bool, display=None):
+    """Inicia el browser (con o sin proxy) y navega al validador. Retorna (browser, page, display, stealth)."""
+    proxy_server = self._proxy_server if use_proxy else None
+    proxy_bypass = self._proxy_bypass_list if use_proxy else None
+
+    stealth = StealthConfig(
+      headless=self._headless,
+      proxy_server=proxy_server,
+      proxy_bypass=proxy_bypass,
+      hide_window=self._hide_window,
+    )
+
+    async with self._startup_lock:
+      if display is None and not self._headless and sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
+        try:
+          from pyvirtualdisplay import Display
+          display = Display(visible=False, size=(1920, 1080))
+          display.start()
+          os.environ['DISPLAY'] = display.new_display_var
+        except ImportError:
+          logger.warning("pyvirtualdisplay not found.")
+
+      browser = await uc.start(headless=stealth.headless_mode, browser_args=stealth.browser_args)
+
+    page = await browser.get("about:blank")
+    await stealth.inject(page)
+    await stealth.simulate_mouse_move(page)
+    await stealth.human_delay(0.5, 1.2)
+
+    page = await browser.get(self.target_url)
+    await stealth.human_delay(1.5, 3.0)
+    await stealth.simulate_mouse_move(page)
+
+    return browser, page, display, stealth
+
   async def validate(self, input_type: InputType, content: str) -> ValidationResult:
     """Punto de entrada seguro para concurrencia."""
     async with self._semaphore:
@@ -212,38 +258,38 @@ class SchemaOrgValidatorEngine:
     display = None
     page = None
     current_url = self.target_url
-
-    stealth = StealthConfig(
-      headless=self._headless,
-      proxy_server=self._proxy_server,
-      proxy_bypass=self._proxy_bypass_list,
-      hide_window=self._hide_window,
-    )
+    proxy_used = False
 
     try:
-      async with self._startup_lock:
-        if not self._headless and sys.platform.startswith('linux') and not os.environ.get('DISPLAY'):
-          try:
-            from pyvirtualdisplay import Display
-            display = Display(visible=False, size=(1920, 1080))
-            display.start()
-            os.environ['DISPLAY'] = display.new_display_var
-          except ImportError:
-            logger.warning("pyvirtualdisplay not found.")
-
-        browser = await uc.start(headless=stealth.headless_mode, browser_args=stealth.browser_args)
-
-      # Inyectar stealth en about:blank antes de navegar al sitio objetivo
-      page = await browser.get("about:blank")
-      await stealth.inject(page)
-      await stealth.simulate_mouse_move(page)
-      await stealth.human_delay(0.5, 1.2)
-
-      # Navegar al validador con el fingerprint ya activo
-      page = await browser.get(self.target_url)
+      # Primer intento: sin proxy
+      browser, page, display, stealth = await self._launch_browser(use_proxy=False)
       current_url = self.target_url
-      await stealth.human_delay(1.5, 3.0)
-      await stealth.simulate_mouse_move(page)
+
+      # Verificar si la página está bloqueada por reCAPTCHA
+      if await self._is_blocked_by_recaptcha(page):
+        logger.warning("Página bloqueada por reCAPTCHA (rc-anchor-container detectado). Cerrando browser...")
+        try:
+          browser.stop()
+        except Exception as e:
+          logger.warning(f"Error deteniendo browser bloqueado: {e}")
+        browser = None
+        page = None
+
+        if not self._proxy_server:
+          logger.error("reCAPTCHA detectado pero no hay proxy configurado.")
+          return ValidationResult(
+            is_success=False,
+            result_url=self.target_url,
+            error_message="Bloqueado por reCAPTCHA y no hay proxy configurado.",
+            method_used="nodriver",
+            blocked_by_schema=True,
+            proxy_used=False,
+          )
+
+        logger.info("Reiniciando browser con proxy para evadir reCAPTCHA...")
+        browser, page, display, stealth = await self._launch_browser(use_proxy=True, display=display)
+        proxy_used = True
+        logger.info("Browser reiniciado con proxy.")
 
       # 2. Interacción con los Tabs e Ingreso de Datos
       if input_type == InputType.HTML:
@@ -340,7 +386,7 @@ class SchemaOrgValidatorEngine:
         result_url=current_url,
         html_content=final_html,
         method_used="nodriver",
-        proxy_used=bool(self._proxy_server),
+        proxy_used=proxy_used,
         screenshots=screenshots
       )
 
@@ -360,7 +406,7 @@ class SchemaOrgValidatorEngine:
         error_message=error_message,
         method_used="nodriver",
         blocked_by_schema=False,
-        proxy_used=bool(self._proxy_server),
+        proxy_used=proxy_used,
         screenshots=screenshots
       )
 
